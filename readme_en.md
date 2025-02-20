@@ -1,3 +1,5 @@
+
+
 <h1 style='text-align: center; margin-bottom: 1rem'> Open Avatar Chat </h1>
 
 <div align="center">
@@ -118,3 +120,11 @@ Current implemented handler provide following configs:
 |Tts2Face.fps|25|Framerate of avatar, on better CPU, it can be set to 30.|
 |Tts2Face.enable_fast_mode|True|Lower the response delay, voice lag may occur if computation power is not enough.|
 
+## Contributors
+
+[Gang Cheng](https://github.com/lovepope)
+[Tao Chen](https://github.com/raidios)
+[Feng Wang](https://github.com/sudowind)
+[Binchao Huang](https://github.com/bingochaos)
+[Hui Xu](https://github.com/xhup)
+[Guanqiao He](https://github.com/bboygun)
