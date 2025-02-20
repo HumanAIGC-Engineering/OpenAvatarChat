@@ -117,3 +117,12 @@ python src/demo.py --config <配置文件的绝对路径>.yaml
 |Tts2Face.enable_fast_mode|True|低延迟模式，打开后可以减低回答的延迟，但在性能不足的情况下，可能会在回答的开始产生语音卡顿。|
 
 **注意：所有配置中的路径参数都可以使用绝对路径，或者相对于项目根目录的相对路径。**
+
+## 贡献者
+
+[程刚](https://github.com/lovepope)
+[陈涛](https://github.com/raidios)
+[王丰](https://github.com/sudowind)
+[黄斌超](https://github.com/bingochaos)
+[徐辉](https://github.com/xhup)
+[何冠桥](https://github.com/bboygun)
