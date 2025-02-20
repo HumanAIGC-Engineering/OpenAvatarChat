@@ -1,0 +1,34 @@
+default:
+  log:
+    log_level: "INFO"
+  service:
+    host: "0.0.0.0"
+    port: 8282
+    cert_file: "ssl_certs/localhost.crt"
+    cert_key: "ssl_certs/localhost.key"
+  chat_engine:
+    model_root: "models"
+    handler_configs:
+      SileroVad:
+        speaking_threshold: 0.5
+        start_delay: 2048
+        end_delay: 5000
+        buffer_look_back: 1024
+        speech_padding: 512
+      S2S_MiniCPM:
+        model_name: "MiniCPM-o-2_6"
+        # model_name: "MiniCPM-o-2_6-int4"
+        voice_prompt: "你是一个AI助手。你能接受视频，音频和文本输入并输出语音和文本。模仿输入音频中的声音特征。"
+        assistant_prompt: "作为助手，你将使用这种声音风格说话。"
+      Tts2Face:
+        avatar_name: sample_data
+        fps: 25
+        debug: false
+        enable_fast_mode: True
+    outputs:
+      video:
+        handler: "Tts2Face"
+        type: "avatar_video"
+      audio:
+        handler: "Tts2Face"
+        type: "avatar_audio"

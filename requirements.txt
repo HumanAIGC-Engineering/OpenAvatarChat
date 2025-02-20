@@ -1,0 +1,38 @@
+# basic requirements
+numpy<=1.26.4
+librosa~=0.10.2
+loguru~=0.7.3
+pydantic~=2.10.6
+opencv-python-headless~=4.11.0
+scipy~=1.15.1
+soundfile~=0.13.1
+tqdm~=4.67.1
+
+#service
+gradio~=5.9.1
+aiohttp~=3.11.12
+aiortc~=1.10.1
+dynaconf~=3.2.7
+PyYAML~=6.0.2
+typing_extensions~=4.12.2
+
+# inference engine
+onnxruntime-gpu~=1.20.1
+onnxruntime~=1.20.1
+torch~=2.5.1
+torchaudio~=2.5.1
+torchvision~=0.20.0
+
+# algo requirements
+h5py~=3.12.1
+funasr~=1.2.3
+pydub~=0.25.1
+pypinyin~=0.53.0
+typeguard==2.13.3
+jieba~=0.42.1
+transformers==4.44.1
+vector_quantize_pytorch~=1.21.7
+vocos~=0.1.0
+
+# project specified version
+src/third_party/gradio_webrtc_videochat/dist/gradio_webrtc-0.0.30.dev0-py3-none-any.whl
