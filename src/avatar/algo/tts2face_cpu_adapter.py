@@ -7,7 +7,7 @@ from loguru import logger
 
 from src.avatar.algo.base_algo_adapter import BaseAlgoAdapter
 from src.avatar.algo.bg_frame_counter import BgFrameCounter
-from src.avatar.algo.tts2face_cpu.tts2face_model import tts2face
+from src.avatar.algo.tts2face_cpu.lite_avatar import liteAvatar
 from src.avatar.model.algo_model import AvatarAlgoConfig, AvatarInitOption, AvatarStatus
 from src.utils.directory_info import DirectoryInfo
 from src.utils.time_utils import timeit
@@ -25,7 +25,7 @@ class Tts2faceCpuAdapter(BaseAlgoAdapter):
     def init(self, init_option: AvatarInitOption):
         self.change_to_algo_dir()
         data_dir = self._get_avatar_data_dir(init_option.avatar_name)
-        self.tts2face = tts2face(
+        self.tts2face = liteAvatar(
             data_dir=data_dir,
             fps=init_option.video_frame_rate
         )
