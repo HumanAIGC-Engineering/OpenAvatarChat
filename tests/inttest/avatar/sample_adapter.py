@@ -1,8 +1,8 @@
 
 
 import numpy as np
-from src.avatar.algo.base_algo_adapter import BaseAlgoAdapter
-from src.avatar.model.algo_model import (
+from handlers.avatar.liteavatar.algo.base_algo_adapter import BaseAlgoAdapter
+from handlers.avatar.liteavatar.model import (
     AvatarInitOption, AudioSlice, AvatarAlgoConfig,
     AvatarStatus, SignalType)
 

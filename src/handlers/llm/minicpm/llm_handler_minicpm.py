@@ -1,8 +1,12 @@
+import importlib
 import os
+import queue
+import sys
 import time
 from abc import ABC
-from typing import Optional, cast, Dict
+from typing import Optional, cast, Dict, List
 
+import PIL.Image
 import librosa
 import numpy as np
 # noinspection PyPackageRequirements
@@ -26,19 +30,25 @@ class MiniCPMConfig(HandlerBaseConfigModel, BaseModel):
     model_name: str = Field(default="MiniCPM-o-2_6")
     voice_prompt: str = Field(default="你是一个AI助手。你能接受视频，音频和文本输入并输出语音和文本。模仿输入音频中的声音特征。")
     assistant_prompt: str = Field(default="作为助手，你将使用这种声音风格说话。")
+    enable_video_input: bool = Field(default=False)
+    skip_video_frame: int = Field(default=-1)
 
 
 class MiniCPMContext(HandlerContext):
     def __init__(self, session_id: str):
         super().__init__(session_id)
-        self.config = None
+        self.config: Optional[MiniCPMConfig] = None
         self.local_session_id = 0
 
         self.dump_audio = True
         self.audio_dump_file = None
+
+        self.prefilling = False
+        self.generating = False
+
         if self.dump_audio:
             dump_file_path = os.path.join(DirectoryInfo.get_project_dir(),
-                                          f"dump_talk_audio.pcm")
+                                          "dump_talk_audio.pcm")
             self.audio_dump_file = open(dump_file_path, "wb")
 
         self.sys_msg = None
@@ -52,15 +62,51 @@ class MiniCPMContext(HandlerContext):
             slice_axis=0,
         )
 
+        self.video_frame_cache = queue.Queue(maxsize=50)
+        self.video_frame_head_cache: Optional[ChatData] = None
+
+    def put_video_frame(self, frame):
+        if self.config is None or not self.config.enable_video_input:
+            return
+        if self.video_frame_cache.full():
+            self.video_frame_head_cache = self.video_frame_cache.get_nowait()
+        self.video_frame_cache.put_nowait(frame)
+
+    def fetch_video_frames(self, start_time: int, end_time: int):
+        result = []
+        if self.config is None or not self.config.enable_video_input:
+            return result
+        while True:
+            if self.video_frame_head_cache is not None and self.video_frame_head_cache.timestamp[0] >= start_time:
+                result.append(self.video_frame_head_cache)
+            self.video_frame_head_cache = None
+            try:
+                self.video_frame_head_cache = self.video_frame_cache.get_nowait()
+            except queue.Empty:
+                break
+            if self.video_frame_head_cache.timestamp[0] >= end_time:
+                break
+        if len(result) == 0:
+            return result
+        frame_skip: Optional[int] = None
+        if self.config is not None:
+            frame_skip = self.config.skip_video_frame
+
+        if frame_skip is not None and frame_skip > 0:
+            return result[::frame_skip+1]
+        elif frame_skip == -1:
+            return result[-1:]
+        else:
+            return result
+
 
 class HandlerS2SMiniCPM(HandlerBase, ABC):
-
     def __init__(self):
         super().__init__()
-        self.device='cuda:0'
+        self.device = 'cuda:0'
         self.model = None
         self.tokenizer = None
-        self.module_path = os.path.join(DirectoryInfo.get_src_dir(), "third_party", "MiniCPM-o")
+        self.module_path = os.path.join(DirectoryInfo.get_src_dir(), "handlers", "llm", "minicpm", "MiniCPM-o")
         self.ref_audio = None
         self.created_session_num = 0
 
@@ -70,6 +116,21 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
             config_model=MiniCPMConfig,
         )
 
+    @staticmethod
+    def _build_auto_gptq_minicpmo():
+        install_mark = os.path.join(DirectoryInfo.get_project_dir(), "auto-gptq-minicpmo")
+        if os.path.isfile(install_mark):
+            return
+        install_scripts = os.path.join(DirectoryInfo.get_project_dir(), "scripts", "build_auto_gptq.sh")
+        cmd = f"cd {DirectoryInfo.get_project_dir()} && chmod +x {install_scripts} && {install_scripts}"
+        logger.warning(f"Cmd: {cmd}")
+        result = os.system(cmd)
+        logger.warning(f"Build auto-gptq MiniCPM-o result: {result}")
+        auto_gptq_path = os.path.join(DirectoryInfo.get_project_dir(), "AutoGPTQ")
+        if auto_gptq_path not in sys.path:
+            sys.path.append(auto_gptq_path)
+        importlib.invalidate_caches()
+
     def load(self, engine_config: ChatEngineConfigModel, handler_config: Optional[BaseModel] = None):
         model_name = "MiniCPM-o-2_6"
         if isinstance(handler_config, MiniCPMConfig):
@@ -78,8 +139,17 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
         model_path = os.path.join(project_dir, engine_config.model_root, model_name)
         if model_name == "MiniCPM-o-2_6-int4":
             # noinspection PyUnresolvedReferences
-            from auto_gptq import AutoGPTQForCausalLM
-            self.model = AutoGPTQForCausalLM.from_quantized(
+            logger.warning(f"python path: {sys.path}")
+            try:
+                auto_gptq = importlib.import_module("auto_gptq")
+            except ModuleNotFoundError:
+                logger.warning("AutoGPTQ not installed, try to install it.")
+                from utils.components_builder.autogptq_minicpmo_builder import AutoGPTQMiniCPMOBuilder
+                builder = AutoGPTQMiniCPMOBuilder()
+                builder.install()
+                auto_gptq = importlib.import_module("auto_gptq")
+            # from auto_gptq import AutoGPTQForCausalLM
+            self.model = auto_gptq.AutoGPTQForCausalLM.from_quantized(
                 model_path,
                 torch_dtype=torch.bfloat16,
                 device=self.device,
@@ -109,6 +179,7 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
         if not isinstance(handler_config, MiniCPMConfig):
             handler_config = MiniCPMConfig()
         context = MiniCPMContext(session_context.session_info.session_id)
+        context.config = handler_config
         context.local_session_id = self.created_session_num + 235
         self.created_session_num += 1
         self.model.reset_session()
@@ -125,6 +196,9 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
         zero_audio_msg = self._create_message(zero_audio)
         self._do_prefill(context, [zero_audio_msg])
         return context
+    
+    def start_context(self, session_context, handler_context):
+        pass
 
     def get_handler_detail(self, session_context: SessionContext,
                            context: HandlerContext) -> HandlerDetail:
@@ -133,7 +207,10 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
         inputs = {
             ChatDataType.HUMAN_AUDIO: HandlerDataInfo(
                 type=ChatDataType.HUMAN_AUDIO,
-            )
+            ),
+            ChatDataType.CAMERA_VIDEO: HandlerDataInfo(
+                type=ChatDataType.CAMERA_VIDEO,
+            ),
         }
         outputs = {
             ChatDataType.AVATAR_AUDIO: HandlerDataInfo(
@@ -146,10 +223,21 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
         )
 
     @staticmethod
-    def _create_message(audio: Optional[np.ndarray]):
+    def _create_message(audio: Optional[np.ndarray], video_frames: Optional[List[ChatData]] = None):
         if audio is None:
             return None
-        msg = {"role": "user", "content":[audio]}
+        contents = []
+        if video_frames is not None and len(video_frames) > 0:
+            contents.append("<unit>")
+            for video_frame in video_frames:
+                frame_array = video_frame.data.get_main_data()
+                if frame_array is None:
+                    continue
+                image = PIL.Image.fromarray(np.squeeze(frame_array)[..., ::-1])
+                contents.append(image)
+
+        contents.append(audio)
+        msg = {"role": "user", "content": contents}
         return msg
 
     def _do_prefill(self, context: HandlerContext, msgs, max_slice_nums=None):
@@ -172,13 +260,13 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
                         context.audio_dump_file.write(audio.tobytes())
 
     def handle(self, context: HandlerContext, inputs: ChatData,
-                     output_definitions: Dict[ChatDataType, HandlerDataInfo]):
+               output_definitions: Dict[ChatDataType, HandlerDataInfo]):
         output_definition = output_definitions.get(ChatDataType.AVATAR_AUDIO).definition
         context = cast(MiniCPMContext, context)
         audio = None
-        _video = None
+        video = None
         if inputs.type == ChatDataType.CAMERA_VIDEO:
-            _video = inputs.data.get_main_data()
+            video = inputs
         elif inputs.type == ChatDataType.HUMAN_AUDIO:
             audio = inputs.data.get_main_data()
         else:
@@ -191,37 +279,57 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
             # prefill audio
             if audio is not None:
                 audio = audio.squeeze()
+            context.audio_prefill_slice_context.update_start_id(inputs.timestamp[0])
             for audio_segment in slice_data(context.audio_prefill_slice_context, audio):
-                if audio_segment is None or audio_segment.shape[0] == 0:
+                segment_size = audio_segment.shape[0]
+                if audio_segment is None or segment_size == 0:
                     continue
-                msg = self._create_message(audio_segment)
+                segment_start_id = context.audio_prefill_slice_context.get_last_slice_start_index()
+                segment_end_id = segment_start_id + segment_size
+                video_frames = context.fetch_video_frames(segment_start_id, segment_end_id)
+                logger.info(f"Got {len(video_frames)} video frames with time {[x.timestamp[0] for x in video_frames]}")
+                msg = self._create_message(audio_segment, video_frames)
                 self._do_prefill(context, [msg], max_slice_nums=1)
+                if not context.prefilling:
+                    context.prefilling = True
+
+        if video is not None:
+            context.put_video_frame(video)
 
         speech_end = inputs.data.get_meta("human_speech_end", False)
         if not speech_end:
             return
 
         # prefill remainder audio in slice context
+        end_segment_start_id = context.audio_prefill_slice_context.get_next_slice_start_index()
         remainder_audio = context.audio_prefill_slice_context.flush()
         if remainder_audio is not None:
-            if remainder_audio.shape[0] < context.audio_prefill_slice_context.slice_size:
+            segment_size = remainder_audio.shape[0]
+            if segment_size < context.audio_prefill_slice_context.slice_size:
                 remainder_audio = np.concatenate(
                     [remainder_audio,
                      np.zeros(shape=(context.audio_prefill_slice_context.slice_size - remainder_audio.shape[0]))])
-            self._do_prefill(context, [self._create_message(remainder_audio)], max_slice_nums=1)
+            end_segment_end_id = end_segment_start_id + segment_size
+            video_frames = context.fetch_video_frames(end_segment_start_id, end_segment_end_id)
+            logger.info(f"Got {len(video_frames)} video frames with time {[x.timestamp[0] for x in video_frames]}")
+            self._do_prefill(context, [self._create_message(remainder_audio, video_frames)], max_slice_nums=1)
+
+        context.prefilling = False
 
         logger.info(f"Start s2s inference for speech {speech_id}")
         t_start = time.monotonic()
         is_first_result = True
         result_audio = []
         result_text = ""
+        if not context.generating:
+            context.generating = True
         with torch.no_grad():
             self.model.config.stream_input = True
             logger.info(f"Generating start with session={str(context.local_session_id)}")
             for result in self.model.streaming_generate(
-                session_id = str(context.local_session_id),
-                tokenizer = self.tokenizer,
-                generate_audio = True,
+                session_id=str(context.local_session_id),
+                tokenizer=self.tokenizer,
+                generate_audio=True,
             ):
                 if is_first_result:
                     is_first_result = False
@@ -241,12 +349,15 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
                 output.add_meta("avatar_speech_text", text)
                 output.add_meta("speech_id", speech_id)
                 logger.info(f"Generated audio of size {out_audio.shape[-1]}, sample_rate={sr}")
-                yield output
+                context.submit_data(output)
+                # yield output
         end_output = DataBundle(output_definition)
         end_output.set_main_data(np.zeros(shape=(1, 50), dtype=np.float32))
         end_output.add_meta("avatar_speech_end", True)
         end_output.add_meta("speech_id", speech_id)
-        yield end_output
+        context.generating = False
+        context.submit_data(end_output)
+        # yield end_output
 
     def destroy_context(self, context: HandlerContext):
         pass

@@ -1,7 +1,7 @@
 
 
 from abc import ABC, abstractmethod
-from src.avatar.model.algo_model import AudioResult, AvatarInitOption, AvatarStatus, VideoResult
+from handlers.avatar.liteavatar.model.algo_model import AudioResult, AvatarInitOption, AvatarStatus, VideoResult
 
 
 class AvatarOutputHandler(ABC):

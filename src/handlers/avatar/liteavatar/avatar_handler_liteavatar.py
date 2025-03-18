@@ -3,18 +3,18 @@ import asyncio
 from typing import cast, Optional, Dict
 from enum import Enum
 import threading
-import torch.multiprocessing as mp
 import time
 
 import numpy as np
 from loguru import logger
 from pydantic import BaseModel, Field
+import torch.multiprocessing as mp
 
-from avatar.avatar_output_handler import AvatarOutputHandler
-from avatar.avatar_processor import AvatarProcessor
-from avatar.avatar_processor_factory import AvatarProcessorFactory, AvatarAlgoType
-from avatar.model.algo_model import AvatarInitOption, AudioResult, VideoResult, AvatarStatus
-from avatar.model.audio_input import SpeechAudio
+from handlers.avatar.liteavatar.avatar_output_handler import AvatarOutputHandler
+from handlers.avatar.liteavatar.avatar_processor import AvatarProcessor
+from handlers.avatar.liteavatar.avatar_processor_factory import AvatarProcessorFactory, AvatarAlgoType
+from handlers.avatar.liteavatar.model.algo_model import AvatarInitOption, AudioResult, VideoResult, AvatarStatus
+from handlers.avatar.liteavatar.model.audio_input import SpeechAudio
 from chat_engine.common.engine_channel_type import EngineChannelType
 from chat_engine.common.handler_base import HandlerBase, HandlerDetail, HandlerBaseInfo, HandlerDataInfo
 from chat_engine.common.chat_data_type import ChatDataType
@@ -248,12 +248,14 @@ class HandlerTts2Face(HandlerBase, ABC):
         self.input_loop_thread = None
         self.event_loop_thread = None
         self.session_running = False
-        
-        self.event_in_queue = mp.Queue()
-        self.event_out_queue = mp.Queue()
-        self.audio_in_queue = mp.Queue()
-        self.audio_out_queue = mp.Queue()
-        self.video_out_queue = mp.Queue()
+        self.managerInstance = mp.Manager()
+
+        self.event_in_queue =self.managerInstance.Queue()
+        self.event_out_queue = self.managerInstance.Queue()
+        self.audio_in_queue = self.managerInstance.Queue()
+        self.audio_out_queue = self.managerInstance.Queue()
+        self.video_out_queue = self.managerInstance.Queue()
+   
         self.shared_state: SharedStates = None
         
         self.rtc_audio_queue: asyncio.Queue = None
@@ -301,6 +303,9 @@ class HandlerTts2Face(HandlerBase, ABC):
                                       self.rtc_audio_queue,
                                       self.rtc_video_queue,
                                       self.shared_state)
+    
+    def start_context(self, session_context, handler_context):
+        pass
 
     def get_handler_detail(self, session_context: SessionContext,
                            context: HandlerContext) -> HandlerDetail:
@@ -328,6 +333,8 @@ class HandlerTts2Face(HandlerBase, ABC):
                 audio_array = (audio_array * 32767).astype(np.int16)
         else:
             audio_array = np.zeros([512], dtype=np.int16)
+        #logger.info(f's2v: {audio_array.shape} type {type(audio_array)}')
+        #logger.info(f'sample_rate {audio_entry.sample_rate}' )
         speech_audio = SpeechAudio(
             speech_id=speech_id,
             end_of_speech=speech_end,
@@ -342,7 +349,6 @@ class HandlerTts2Face(HandlerBase, ABC):
 
 
 if __name__ == "__main__":
-    import torch.multiprocessing as mp
     s2v_handler = HandlerTts2Face()
     mp.spawn
     s2v_process = mp.Process(target=s2v_handler.start)

@@ -16,6 +16,8 @@
 * 未量化的多模态语言模型需要20GB以上的显存。
   * 使用int4量化版本的语言模型可以在不到10GB现存的显卡上运行，但可能会因为量化而影响效果。
 * 数字人部分使用CPU进行推理，测试设备CPU为i9-13980HX，可以达到30FPS.
+> 可以使用云端的LLM模型 api 来替代MiniCPM-o，可以大大减低配置需求，具体可参考 [ASR + LLM + TTS方式](#asr--llm--tts-替代本地-minicpm-o)，这两种模式的结构如下图所示
+> <img src="./assets/images/data_flow.svg" />
 
 ## 性能
 我们在测试PC上记录了回答的延迟时间，10次平均时间约为2.2秒，测试PC使用i9-13900KF和Nvidia RTX 4090。延迟从人的语音结束到数字人的语音开始计算，其中会包括RTC双向传输数据时间、VAD判停延迟以及整个流程的计算时间。
@@ -29,6 +31,7 @@
 |LLM|OpenBMB/MiniCPM-o|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)| [🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6) |
 |LLM-int4|||[🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)|
 |Avatar|HumanAIGC/lite-avatar|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC/lite-avatar)||
+|TTS|FunAudioLLM/CosyVoice|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
 
 
 ## 安装
@@ -102,11 +105,39 @@ python src/demo.py --config <配置文件的绝对路径>.yaml
 
 * 语言模型
 
+| 参数                             | 默认值           | 说明                                                                                 |
+|--------------------------------|---------------|------------------------------------------------------------------------------------|
+| S2S_MiniCPM.model_name         | MiniCPM-o-2_6 | 该参数用于选择使用的语言模型，可选"MiniCPM-o-2_6" 或者 "MiniCPM-o-2_6-int4"，需要确保model目录下实际模型的目录名与此一致。 |
+| S2S_MiniCPM.voice_prompt       |               | MiniCPM-o的voice prompt                                                             |
+| S2S_MiniCPM.assistant_prompt   |               | MiniCPM-o的assistant prompt                                                         |
+| S2S_MiniCPM.enable_video_input | False         | 设置是否开启视频输入，**开启视频输入时，显存占用会明显增加，非量化模型再24G显存下可能会oom**                                |
+| S2S_MiniCPM.skip_video_frame   | -1            | 控制开启视频输入时，输入视频帧的频率。-1表示仅每秒输入最后的一帧，0表示输入所有帧，大于0的值表示每一帧后会有这个数量的图像帧被跳过。               |
+
+* ASR funasr模型
+
 |参数|默认值|说明|
 |---|---|---|
-|S2S_MiniCPM.model_name|MiniCPM-o-2_6|该参数用于选择使用的语言模型，可选"MiniCPM-o-2_6" 或者 "MiniCPM-o-2_6-int4"，需要确保model目录下实际模型的目录名与此一致。|
-|S2S_MiniCPM.voice_prompt||MiniCPM-o的voice prompt|
-|S2S_MiniCPM.assistant_prompt||MiniCPM-o的assistant prompt|
+|ASR_Funasr.model_name|iic/SenseVoiceSmall|该参数用于选择funasr 下的[模型](https://github.com/modelscope/FunASR)，会自动下载模型，若需使用本地模型需改为绝对路径|
+
+* LLM纯文本模型
+
+|参数|默认值|说明|
+|---|---|---|
+|LLM_Bailian.model_name|qwen-plus|测试环境使用的百炼api,免费额度可以从[百炼](https://bailian.console.aliyun.com/#/home)获取|
+|LLM_Bailian.system_prompt||默认系统prompt|
+|LLM_Bailian.api_url||模型api_url|
+|LLM_Bailian.api_key||模型api_key|
+
+* TTS CosyVoice模型
+
+|参数|默认值|说明|
+|---|---|---|
+|TTS_CosyVoice.api_url||自己利用其他机器部署cosyvocie server时需填|
+|TTS_CosyVoice.model_name||可参考[CosyVoice](https://github.com/FunAudioLLM/CosyVoice)|
+|TTS_CosyVoice.spk_id|中文女|使用官方sft 比如'中文女'|'中文男'，和ref_audio_path互斥|
+|TTS_CosyVoice.ref_audio_path||参考音频的绝对路径，和spk_id 互斥，记得更换可参考音色的模型|
+|TTS_CosyVoice.ref_audio_text||参考音频的文本内容|
+|TTS_CosyVoice.sample_rate|24000|输出音频采样率|
 
 * 数字人
 
@@ -116,11 +147,59 @@ python src/demo.py --config <配置文件的绝对路径>.yaml
 |Tts2Face.fps|25|数字人的运行帧率，在性能较好的CPU上，可以设置为30FPS|
 |Tts2Face.enable_fast_mode|True|低延迟模式，打开后可以减低回答的延迟，但在性能不足的情况下，可能会在回答的开始产生语音卡顿。|
 
-**注意：所有配置中的路径参数都可以使用绝对路径，或者相对于项目根目录的相对路径。**
-
 ## 
 如果您觉得我们的项目还有点帮助，辛苦帮我们点个⭐，感谢！
 ![](https://api.star-history.com/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)
+
+**注意：所有配置中的路径参数都可以使用绝对路径，或者相对于项目根目录的相对路径。**
+
+#### ASR + LLM + TTS 替代本地 MiniCPM-o
+MiniCPM-o 的本地启动要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人,修改完后仍可以用 `python src/demo.py` 启动即可
+> 如果遇到问题欢迎 [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues)给我们
+* 修改 src/demo.py
+
+```python
+# 打开注释掉的三个处理器
+from handlers.asr.sensevoice.asr_handler_sensevoice import HandlerASR
+
+engine.register_handler(HandlerASR())
+from handlers.llm.openai_compatible.llm_handler_openai_compatible import HandlerLLM
+
+engine.register_handler(HandlerLLM())
+from chat_engine.output_handlers.output_handler_tts import HandlerTTS
+
+engine.register_handler(HandlerTTS())
+
+# 注释MiniCPM处理
+# from chat_engine.think_handlers.handler_s2s import HandlerS2SMiniCPM
+# engine.register_handler(HandlerS2SMiniCPM())
+```
+* 修改 config/sample.yaml 中的 LLM_Bailian配置，代码中的调用方式为 openai 的标准方式，理论上相同的可以兼容
+```yaml
+LLM_Bailian: 
+  moedl_name: "qwen-plus"
+  system_prompt: "你是个AI对话数字人，你要用简短的对话来回答我的问题，并在合理的地方插入标点符号"
+  api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+  api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
+```
+* 代码内部调用方式
+```python
+client = OpenAI(
+      api_key= self.api_key, 
+      base_url=self.api_url,
+  )
+completion = client.chat.completions.create(
+    model=self.model_name,
+    messages=[
+        self.system_prompt,
+        {'role': 'user', 'content': chat_text}
+    ],
+    stream=True
+    )
+```
+* ASR默认为funasr 调用 iic/SenseVoiceSmall
+* LLM默认为百炼api_url + api_key
+* TTS默认为CosyVoice的 `iic/CosyVoice-300M-SFT` + `中文女`，可以通过修改为`其他模型`配合 `ref_audio_path` 和 `ref_audio_text` 进行音色复刻
 
 ## 贡献者
 

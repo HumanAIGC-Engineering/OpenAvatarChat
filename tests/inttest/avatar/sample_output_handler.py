@@ -2,8 +2,8 @@ from fractions import Fraction
 import os
 import av
 from loguru import logger
-from src.avatar.avatar_output_handler import AvatarOutputHandler
-from src.avatar.model.algo_model import AudioResult, AvatarInitOption, VideoResult
+from handlers.avatar.liteavatar.avatar_output_handler import AvatarOutputHandler
+from handlers.avatar.liteavatar.model import AudioResult, AvatarInitOption, VideoResult
 from src.utils.directory_info import DirectoryInfo
 
 

@@ -27,9 +27,11 @@ results
 /sync*.sh
 /build_and_run*.sh
 models/MiniCPM-o-2_6*
+models/iic
 
 resource/audio
 resource/avatar/*
 !resource/avatar/put_avatar_here.txt
 
 dump_talk_audio.pcm
+dump_avatar_audio.pcm

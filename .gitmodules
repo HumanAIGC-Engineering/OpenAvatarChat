@@ -1,12 +1,15 @@
 [submodule "src/avatar/algo/tts2face_cpu"]
-	path = src/avatar/algo/tts2face_cpu
+	path = src/handlers/avatar/liteavatar/algo/liteavatar
 	url = https://github.com/HumanAIGC/lite-avatar.git
 [submodule "src/third_party/silero_vad"]
-	path = src/third_party/silero_vad
+	path = src/handlers/vad/silerovad/silero_vad
 	url = https://github.com/snakers4/silero-vad.git
 [submodule "src/third_party/MiniCPM-o"]
-	path = src/third_party/MiniCPM-o
+	path = src/handlers/llm/minicpm/MiniCPM-o
 	url = https://github.com/OpenBMB/MiniCPM-o.git
 [submodule "src/third_party/gradio_webrtc_videochat"]
 	path = src/third_party/gradio_webrtc_videochat
 	url = https://github.com/HumanAIGC-Engineering/gradio-webrtc.git
+[submodule "src/third_party/CosyVoice"]
+	path = src/handlers/tts/cosyvoice/CosyVoice
+	url = https://github.com/FunAudioLLM/CosyVoice.git

@@ -5,10 +5,10 @@ import sys
 
 from loguru import logger
 
-from src.avatar.algo.base_algo_adapter import BaseAlgoAdapter
-from src.avatar.algo.bg_frame_counter import BgFrameCounter
-from src.avatar.algo.tts2face_cpu.lite_avatar import liteAvatar
-from src.avatar.model.algo_model import AvatarAlgoConfig, AvatarInitOption, AvatarStatus
+from handlers.avatar.liteavatar.algo.base_algo_adapter import BaseAlgoAdapter
+from handlers.avatar.liteavatar.algo.bg_frame_counter import BgFrameCounter
+from handlers.avatar.liteavatar.algo.liteavatar.lite_avatar import liteAvatar
+from handlers.avatar.liteavatar.model.algo_model import AvatarAlgoConfig, AvatarInitOption, AvatarStatus
 from src.utils.directory_info import DirectoryInfo
 from src.utils.time_utils import timeit
 
@@ -75,8 +75,8 @@ class Tts2faceCpuAdapter(BaseAlgoAdapter):
         data_dir = os.path.join(extract_dir, "preload")
         if not os.path.exists(data_dir):
             # extract avatar data to dir
-            data_zip_path = os.path.join(project_dir, "src", "avatar", "algo",
-                                         "tts2face_cpu", "data", f"{avatar_name}.zip")
+            data_zip_path = os.path.join(project_dir, "src", "handlers", "avatar", "liteavatar", "algo",
+                                         "liteavatar", "data", f"{avatar_name}.zip")
             logger.info("extract avatar data to dir {}", extract_dir)
             assert os.path.exists(data_zip_path)
             shutil.unpack_archive(data_zip_path, extract_dir)
@@ -85,7 +85,8 @@ class Tts2faceCpuAdapter(BaseAlgoAdapter):
 
     def change_to_algo_dir(self):
         project_dir = DirectoryInfo.get_project_dir()
-        algo_dir = os.path.join(project_dir, "src", "avatar", "algo", "tts2face_cpu")
+        algo_dir = os.path.join(project_dir, "src", "handlers", "avatar", "liteavatar", "algo", "liteavatar")
+        algo_dir = os.path.abspath(algo_dir)
         sys.path.insert(0, algo_dir)
         os.chdir(algo_dir)
         

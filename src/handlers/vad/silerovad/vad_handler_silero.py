@@ -60,46 +60,68 @@ class HumanAudioVADContext(HandlerContext):
         self.silence_length = 0
         self.slice_context.flush()
 
-    def _update_status_on_pre_start(self, clip: np.ndarray):
+    def _update_status_on_pre_start(self, clip: np.ndarray, _timestamp: Optional[int] = None):
         if self.speech_length >= self.config.start_delay:
+            head_sample_id = None
             self.speaking_status = SpeakingStatus.START
             sample_num_to_fetch = self.config.buffer_look_back + self.config.start_delay
             slice_num_to_fetch = math.ceil(sample_num_to_fetch / self.clip_size)
-            output_audio = np.concatenate(self.audio_history[-slice_num_to_fetch:], axis=0)
+            audio_clips = []
+            for history_entry in self.audio_history[-slice_num_to_fetch:]:
+                history_clip, history_timestamp = history_entry
+                if head_sample_id is None:
+                    head_sample_id = history_timestamp
+                audio_clips.append(history_clip)
+            output_audio = np.concatenate(audio_clips, axis=0)
             output_audio = np.concatenate(
                 [np.zeros(self.config.speech_padding, dtype=clip.dtype), output_audio], axis=0)
             self.speech_id += 1
             logger.info("Start of human speech")
-            return output_audio, {"human_speech_start": True}
+            extra_args =  {
+                "human_speech_start": True,
+                "pre_padding": self.config.speech_padding,
+            }
+            if head_sample_id is not None:
+                extra_args["head_sample_id"] = head_sample_id
+                logger.info(f"VAD pre_start to start got timestamp {head_sample_id}")
+            return output_audio, extra_args
         else:
             if self.silence_length > 0:
                 logger.info("Back to not started status")
                 self.speaking_status = SpeakingStatus.END
             return None, {}
 
-    def _update_status_on_start(self, clip: np.ndarray):
+    def _update_status_on_start(self, clip: np.ndarray, timestamp: Optional[int] = None):
         if self.silence_length >= self.config.end_delay:
             self.speaking_status = SpeakingStatus.END
             output_audio = np.concatenate(
-                [np.zeros(self.config.speech_padding, dtype=clip.dtype), clip], axis=0)
+                [clip, np.zeros(self.config.speech_padding, dtype=clip.dtype)], axis=0)
             logger.info("End of human speech")
-            return output_audio, {"human_speech_end": True}
+            extra_args =  {
+                "human_speech_end": True,
+                "post_padding": self.config.speech_padding,
+            }
+            if timestamp is not None:
+                extra_args["head_sample_id"] = timestamp
+                logger.info(f"VAD start to start got timestamp {timestamp}")
+            return output_audio,  extra_args
         else:
-            return clip, {}
+            return clip, {"head_sample_id": timestamp}
 
-    def _update_status_on_end(self, _clip: np.ndarray):
+    def _update_status_on_end(self, _clip: np.ndarray, _timestamp: Optional[int] = None):
         if self.speech_length > 0:
             logger.info("Pre start of new human speech")
             self.speaking_status = SpeakingStatus.PRE_START
         return None, {}
 
-    def _append_to_history(self, clip: np.ndarray):
-        self.audio_history.append(clip)
+    def _append_to_history(self, clip: np.ndarray, timestamp: Optional[int] = None):
+        self.audio_history.append((clip, timestamp))
         while 0 < self.history_length_limit < len(self.audio_history):
             self.audio_history.pop(0)
 
-    def update_status(self, speech_prob: float, clip: np.ndarray) -> Tuple[Optional[np.ndarray], Dict]:
-        self._append_to_history(clip)
+    def update_status(self, speech_prob: float, clip: np.ndarray,
+                      timestamp: Optional[int]=None) -> Tuple[Optional[np.ndarray], Dict]:
+        self._append_to_history(clip, timestamp)
         if speech_prob > self.config.speaking_threshold:
             self.speech_length += self.clip_size
             self.silence_length = 0
@@ -107,11 +129,11 @@ class HumanAudioVADContext(HandlerContext):
             self.silence_length += self.clip_size
             self.speech_length = 0
         if self.speaking_status == SpeakingStatus.PRE_START:
-            return self._update_status_on_pre_start(clip)
+            return self._update_status_on_pre_start(clip, timestamp)
         elif self.speaking_status == SpeakingStatus.START:
-            return self._update_status_on_start(clip)
+            return self._update_status_on_start(clip, timestamp)
         elif self.speaking_status == SpeakingStatus.END:
-            return self._update_status_on_end(clip)
+            return self._update_status_on_end(clip, timestamp)
 
 
 class HandlerAudioVAD(HandlerBase, ABC):
@@ -129,7 +151,7 @@ class HandlerAudioVAD(HandlerBase, ABC):
         import onnxruntime
         model_name = "silero_vad.onnx"
         model_path = os.path.join(DirectoryInfo.get_src_dir(),
-                                  "third_party", "silero_vad",
+                                  "handlers", "vad", "silerovad", "silero_vad",
                                   "src", "silero_vad", "data",
                                   model_name)
         options = onnxruntime.SessionOptions()
@@ -153,6 +175,9 @@ class HandlerAudioVAD(HandlerBase, ABC):
         context.history_length_limit = math.ceil((context.config.start_delay + context.config.buffer_look_back)
                                                  / context.clip_size)
         return context
+    
+    def start_context(self, session_context, handler_context):
+        pass
 
     def get_handler_detail(self, session_context: SessionContext,
                            context: HandlerContext) -> HandlerDetail:
@@ -201,17 +226,27 @@ class HandlerAudioVAD(HandlerBase, ABC):
         audio = inputs.data.get_main_data()
         if audio is None:
             return
+        audio_entry = inputs.data.get_main_definition_entry()
+        sample_rate = audio_entry.sample_rate
         audio = audio.squeeze()
+
+        timestamp = None
+        if inputs.is_timestamp_valid():
+            timestamp = inputs.timestamp
 
         if audio.dtype != np.float32:
             audio = audio.astype(np.float32) / 32767
 
+        context.slice_context.update_start_id(timestamp[0], force_update=False)
+
         for clip in slice_data(context.slice_context, audio):
+            head_sample_id = context.slice_context.get_last_slice_start_index()
             speech_prob = self._inference(context, clip)
-            audio_clip, flags = context.update_status(speech_prob, clip)
+            audio_clip, extra_args = context.update_status(speech_prob, clip, timestamp=head_sample_id)
             # FIXME this is a hack to disable VAD after human speech end,
             #  but it should be handled by client or downstream handlers
-            human_speech_end = flags.get("human_speech_end", False)
+            human_speech_end = extra_args.get("human_speech_end", False)
+            timestamp = extra_args.get("head_sample_id", head_sample_id)
             speech_id = f"speech-{context.session_id}-{context.speech_id}"
             if human_speech_end:
                 context.shared_states.enable_vad = False
@@ -219,10 +254,16 @@ class HandlerAudioVAD(HandlerBase, ABC):
             if audio_clip is not None:
                 output = DataBundle(output_definition)
                 output.set_main_data(np.expand_dims(audio_clip, axis=0))
-                for flag_name, flag_value in flags.items():
+                for flag_name, flag_value in extra_args.items():
                     output.add_meta(flag_name, flag_value)
                 output.add_meta("speech_id", speech_id)
-                yield output
+                output_chat_data = ChatData(
+                    type=ChatDataType.HUMAN_AUDIO,
+                    data=output
+                )
+                if timestamp >= 0:
+                    output_chat_data.timestamp = timestamp, sample_rate
+                yield output_chat_data
 
     def destroy_context(self, context: HandlerContext):
         pass

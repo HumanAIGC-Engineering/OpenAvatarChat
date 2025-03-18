@@ -1,6 +1,6 @@
 import copy
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Sequence, Any
+from typing import List, Dict, Optional, Sequence, Any, Union
 
 import numpy as np
 
@@ -37,17 +37,33 @@ class DataBundleEntry:
             time_unit=TimeUnitType.FRAME,
         )
 
+    @staticmethod
+    def create_text_entry(name: str):
+        return DataBundleEntry(
+            name=name,
+            shape=[1],
+            time_axis=-1,
+            sample_rate=-1,
+            time_unit=TimeUnitType.NONE,
+        )
+
     def get_time_axis_size(self, shape: Sequence[int]) -> Optional[int]:
         shape_size = len(shape)
-        if self.time_axis < 0 or self.time_axis >= shape_size:
-            raise RuntimeError(f"Invalid time axis {self.time_axis} for shape {self.shape}")
+        if self.time_unit != TimeUnitType.NONE:
+            if self.time_axis < 0 or self.time_axis >= shape_size:
+                raise RuntimeError(f"Invalid time axis {self.time_axis} for shape {self.shape}")
+        else:
+            return 0
         return shape[self.time_axis]
 
     def calculate_shape(self, timed_axis_size: int):
-        if timed_axis_size < 0:
-            raise RuntimeError(f"Invalid time axis size {timed_axis_size}")
-        if self.time_axis < 0 or self.time_axis >= len(self.shape):
-            raise RuntimeError(f"Invalid time axis {self.time_axis} for shape {self.shape}")
+        if self.time_unit != TimeUnitType.NONE:
+            if timed_axis_size < 0:
+                raise RuntimeError(f"Invalid time axis size {timed_axis_size}")
+            if self.time_axis < 0 or self.time_axis >= len(self.shape):
+                raise RuntimeError(f"Invalid time axis {self.time_axis} for shape {self.shape}")
+        else:
+            return self.shape.copy()
         result = self.shape.copy()
         result[self.time_axis] = timed_axis_size
         return result
@@ -206,10 +222,7 @@ class DataBundle:
     def is_base_layer(self) -> bool:
         return True
 
-    def set_data(self, name: str, data: np.ndarray):
-        entry = self._definition.entries.get(name, None)
-        if entry is None:
-            raise RuntimeError(f"Unknown data name {name}")
+    def set_array_data(self, name: str, entry: DataBundleEntry, data: np.ndarray):
         timed_axis_size = entry.get_time_axis_size(data.shape)
         if timed_axis_size is None or timed_axis_size <= 0:
             raise RuntimeError(f"Dimension mismatch: {name}: {data.shape} is not valid")
@@ -219,17 +232,32 @@ class DataBundle:
         data_store = self.get_data_store(name, read_only=False)
         return data_store.set_data(data, DataStoreType.LOCAL_MEMORY)
 
-    def set_main_data(self, data: np.ndarray):
+    def set_text_data(self, name: str, _entry: DataBundleEntry, data: str):
+        data_store = self.get_data_store(name, read_only=False)
+        return data_store.set_data(data, DataStoreType.LOCAL_MEMORY)
+
+    def set_data(self, name: str, data: Union[np.ndarray, str]):
+        entry = self._definition.entries.get(name, None)
+        if entry is None:
+            raise RuntimeError(f"Unknown data name {name}")
+        if isinstance(data, np.ndarray):
+            return self.set_array_data(name, entry, data)
+        elif isinstance(data, str):
+            return self.set_text_data(name, entry, data)
+        else:
+            raise RuntimeError(f"Input data type {type(data)} is not supported.")
+
+    def set_main_data(self, data: Union[np.ndarray, str]):
         main_data_name = self._definition.main_entry_name
         if main_data_name is None:
             raise RuntimeError("No main data entry")
         return self.set_data(main_data_name, data)
 
-    def get_data(self, name: str) -> np.ndarray:
+    def get_data(self, name: str) -> Union[np.ndarray, str]:
         data_store = self.get_data_store(name, read_only=True)
         return data_store.get_data()
 
-    def get_main_data(self) -> Optional[np.ndarray]:
+    def get_main_data(self) -> Optional[Union[np.ndarray, str]]:
         main_entry = self._definition.main_entry_name
         if main_entry is None:
             return None

@@ -4,9 +4,9 @@ import sys
 import time
 
 from loguru import logger
-from src.avatar.avatar_processor_factory import AvatarAlgoType, AvatarProcessorFactory
-from src.avatar.model.algo_model import AvatarInitOption
-from src.avatar.model.audio_input import SpeechAudio
+from handlers.avatar.liteavatar.avatar_processor_factory import AvatarAlgoType, AvatarProcessorFactory
+from handlers.avatar.liteavatar.model import AvatarInitOption
+from handlers.avatar.liteavatar.model import SpeechAudio
 from src.utils.directory_info import DirectoryInfo
 from src.utils.media_utils import AudioUtils
 from tests.inttest.avatar.sample_output_handler import SampleOutputHandler

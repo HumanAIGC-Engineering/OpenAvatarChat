@@ -5,8 +5,8 @@ from typing import List
 import librosa
 from loguru import logger
 import numpy as np
-from src.avatar.model.algo_model import AudioSlice
-from src.avatar.model.audio_input import SpeechAudio
+from handlers.avatar.liteavatar.model.algo_model import AudioSlice
+from handlers.avatar.liteavatar.model.audio_input import SpeechAudio
 
 
 class SpeechAudioProcessor:

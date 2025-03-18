@@ -17,8 +17,8 @@ PyYAML~=6.0.2
 typing_extensions~=4.12.2
 
 # inference engine
-onnxruntime-gpu~=1.20.1
-onnxruntime~=1.20.1
+onnxruntime-gpu~=1.18.1
+onnxruntime~=1.18.1
 torch~=2.5.1
 torchaudio~=2.5.1
 torchvision~=0.20.0
@@ -33,6 +33,22 @@ jieba~=0.42.1
 transformers==4.44.1
 vector_quantize_pytorch~=1.21.7
 vocos~=0.1.0
-
+pillow~=11.1.0
+openai
 # project specified version
 src/third_party/gradio_webrtc_videochat/dist/gradio_webrtc-0.0.30.dev0-py3-none-any.whl
+
+
+# extra version for cosyvocie
+HyperPyYAML==1.2.2
+openai-whisper==20240930
+WeTextProcessing==1.0.3
+conformer==0.3.2
+diffusers==0.29.0
+lightning==2.2.4
+gdown==5.1.0
+matplotlib==3.7.5
+wget==3.2
+pyarrow
+pyworld==0.3.4
+inflect

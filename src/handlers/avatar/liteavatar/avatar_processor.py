@@ -1,6 +1,7 @@
 
 from fractions import Fraction
 from queue import Queue
+import sys
 from threading import Thread
 import threading
 import time
@@ -10,14 +11,14 @@ import av
 import cv2
 from loguru import logger
 import numpy as np
-from src.avatar.algo.audio2signal_speed_limiter import Audio2SignalSpeedLimiter
-from src.avatar.algo.base_algo_adapter import BaseAlgoAdapter
-from src.avatar.media.speech_audio_processor import SpeechAudioProcessor
-from src.avatar.avatar_output_handler import AvatarOutputHandler
-from src.avatar.media.video_audio_aligner import VideoAudioAligner
-from src.avatar.model.algo_model import (
+from handlers.avatar.liteavatar.algo.audio2signal_speed_limiter import Audio2SignalSpeedLimiter
+from handlers.avatar.liteavatar.algo.base_algo_adapter import BaseAlgoAdapter
+from handlers.avatar.liteavatar.media.speech_audio_processor import SpeechAudioProcessor
+from handlers.avatar.liteavatar.avatar_output_handler import AvatarOutputHandler
+from handlers.avatar.liteavatar.media.video_audio_aligner import VideoAudioAligner
+from handlers.avatar.liteavatar.model.algo_model import (
     AvatarInitOption, AudioResult, AudioSlice, AvatarStatus, MouthResult, SignalResult, VideoResult)
-from src.avatar.model.audio_input import SpeechAudio
+from handlers.avatar.liteavatar.model.audio_input import SpeechAudio
 from src.utils.interval_counter import IntervalCounter
 
 
@@ -25,6 +26,11 @@ class AvatarProcessor:
     def __init__(self,
                  algo_adapter: BaseAlgoAdapter,
                  init_option: AvatarInitOption):
+        
+        ## TODO remove debugger logger
+        logger.remove()
+        logger.add(sys.stdout, level='INFO')
+
         logger.info("init avatar processor {}", init_option)
         self._output_handlers: List[AvatarOutputHandler] = []
         self._algo_adapter = algo_adapter
@@ -132,7 +138,7 @@ class AvatarProcessor:
             target_round_time = audio_slice.get_audio_duration() - front_padding_duration - 0.1
             padding_frame_count = int(front_padding_duration * self._init_option.video_frame_rate)
             signal_vals = signal_vals[padding_frame_count:]
-            padding_audio_count = int(front_padding_duration * self._init_option.audio_sample_rate * 2)
+            padding_audio_count = int(front_padding_duration) * self._init_option.audio_sample_rate * 2
             audio_slice.play_audio_data = audio_slice.play_audio_data[padding_audio_count:]
 
             audio_slice.play_audio_data = self._video_audio_aligner.get_speech_level_algined_audio(
