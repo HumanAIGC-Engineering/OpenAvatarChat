@@ -19,6 +19,9 @@ A modular avatar chat implementation runs on single pc.
 * 20GB+ VRam needed to load omni-llm model without quantization. 
   * Less than 10GB VRam is sufficient for int4 quantization, but the response quality may be limited.
 * Avatar part use CPU to inference, reaches 30fps on an i9-13980HX.
+> You can use a cloud-based LLM model API to replace MiniCPM-o, which significantly reduces the configuration requirements. For more details, refer to [ASR + LLM + TTS Method](#asr--llm--tts-as-an-alternative-to-local-minicpm-o).The structure of these two flow is shown in the figure below.
+> <img src="./assets/images/data_flow.svg" />
+
 
 **Note: All path in the config file can be absolute path or path relative to the project root.**
 ## Performance
@@ -34,6 +37,7 @@ It's counted between human voice end and subsequent avatar audio starts, which i
 |LLM|OpenBMB/MiniCPM-o|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)| [🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6) |
 |LLM-int4|||[🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)|
 |Avatar|HumanAIGC/lite-avatar|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC/lite-avatar)||
+|TTS|FunAudioLLM/CosyVoice|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
 
 ## Installation
 **Note1：Submodules referred by this project and the models all need git lfs module to be cloned properly, please install it before clone any code.**
@@ -106,23 +110,117 @@ Current implemented handler provide following configs:
 
 * LLM
 
-|Parameter|Default|Description|
-|---|---|---|
-|S2S_MiniCPM.model_name|MiniCPM-o-2_6|Which model to load, can be "MiniCPM-o-2_6" or "MiniCPM-o-2_6-int4", it should match the folder's name under model directory.|
-|S2S_MiniCPM.voice_prompt||Voice prompt for MiniCPM-o.|
-|S2S_MiniCPM.assistant_prompt||Assistant prompt for MiniCPM-o.|
+|Parameter|Default| Description                                                                                                                                                                                                                                                                                                 |
+|---|---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|S2S_MiniCPM.model_name|MiniCPM-o-2_6| Which model to load, can be "MiniCPM-o-2_6" or "MiniCPM-o-2_6-int4", it should match the folder's name under model directory.                                                                                                                                                                               |
+|S2S_MiniCPM.voice_prompt|| Voice prompt for MiniCPM-o.                                                                                                                                                                                                                                                                                 |
+|S2S_MiniCPM.assistant_prompt|| Assistant prompt for MiniCPM-o.                                                                                                                                                                                                                                                                             |
+| S2S_MiniCPM.enable_video_input | False         | Whether video input is enabled.**when video input is enbaled vram consumption will be increased largely, on 24GB gpu with non-quantized model, oom may occur during inference.**                                                                                                                            |
+| S2S_MiniCPM.skip_video_frame   | -1            | Decide how many frames will be used when video modality is used. -1 means only the latest frame in every 1 second interval will be used. 0 means all frames will be used. n>0 means n frames will be skipped after each accepted frame.|
 
-* Avatar
 
-|Parameter|Default|Description|
-|---|---|---|
-|Tts2Face.avatar_name|sample_data|Avatar data name, currently only the sample data is provided.|
-|Tts2Face.fps|25|Framerate of avatar, on better CPU, it can be set to 30.|
-|Tts2Face.enable_fast_mode|True|Lower the response delay, voice lag may occur if computation power is not enough.|
+*ASR FunASR Model*
+| Parameter              | Default Value          | Description                                                                 |
+|------------------------|------------------------|-----------------------------------------------------------------------------|
+| ASR_Funasr.model_name  | iic/SenseVoiceSmall    | This parameter selects a model from [FunASR](https://github.com/modelscope/FunASR). Models are downloaded automatically. To use a local model, provide an absolute path. |
+
+---
+
+*LLM Plain Text Model*
+
+| Parameter                  | Default Value | Description                                                                 |
+|----------------------------|---------------|-----------------------------------------------------------------------------|
+| LLM_Bailian.model_name     | qwen-plus     | The API for Bailian's testing environment. Free quotas can be obtained from [Bailian](https://bailian.console.aliyun.com/#/home). |
+| LLM_Bailian.system_prompt  |               | Default system prompt                                                       |
+| LLM_Bailian.api_url        |               | API URL for the model                                                      |
+| LLM_Bailian.api_key        |               | API key for the model                                                      |
+
+---
+
+*TTS CosyVoice Model*
+
+| Parameter                      | Default Value | Description                                                                 |
+|--------------------------------|---------------|-----------------------------------------------------------------------------|
+| TTS_CosyVoice.api_url          |               | Required if deploying CosyVoice server on another machine.                 |
+| TTS_CosyVoice.model_name       |               | Refer to [CosyVoice](https://github.com/FunAudioLLM/CosyVoice) for details. |
+| TTS_CosyVoice.spk_id           | '中文女' | Use official SFT voices like '英文女' or '英文男'. Mutually exclusive with `ref_audio_path`. |
+| TTS_CosyVoice.ref_audio_path  |               | Absolute path to the reference audio. Mutually exclusive with `spk_id`.    |
+| TTS_CosyVoice.ref_audio_text  |               | Text content of the reference audio.                                       |
+| TTS_CosyVoice.sample_rate      | 24000         | Output audio sample rate                                                   |
+
+---
+
+*Digital Human*
+
+| Parameter                     | Default Value | Description                                                                 |
+|-------------------------------|---------------|-----------------------------------------------------------------------------|
+| Tts2Face.avatar_name          | sample_data   | Name of the digital human data. Currently, only "sample_data" is available. Stay tuned for more options. |
+| Tts2Face.fps                  | 25            | Frame rate for the digital human. On high-performance CPUs, it can be set to 30 FPS. |
+| Tts2Face.enable_fast_mode     | True          | Low-latency mode. Enabling this reduces response delay but may cause stuttering at the beginning of responses on underpowered systems. |
 
 ##
 If you find this project useful, please ⭐️ star the repository. 
 ![](https://api.star-history.com/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)
+
+
+**Note: All path parameters in the configuration can use either absolute paths or paths relative to the project root directory.**
+
+---
+
+### ASR + LLM + TTS as an Alternative to Local MiniCPM-o
+The local startup requirements for MiniCPM-o are relatively high. If you already have an LLM API key, you can use this method to experience the conversational digital human. After modification, you can still start it using `python src/demo.py`.
+
+> If you encounter any issues, feel free to submit an [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues).
+
+* Modify `src/demo.py`
+
+```python
+# Uncomment the three processors
+from handlers.asr.sensevoice.asr_handler_sensevoice import HandlerASR
+
+engine.register_handler(HandlerASR())
+from handlers.llm.openai_compatible.llm_handler_openai_compatible import HandlerLLM
+
+engine.register_handler(HandlerLLM())
+from chat_engine.output_handlers.output_handler_tts import HandlerTTS
+
+engine.register_handler(HandlerTTS())
+
+# Comment out MiniCPM processing
+# from chat_engine.think_handlers.handler_s2s import HandlerS2SMiniCPM
+# engine.register_handler(HandlerS2SMiniCPM())
+```
+
+* Modify `config/sample.yaml` for LLM_Bailian Configuration
+The internal calling method follows OpenAI's standard format and should theoretically be compatible with similar APIs.
+```yaml
+LLM_Bailian: 
+  model_name: "qwen-plus"
+  system_prompt: "You are an AI digital human. Respond to my questions briefly and insert punctuation where appropriate."
+  api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+  api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
+```
+
+* Internal Code Calling Method
+```python
+client = OpenAI(
+      api_key= self.api_key, 
+      base_url=self.api_url,
+  )
+completion = client.chat.completions.create(
+    model=self.model_name,
+    messages=[
+        self.system_prompt,
+        {'role': 'user', 'content': chat_text}
+    ],
+    stream=True
+)
+```
+
+* Defaults:
+- ASR defaults to FunASR using `iic/SenseVoiceSmall`.
+- LLM defaults to Bailian API URL + API key.
+- TTS defaults to CosyVoice's `iic/CosyVoice-300M-SFT` + `Chinese Female`. You can modify it to other models and use `ref_audio_path` and `ref_audio_text` for voice cloning.
 
 ## Contributors
 

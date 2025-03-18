@@ -3,7 +3,7 @@ from typing import List
 
 import numpy as np
 
-from src.avatar.model.algo_model import (
+from handlers.avatar.liteavatar.model.algo_model import (
     AvatarInitOption, AudioSlice, AvatarAlgoConfig,
     AvatarStatus, SignalType)
 

@@ -2,6 +2,7 @@ import inspect
 import multiprocessing
 import queue
 import sys
+from asyncio import QueueEmpty
 from typing import Optional, Dict
 from typing import Union
 
@@ -55,7 +56,8 @@ def load_configs(in_args):
     logger.info(f"Load config with env {in_args.env} from {config_path}")
     config = Dynaconf(
         settings_files=[config_path],
-        environments=True
+        environments=True,
+        load_dotenv=True
     )
 
     out_logger_config = LoggerConfigData.model_validate(config.get("logger", {}))
@@ -71,11 +73,20 @@ def config_logger(in_logger_config: LoggerConfigData):
 
 
 def register_handlers(engine: ChatEngine):
-    from chat_engine.output_handlers.output_handler_s2v import HandlerTts2Face
+    from handlers.avatar.liteavatar.avatar_handler_liteavatar import HandlerTts2Face
     engine.register_handler(HandlerTts2Face())
-    from chat_engine.input_handlers.input_handler_vad import HandlerAudioVAD
+    from handlers.vad.silerovad.vad_handler_silero import HandlerAudioVAD
     engine.register_handler(HandlerAudioVAD())
-    from chat_engine.think_handlers.handler_s2s import HandlerS2SMiniCPM
+    # from handlers.asr.sensevoice.asr_handler_sensevoice import HandlerASR
+    # engine.register_handler(HandlerASR())
+    # from handlers.llm.openai_compatible.llm_handler_openai_compatible import HandlerLLM
+    # engine.register_handler(HandlerLLM())
+    # # multi process
+    # from handlers.tts.cosyvoice.tts_handler_cosyvoice import HandlerTTS
+    # engine.register_handler(HandlerTTS())
+
+   
+    from handlers.llm.minicpm.llm_handler_minicpm import HandlerS2SMiniCPM
     engine.register_handler(HandlerS2SMiniCPM())
 
 
@@ -139,6 +150,9 @@ def prepare_rtc_configuration(config: ServiceConfigData):
 
 
 class ChatStreamHandler(AsyncAudioVideoStreamHandler):
+    # FIXME No internal resampler is implemented,
+    #   input sample rate is hardcoded and should not be changed
+    INPUT_AUDIO_SAMPLERATE = 16000
     def __init__(self, expected_layout="mono",
                  output_sample_rate=24000,
                  output_frame_size=480) -> None:
@@ -146,11 +160,14 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
             expected_layout=expected_layout,
             output_sample_rate=output_sample_rate,
             output_frame_size=output_frame_size,
-            input_sample_rate=16000,
+            input_sample_rate=self.INPUT_AUDIO_SAMPLERATE,
         )
+
+        self.start_stream_delay = 0.5
 
         self.audio_input_queue = asyncio.Queue()
         self.audio_output_queue = asyncio.Queue()
+        self.video_input_queue = asyncio.Queue(maxsize=30)
         self.video_output_queue = asyncio.Queue()
 
         self.quit = asyncio.Event()
@@ -158,6 +175,9 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
         self.last_frame_time = 0
         
         self.emit_counter = IntervalCounter("emit counter")
+
+        self.start_time = None
+        self.timestamp_base = self.input_sample_rate
 
     def copy(self):
         return ChatStreamHandler(
@@ -169,6 +189,7 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
     def start_session(self):
         inputs = {
             EngineChannelType.AUDIO: self.audio_input_queue,
+            EngineChannelType.VIDEO: self.video_input_queue,
         }
         outputs = {
             EngineChannelType.AUDIO: self.audio_output_queue,
@@ -177,6 +198,7 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
 
         session_info = SessionInfoData(
             session_id=str(uuid.uuid4()),
+            timestamp_base=self.INPUT_AUDIO_SAMPLERATE,
         )
 
         self.session = chat_engine.create_session(session_info=session_info,
@@ -190,13 +212,27 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
         return video_frame
 
     async def video_receive(self, frame):
-        # TODO implement video input
-        pass
+        if self.session is None:
+            return
+        timestamp = self.session.get_timestamp()
+        if timestamp[0] / timestamp[1] < self.start_stream_delay:
+            return
+        if self.video_input_queue.full():
+            try:
+                self.video_input_queue.get_nowait()
+            except QueueEmpty:
+                pass
+        self.video_input_queue.put_nowait((30, frame, timestamp))
 
     async def receive(self, frame: tuple[int, np.ndarray]):
+        if self.session is None:
+            return
+        timestamp = self.session.get_timestamp()
+        if timestamp[0] / timestamp[1] < self.start_stream_delay:
+            return
         sr, array = frame
         if self.session:
-            self.audio_input_queue.put_nowait((sr, array))
+            self.audio_input_queue.put_nowait((sr, array, timestamp))
 
     async def emit(self) -> AudioEmitType:
         try:
@@ -224,13 +260,13 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
         self.quit.clear()
         
     @staticmethod
-    async def _get_data_from_queue(queue: Union[asyncio.Queue, queue.Queue, multiprocessing.Queue]):
-        if inspect.iscoroutinefunction(queue.get):
-            return await queue.get()
+    async def _get_data_from_queue(queue_to_get: Union[asyncio.Queue, queue.Queue, multiprocessing.Queue]):
+        if inspect.iscoroutinefunction(queue_to_get.get):
+            return await queue_to_get.get()
         else:
             while True:
                 try:
-                    data = queue.get_nowait()
+                    data = queue_to_get.get_nowait()
                     return data
                 except Exception:
                     await asyncio.sleep(0.1)
@@ -270,10 +306,15 @@ def setup_demo(_config: ServiceConfigData, in_rtc_configuration: Optional[Dict] 
 if __name__ == "__main__":
     args = parse_args()
     logger_config, service_config, engine_config = load_configs(args)
+    
+    # 设置modelscope的默认下载地址
+    if not os.path.isabs(engine_config.model_root):
+        os.environ['MODELSCOPE_CACHE'] = os.path.join(DirectoryInfo.get_project_dir(), engine_config.model_root.replace('models', ''))
 
     config_logger(logger_config)
     register_handlers(chat_engine)
     chat_engine.initialize(engine_config)
+
     ssl_context = create_ssl_context(args, service_config)
     rtc_configuration, rtc_entities = prepare_rtc_configuration(service_config)
     demo = setup_demo(service_config, rtc_configuration)

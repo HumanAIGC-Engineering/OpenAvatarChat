@@ -13,4 +13,4 @@ class ChatData:
     data: Optional[DataBundle] = None
 
     def is_timestamp_valid(self) -> bool:
-        return self.timestamp[0] > 0 and self.timestamp[1] > 0
+        return self.timestamp[0] >= 0 and self.timestamp[1] > 0

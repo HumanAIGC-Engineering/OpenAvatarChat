@@ -2,7 +2,7 @@
 import math
 import time
 from typing import List
-from src.avatar.model.algo_model import AvatarStatus, SignalResult
+from handlers.avatar.liteavatar.model.algo_model import AvatarStatus, SignalResult
 
 
 class Audio2SignalSpeedLimiter:

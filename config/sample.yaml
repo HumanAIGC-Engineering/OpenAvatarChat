@@ -13,18 +13,37 @@ default:
         speaking_threshold: 0.5
         start_delay: 2048
         end_delay: 5000
-        buffer_look_back: 1024
+        buffer_look_back: 5000
         speech_padding: 512
       S2S_MiniCPM:
         model_name: "MiniCPM-o-2_6"
         # model_name: "MiniCPM-o-2_6-int4"
         voice_prompt: "你是一个AI助手。你能接受视频，音频和文本输入并输出语音和文本。模仿输入音频中的声音特征。"
         assistant_prompt: "作为助手，你将使用这种声音风格说话。"
+        enable_video_input: True
+        skip_video_frame: 2
       Tts2Face:
         avatar_name: sample_data
         fps: 25
         debug: false
         enable_fast_mode: True
+      ASR_Funasr:
+        model_name: "iic/SenseVoiceSmall"
+      TTS_CosyVoice:
+        # api_url: 'http://127.0.0.1:50000/inference_sft' #run CosyVoice/runtime/python/fastapi/server.py
+        model_name: "iic/CosyVoice-300M-SFT" # run cosyvoice in code 
+        spk_id: "中文女" # use sft model
+        # ref_audio_path: "open-video-chat/src/third_party/CosyVoice/asset/zero_shot_prompt.wav" #use zero_shot model
+        # ref_audio_text: "希望你以后能够做的比我还好呦。"
+        sample_rate: 24000
+        process_num: 2
+      LLM_Bailian: 
+        model_name: "qwen-plus"
+        # model_name: "gemini-2.0-flash"
+        system_prompt: "你是个AI对话数字人，你要用简短的对话来回答我的问题，并在合理的地方插入标点符号"
+        api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+        # api_url: 'https://generativelanguage.googleapis.com/v1beta/openai/'
+        # api_key: '' # default=os.getenv("DASHSCOPE_API_KEY")
     outputs:
       video:
         handler: "Tts2Face"

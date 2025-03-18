@@ -11,7 +11,7 @@ from loguru import logger
 from chat_engine.common.chat_data_type import ChatDataType
 from chat_engine.common.engine_channel_type import EngineChannelType
 from chat_engine.common.handler_base import HandlerBase, HandlerBaseInfo, HandlerDataInfo
-from chat_engine.contexts.handler_context import HandlerContext
+from chat_engine.contexts.handler_context import HandlerContext, HandlerResultType
 from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_engine_config_data import HandlerBaseConfigModel, ChatEngineConfigModel
@@ -108,9 +108,13 @@ class ChatSession:
                            _target_type: ChatDataType):
         frame_rate, image = video_data
         image = image.squeeze()
-        definition = session_context.get_input_video_definition(list(image.shape), frame_rate)
+        definition = session_context.get_input_video_definition(
+            list(image.shape), frame_rate,
+            allow_shape_change=True
+        )
         data_bundle = DataBundle(definition)
-        data_bundle.set_main_data(image[np.newaxis, ...])
+        input_image = image[np.newaxis, ...]
+        data_bundle.set_main_data(input_image)
         return data_bundle
 
     @classmethod
@@ -119,6 +123,10 @@ class ChatSession:
             type=target_type,
         )
         data_bundle = None
+        timestamp = None
+        if len(input_data) > 2:
+            timestamp = input_data[2]
+            input_data = input_data[:2]
         if target_type.channel_type == EngineChannelType.AUDIO:
             data_bundle = cls.packet_audio_data(session_context, input_data, target_type)
         elif target_type.channel_type == EngineChannelType.VIDEO:
@@ -127,6 +135,8 @@ class ChatSession:
             logger.warning(f"Unsupported target type {target_type}")
             return None
         chat_data.data = data_bundle
+        if timestamp is not None:
+            chat_data.timestamp = timestamp
         return chat_data
 
     @classmethod
@@ -136,7 +146,7 @@ class ChatSession:
         shared_states = session_context.shared_states
         while shared_states.active:
             input_data_list = []
-            now = time.monotonic() * 1e6
+            timestamp = session_context.get_timestamp()
 
             for input_source in inputs:
                 input_queue = input_source.source_queue
@@ -153,9 +163,54 @@ class ChatSession:
                     chat_data = cls.packet_input_data(session_context, input_data, target_type)
                     if chat_data is None:
                         continue
-                    chat_data.timestamp = (int(now), int(1e6))
+                    if not chat_data.is_timestamp_valid():
+                        chat_data.timestamp = timestamp
                     chat_data.source = input_source.owner
                     cls.distribute_data(chat_data, sinks, outputs)
+
+    @classmethod
+    def _packet_chat_data(cls, handler_name: str, output_info, session_context: SessionContext,
+                          data: HandlerResultType):
+        if data is None:
+            return None
+        timestamp = session_context.get_timestamp()
+        single_output = None
+        if len(output_info) == 1:
+            single_output = list(output_info.keys())[0]
+
+        if isinstance(data, ChatData):
+            chat_data = data
+        elif isinstance(data, DataBundle):
+            if single_output is None:
+                msg = f"Bare DataBundle is supported only if handler outputs single chat data type."
+                raise ValueError(msg)
+            chat_data = ChatData(
+                data=data,
+                type=single_output,
+                timestamp=timestamp,
+            )
+        elif isinstance(data, Tuple) and len(data) == 2:
+            chat_data_type, raw_data = data
+            if not isinstance(chat_data_type, ChatDataType) or not isinstance(raw_data, np.ndarray):
+                msg = f"Unsupported handler output type {type(data)}"
+                raise ValueError(msg)
+            if chat_data_type not in output_info:
+                msg = f"Handler output type {chat_data_type} is not configured in outputs declaration."
+                raise ValueError(msg)
+            data_bundle = DataBundle(definition=output_info[chat_data_type].definition)
+            data_bundle.set_main_data(raw_data)
+            chat_data = ChatData(
+                data=data_bundle,
+                type=chat_data_type,
+                timestamp=timestamp,
+            )
+        else:
+            msg = f"Unsupported handler output type {type(data)}"
+            raise ValueError(msg)
+        if not chat_data.is_timestamp_valid():
+            chat_data.timestamp = timestamp
+        chat_data.source = handler_name
+        return chat_data
 
     @classmethod
     def distribute_data(cls, data: ChatData, sinks: Dict[ChatDataType, List[DataSink]],
@@ -171,6 +226,13 @@ class ChatSession:
             sink.sink_queue.put_nowait(data)
 
     @classmethod
+    def submit_data(cls, data: HandlerResultType, handler_name: str, output_info, session_context: SessionContext,
+                    sinks: Dict[ChatDataType, List[DataSink]], outputs: Dict[Tuple[str, ChatDataType], DataSink]):
+        chat_data = cls._packet_chat_data(handler_name, output_info, session_context, data)
+        if chat_data is not None:
+            cls.distribute_data(chat_data, sinks, outputs)
+
+    @classmethod
     def handler_pumper(cls, session_context: SessionContext, handler_env: HandlerEnv,
                        sinks: Dict[ChatDataType, List[DataSink]],
                        outputs: Dict[Tuple[str, ChatDataType], DataSink]):
@@ -180,9 +242,6 @@ class ChatSession:
         output_info = handler_env.output_info
         if output_info is None:
             output_info = {}
-        single_output = None
-        if len(output_info) == 1:
-            single_output = list(output_info.keys())[0]
         while shared_states.active:
             try:
                 input_data = input_queue.get_nowait()
@@ -193,44 +252,16 @@ class ChatSession:
             if not isinstance(handler_result, Iterable):
                 handler_result = [handler_result]
             for handler_output in handler_result:
-                now = time.monotonic() * 1e6
-                timestamp = (int(now), int(1e6))
-                if isinstance(handler_output, ChatData):
-                    chat_data = handler_output
-                elif isinstance(handler_output, DataBundle):
-                    if single_output is None:
-                        logger.error(f"Bare DataBundle is supported only if handler outputs single chat data type.")
-                        break
-                    chat_data = ChatData(
-                        data=handler_output,
-                        type=single_output,
-                        timestamp=timestamp,
-                    )
-                elif isinstance(handler_output, Tuple) and len(handler_output) == 2:
-                    chat_data_type, raw_data = handler_output
-                    if not isinstance(chat_data_type, ChatDataType) or not isinstance(raw_data, np.ndarray):
-                        logger.error(f"Unsupported handler output type {type(handler_output)}")
-                        break
-                    if chat_data_type not in output_info:
-                        logger.error(f"Handler output type {chat_data_type} is not configured in outputs declaration.")
-                        break
-                    data_bundle = DataBundle(definition=output_info[chat_data_type].definition)
-                    data_bundle.set_main_data(raw_data)
-                    chat_data = ChatData(
-                        data=data_bundle,
-                        type=chat_data_type,
-                        timestamp=timestamp,
-                    )
-                elif handler_output is None:
+                if handler_result is None:
                     continue
-                else:
-                    logger.error(f"Unsupported handler output type {type(handler_output)}")
-                    break
+                chat_data = cls._packet_chat_data(
+                    handler_env.handler_info.name,
+                    output_info,
+                    session_context,
+                    handler_output
+                )
                 if chat_data is None:
                     continue
-                if not chat_data.is_timestamp_valid():
-                    chat_data.timestamp = timestamp
-                chat_data.source = handler_env.handler_info.name
                 cls.distribute_data(chat_data, sinks, outputs)
 
     def prepare_handler(self, handler: HandlerBase, handler_info: HandlerBaseInfo,
@@ -254,11 +285,17 @@ class ChatSession:
         for handler_name, handler_record in self.handlers.items():
             start_args = (self.session_context, handler_record.env,
                           self.data_sinks, self.outputs)
+            handler_record.env.context.data_submitter = lambda data: self.submit_data(
+                data, handler_name, handler_record.env.output_info, self.session_context,
+                self.data_sinks, self.outputs
+            )
+            handler_record.env.handler.start_context(self.session_context, handler_record.env.context)
             handler_record.pump_thread = threading.Thread(target=self.handler_pumper, args=start_args)
             handler_record.pump_thread.start()
         input_pumper_args = (self.session_context, self.inputs, self.data_sinks, self.outputs)
         self.input_pump_thread = threading.Thread(target=self.inputs_pumper, args=input_pumper_args)
         self.input_pump_thread.start()
+        self.session_context.set_input_start()
 
     def stop(self):
         self.session_context.shared_states.active = False
@@ -273,3 +310,6 @@ class ChatSession:
         self.handlers.clear()
         self.session_context.cleanup()
         logger.info("chat session stopped")
+
+    def get_timestamp(self):
+        return self.session_context.get_timestamp()

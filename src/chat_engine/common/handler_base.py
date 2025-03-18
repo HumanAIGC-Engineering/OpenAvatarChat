@@ -1,13 +1,16 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, Dict
+from typing import Optional, Dict, Union, Tuple
+
+import numpy as np
+from loguru import logger
 
 from chat_engine.common.chat_data_type import ChatDataType
 from chat_engine.contexts.handler_context import HandlerContext
 from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_engine_config_data import ChatEngineConfigModel, HandlerBaseConfigModel
-from chat_engine.data_models.runtime_data.data_bundle import DataBundleDefinition
+from chat_engine.data_models.runtime_data.data_bundle import DataBundleDefinition, DataBundle
 
 
 @dataclass
@@ -28,6 +31,7 @@ class HandlerDetail:
     outputs: Dict[ChatDataType, HandlerDataInfo] = field(default_factory=dict)
 
 
+
 class HandlerBase(ABC):
     def __init__(self):
         pass
@@ -43,6 +47,10 @@ class HandlerBase(ABC):
     @abstractmethod
     def create_context(self, session_context: SessionContext,
                        handler_config: Optional[HandlerBaseConfigModel] = None) -> HandlerContext:
+        pass
+
+    @abstractmethod
+    def start_context(self, session_context: SessionContext, handler_context: HandlerContext):
         pass
 
     @abstractmethod

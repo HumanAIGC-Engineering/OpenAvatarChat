@@ -1,6 +1,6 @@
 
-from src.avatar.model.algo_model import AvatarInitOption
-from src.avatar.avatar_processor import AvatarProcessor
+from handlers.avatar.liteavatar.model.algo_model import AvatarInitOption
+from handlers.avatar.liteavatar.avatar_processor import AvatarProcessor
 
 
 class AvatarAlgoType:
@@ -18,6 +18,6 @@ class AvatarProcessorFactory:
             from tests.inttest.avatar.sample_adapter import SampleAdapter
             algo_adapter = SampleAdapter()
         if algo_type == AvatarAlgoType.TTS2FACE_CPU:
-            from src.avatar.algo.tts2face_cpu_adapter import Tts2faceCpuAdapter
+            from handlers.avatar.liteavatar.algo.tts2face_cpu_adapter import Tts2faceCpuAdapter
             algo_adapter = Tts2faceCpuAdapter()
         return AvatarProcessor(algo_adapter, init_option)

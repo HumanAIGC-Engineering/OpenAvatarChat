@@ -1,5 +1,5 @@
 import unittest
-from src.avatar.algo.bg_frame_counter import BgFrameCounter
+from handlers.avatar.liteavatar.algo.bg_frame_counter import BgFrameCounter
 
 
 class TestBgFrameCounter(unittest.TestCase):

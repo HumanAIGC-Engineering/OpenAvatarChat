@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
-from src.avatar.media.speech_audio_processor import SpeechAudioProcessor
-from src.avatar.model.audio_input import SpeechAudio
+from handlers.avatar.liteavatar.media.speech_audio_processor import SpeechAudioProcessor
+from handlers.avatar.liteavatar.model import SpeechAudio
 
 
 class TestSpeechAudioProcessor(unittest.TestCase):
