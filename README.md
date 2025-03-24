@@ -10,6 +10,14 @@
 <a href="https://github.com/HumanAIGC-Engineering/OpenAvatarChat" target="_blank"><img alt="Static Badge" style="display: block; padding-right: 5px; height: 20px;" src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"></a>
 </div>
 
+我们部署了一个服务，音频部分采用SenseVoice + qwen-plus + CosyVoice实现，欢迎体验（目前只支持一路，无VL）
+<a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
+    <img alt="Static Badge" style="height: 14px; margin-right: 5px;" src="./assets/images/modelscope_logo.png">
+ </a>
+<br>
+以下为demo演示：
+<video controls src="https://github.com/user-attachments/assets/89753aea-370f-4f10-9d05-f4b104f87dd8">
+</video>
 ## 系统需求
 * Python版本 3.10+
 * 支持CUDA的GPU
