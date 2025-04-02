@@ -12,6 +12,14 @@ A modular avatar chat implementation runs on single pc.
 
 <a href="https://github.com/HumanAIGC-Engineering/OpenAvatarChat" target="_blank"><img alt="Static Badge" style="display: block; padding-right: 5px; height: 20px;" src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"></a>
 </div>
+Demo service using SenseVoice + qwen-plus + CosyVoice, one concurrent session, without VL.
+<a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
+    <img alt="Static Badge" style="height: 14px; margin-left: 5px; " src="./assets/images/modelscope_logo.png">
+</a>
+
+The following is a demo video:
+<br>
+<video src="https://github.com/user-attachments/assets/89753aea-370f-4f10-9d05-f4b104f87dd8" controls="controls"></video>
 
 ## Requirements
 * Need Python 3.10+
