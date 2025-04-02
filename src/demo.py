@@ -24,7 +24,7 @@ import uuid
 import numpy as np
 import gradio as gr
 from dynaconf import Dynaconf
-from fastrtc.webrtc import AsyncAudioVideoStreamHandler, AudioEmitType, WebRTC
+from fastrtc import AsyncAudioVideoStreamHandler, AudioEmitType, WebRTC
 from loguru import logger
 
 from chat_engine.chat_engine import ChatEngine
