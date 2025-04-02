@@ -154,7 +154,7 @@ class DataBundleDefinition:
 class DataBundle:
     def __init__(self, definition: DataBundleDefinition):
         self._definition: DataBundleDefinition = definition.lockdown()
-        self.events: dict[str, Any] = {}
+        self.metadata: dict[str, Any] = {}
         self._data_entries: List[DataBundleEntry] = []
         self.data: List[DataStore] = []
         for entry_name, entry in self._definition.entries.items():
@@ -164,7 +164,7 @@ class DataBundle:
     def __str__(self):
         data_infos = ""
         not_set_entries = ""
-        event_str = ""
+        meta_str = ""
         for entry, data_store in zip(self._data_entries, self.data):
             if data_store.valid:
                 if len(data_infos) > 0:
@@ -172,23 +172,25 @@ class DataBundle:
                 if isinstance(data_store.data, np.ndarray):
                     data_infos += (f"{entry.name}: length={entry.get_time_axis_size(data_store.data.shape)} "
                                    f"{entry.time_unit.name}")
+                elif isinstance(data_store.data, str):
+                    data_infos += f"{entry.name}: {data_store.data}"
                 else:
-                    data_infos += f"{entry.name}: <No Detail>"
+                    data_infos += f"{entry.name}: type=[{type(data_store.data)}] <No Detail>"
             else:
                 if len(not_set_entries) > 0:
                     not_set_entries += ", "
                 not_set_entries += f"{entry.name}"
                 continue
-        for event_name, event_value in self.events.items():
-            if len(event_str) > 0:
-                event_str += ", "
-            event_str += f"{event_name}: {event_value}"
+        for meta_name, meta_value in self.metadata.items():
+            if len(meta_str) > 0:
+                meta_str += ", "
+            meta_str += f"{meta_name}: {meta_value}"
 
         result = "DataBundle: "
         if len(data_infos) > 0:
             result += f" ValidData=[{data_infos}];"
-        if len(event_str) > 0:
-            result += f" Events=[{event_str}];"
+        if len(meta_str) > 0:
+            result += f" Meta=[{meta_str}];"
         if len(not_set_entries) > 0:
             result += f" MissingData=[{not_set_entries}];"
         return result
@@ -264,7 +266,7 @@ class DataBundle:
         return self.get_data(main_entry)
 
     def add_meta(self, name, value):
-        self.events[name] = value
+        self.metadata[name] = value
 
     def get_meta(self, name, default=None):
-        return self.events.get(name, default)
+        return self.metadata.get(name, default)

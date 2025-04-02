@@ -1,4 +1,5 @@
 import inspect
+import json
 import multiprocessing
 import queue
 import sys
@@ -40,7 +41,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, help="service host address")
     parser.add_argument("--port", type=int, help="service host port")
-    parser.add_argument("--config", type=str, default="config/sample.yaml", help="config file to use")
+    parser.add_argument("--config", type=str, default="config/chat_with_minicpm.yaml", help="config file to use")
     parser.add_argument("--env", type=str, default="default", help="environment to use in config file")
     return parser.parse_args()
 
@@ -70,24 +71,6 @@ def config_logger(in_logger_config: LoggerConfigData):
     logger.info(f"Set log level to {in_logger_config.log_level}")
     logger.remove()
     logger.add(sys.stdout, level=in_logger_config.log_level)
-
-
-def register_handlers(engine: ChatEngine):
-    from handlers.avatar.liteavatar.avatar_handler_liteavatar import HandlerTts2Face
-    engine.register_handler(HandlerTts2Face())
-    from handlers.vad.silerovad.vad_handler_silero import HandlerAudioVAD
-    engine.register_handler(HandlerAudioVAD())
-    # from handlers.asr.sensevoice.asr_handler_sensevoice import HandlerASR
-    # engine.register_handler(HandlerASR())
-    # from handlers.llm.openai_compatible.llm_handler_openai_compatible import HandlerLLM
-    # engine.register_handler(HandlerLLM())
-    # # multi process
-    # from handlers.tts.cosyvoice.tts_handler_cosyvoice import HandlerTTS
-    # engine.register_handler(HandlerTTS())
-
-   
-    from handlers.llm.minicpm.llm_handler_minicpm import HandlerS2SMiniCPM
-    engine.register_handler(HandlerS2SMiniCPM())
 
 
 def create_ssl_context(in_args, in_service_config: ServiceConfigData):
@@ -164,11 +147,12 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
         )
 
         self.start_stream_delay = 0.5
-
+        self.chat_channel = None
         self.audio_input_queue = asyncio.Queue()
         self.audio_output_queue = asyncio.Queue()
         self.video_input_queue = asyncio.Queue(maxsize=30)
         self.video_output_queue = asyncio.Queue()
+        self.text_input_queue = asyncio.Queue()
 
         self.quit = asyncio.Event()
         self.session = None
@@ -190,6 +174,7 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
         inputs = {
             EngineChannelType.AUDIO: self.audio_input_queue,
             EngineChannelType.VIDEO: self.video_input_queue,
+            EngineChannelType.TEXT: self.text_input_queue
         }
         outputs = {
             EngineChannelType.AUDIO: self.audio_output_queue,
@@ -251,6 +236,23 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
             logger.opt(exception=e).error(f"Error in emit: ")
             array = np.zeros((1, 1), dtype=np.float32)
         return self.output_sample_rate, array
+    
+    def on_chat_datachannel(self, message: Dict, channel):
+        # {"type":"chat",id:"标识属于同一段话", "message":"Hello, world!"}
+        # unique_id = uuid.uuid4().hex
+        if self.session is None:
+            return
+        timestamp = self.session.get_timestamp()
+        if timestamp[0] / timestamp[1] < self.start_stream_delay:
+            return
+        if self.session.session_context.shared_states.enable_vad is True:
+            self.session.session_context.shared_states.enable_vad = False
+            self.text_input_queue.put_nowait((0, message['data'], timestamp))
+        channel.send(json.dumps({'type': 'avatar_end'}))
+            
+        self.chat_channel = channel
+
+        # channel.send(json.dumps({"type": "chat", "unique_id": unique_id, "message": message}))
 
     def shutdown(self):
         self.quit.set()
@@ -290,7 +292,6 @@ def setup_demo(_config: ServiceConfigData, in_rtc_configuration: Optional[Dict] 
                     rtc_configuration=in_rtc_configuration,
                     pulse_color="rgb(35, 157, 225)",
                     icon_button_color="rgb(35, 157, 225)",
-                    show_local_video="picture-in-picture",
                 )
             # noinspection PyTypeChecker
             webrtc.stream(
@@ -306,13 +307,12 @@ def setup_demo(_config: ServiceConfigData, in_rtc_configuration: Optional[Dict] 
 if __name__ == "__main__":
     args = parse_args()
     logger_config, service_config, engine_config = load_configs(args)
-    
+
     # 设置modelscope的默认下载地址
     if not os.path.isabs(engine_config.model_root):
         os.environ['MODELSCOPE_CACHE'] = os.path.join(DirectoryInfo.get_project_dir(), engine_config.model_root.replace('models', ''))
 
     config_logger(logger_config)
-    register_handlers(chat_engine)
     chat_engine.initialize(engine_config)
 
     ssl_context = create_ssl_context(args, service_config)

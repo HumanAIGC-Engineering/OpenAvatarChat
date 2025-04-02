@@ -23,4 +23,4 @@ class HandlerContext(object):
         if self.data_submitter is None:
             logger.error("Session is not started, data submitter not ready.")
             return
-        self.data_submitter(data)
+        self.data_submitter.submit(data)

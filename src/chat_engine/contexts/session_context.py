@@ -53,6 +53,15 @@ class SessionContext(object):
             definition.lockdown()
             self.input_definitions[EngineChannelType.VIDEO] = definition
         return definition
+    
+    def get_input_text_definition(self, entry_name: str = "human_text"):
+        definition = self.input_definitions.get(EngineChannelType.TEXT, None)
+        if definition is None:
+            definition = DataBundleDefinition()
+            definition.add_entry(DataBundleEntry.create_text_entry(entry_name))
+            definition.lockdown()
+            self.input_definitions[EngineChannelType.TEXT] = definition
+        return definition
 
     def cleanup(self):
         for data_queue in self.input_queues.values():

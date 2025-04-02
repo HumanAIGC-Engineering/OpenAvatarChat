@@ -85,7 +85,7 @@ scripts/create_ssl_certs.sh
     ```
 
 #### 配置
-程序默认启动时，会读取 **<project_root>/configs/sample.yaml** 中的配置，用户也可以在启动命令后加上--config参数来选择从其他配置文件启动。
+程序默认启动时，会读取 **<project_root>/configs/chat_with_minicpm.yaml** 中的配置，用户也可以在启动命令后加上--config参数来选择从其他配置文件启动。
 ```bash
 python src/demo.py --config <配置文件的绝对路径>.yaml
 ```
@@ -164,25 +164,11 @@ python src/demo.py --config <配置文件的绝对路径>.yaml
 #### ASR + LLM + TTS 替代本地 MiniCPM-o
 MiniCPM-o 的本地启动要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人,修改完后仍可以用 `python src/demo.py` 启动即可
 > 如果遇到问题欢迎 [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues)给我们
-* 修改 src/demo.py
 
-```python
-# 打开注释掉的三个处理器
-from handlers.asr.sensevoice.asr_handler_sensevoice import HandlerASR
+启动配置修改为 ```python src/demo.py --config config/llm_openai_compatible.yaml```
 
-engine.register_handler(HandlerASR())
-from handlers.llm.openai_compatible.llm_handler_openai_compatible import HandlerLLM
 
-engine.register_handler(HandlerLLM())
-from chat_engine.output_handlers.output_handler_tts import HandlerTTS
-
-engine.register_handler(HandlerTTS())
-
-# 注释MiniCPM处理
-# from chat_engine.think_handlers.handler_s2s import HandlerS2SMiniCPM
-# engine.register_handler(HandlerS2SMiniCPM())
-```
-* 修改 config/sample.yaml 中的 LLM_Bailian配置，代码中的调用方式为 openai 的标准方式，理论上相同的可以兼容
+* 修改 config/llm_openai_compatible.yaml 中的 LLM_Bailian配置，代码中的调用方式为 openai 的标准方式，理论上相同的可以兼容
 ```yaml
 LLM_Bailian: 
   moedl_name: "qwen-plus"

@@ -24,6 +24,7 @@ class AvatarDemo:
         audio_bytes, sample_rate = AudioUtils.read_wav_to_bytes(test_input_file_path)
         
         processor = AvatarProcessorFactory.create_avatar_processor(
+            "",
             AvatarAlgoType.TTS2FACE_CPU,
             AvatarInitOption(audio_sample_rate=sample_rate, video_frame_rate=25))
         processor.register_output_handler(SampleOutputHandler())

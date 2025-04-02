@@ -106,13 +106,11 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
         self.device = 'cuda:0'
         self.model = None
         self.tokenizer = None
-        self.module_path = os.path.join(DirectoryInfo.get_src_dir(), "handlers", "llm", "minicpm", "MiniCPM-o")
         self.ref_audio = None
         self.created_session_num = 0
 
     def get_handler_info(self) -> HandlerBaseInfo:
         return HandlerBaseInfo(
-            name="S2S_MiniCPM",
             config_model=MiniCPMConfig,
         )
 
@@ -171,7 +169,7 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
         )
         self.model.init_tts()
         self.model.to(self.device).eval()
-        ref_audio_path = os.path.join(self.module_path, "assets", "ref_audios", 'default.wav')
+        ref_audio_path = os.path.join(self.handler_root, "MiniCPM-o", "assets", "ref_audios", 'default.wav')
         self.ref_audio, _ = librosa.load(ref_audio_path, sr=16000, mono=True)
 
     def create_context(self, session_context: SessionContext,
@@ -196,7 +194,7 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
         zero_audio_msg = self._create_message(zero_audio)
         self._do_prefill(context, [zero_audio_msg])
         return context
-    
+
     def start_context(self, session_context, handler_context):
         pass
 

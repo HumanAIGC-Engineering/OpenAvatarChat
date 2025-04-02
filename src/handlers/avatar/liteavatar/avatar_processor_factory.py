@@ -11,7 +11,7 @@ class AvatarAlgoType:
 class AvatarProcessorFactory:
 
     @staticmethod
-    def create_avatar_processor(algo_type: AvatarAlgoType,
+    def create_avatar_processor(handler_root: str, algo_type: AvatarAlgoType,
                                 init_option: AvatarInitOption) -> AvatarProcessor:
         algo_adapter = None
         if algo_type == AvatarAlgoType.SAMPLE:
@@ -19,5 +19,5 @@ class AvatarProcessorFactory:
             algo_adapter = SampleAdapter()
         if algo_type == AvatarAlgoType.TTS2FACE_CPU:
             from handlers.avatar.liteavatar.algo.tts2face_cpu_adapter import Tts2faceCpuAdapter
-            algo_adapter = Tts2faceCpuAdapter()
+            algo_adapter = Tts2faceCpuAdapter(handler_root)
         return AvatarProcessor(algo_adapter, init_option)

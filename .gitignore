@@ -9,7 +9,7 @@
 /build
 /dist
 /docs/_build
-
+temp
 # Environments
 .env
 .venv

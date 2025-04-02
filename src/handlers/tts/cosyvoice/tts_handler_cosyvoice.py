@@ -1,5 +1,3 @@
-
-
 from collections import deque
 from dataclasses import dataclass, field
 from torch.multiprocessing import Manager, Queue
@@ -24,6 +22,8 @@ from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBundleDefinition, DataBundleEntry
 from handlers.tts.cosyvoice.cosyvoice_processor import TTSCosyVoiceProcessor
 import modelscope
+
+from utils.directory_info import DirectoryInfo
 
 class TTSConfig(HandlerBaseConfigModel, BaseModel):
     model_name: str = Field(default=None)
@@ -50,6 +50,7 @@ class TTSContext(HandlerContext):
         self.config = None
         self.local_session_id = 0
         self.input_text = ''
+        self.dump_audio = False
         self.audio_dump_file = None
 
         self.task_queue: deque[HandlerTask]
@@ -84,7 +85,6 @@ class HandlerTTS(HandlerBase, ABC):
 
     def get_handler_info(self) -> HandlerBaseInfo:
         return HandlerBaseInfo(
-            name="TTS_CosyVoice",
             config_model=TTSConfig,
         )
 
@@ -114,9 +114,11 @@ class HandlerTTS(HandlerBase, ABC):
 
             self.sample_rate = handler_config.sample_rate      
             for i in range(handler_config.process_num):
-                process = TTSCosyVoiceProcessor(handler_config, self.tts_input_queue, self.tts_output_queue)
+                process = TTSCosyVoiceProcessor(self.handler_root, handler_config,
+                                                self.tts_input_queue, self.tts_output_queue)
                 process.start()
                 self.multi_process.append(process)
+            self.tts_output_queue.get()
 
         def consumer(task_queue_map: dict[str, deque], tts_output_queue: Queue):
             while True:
@@ -154,6 +156,10 @@ class HandlerTTS(HandlerBase, ABC):
         context = TTSContext(session_context.session_info.session_id)
         context.input_text = ''
         context.task_queue = deque()
+        if context.dump_audio:
+            dump_file_path = os.path.join(DirectoryInfo.get_project_dir(), 'temp',
+                                            f"dump_avatar_audio_{context.session_id}_{time.localtime().tm_hour}_{time.localtime().tm_min}.pcm")
+            context.audio_dump_file = open(dump_file_path, "wb")
         return context
     
     def start_context(self, session_context, context: HandlerContext):
@@ -178,6 +184,9 @@ class HandlerTTS(HandlerBase, ABC):
                         output.add_meta("avatar_speech_end", False if not task.speech_end else True)
                         output.add_meta("speech_id", task.speech_id)
                         callback(output)
+                        if context.dump_audio:
+                            dump_audio = audio
+                            context.audio_dump_file.write(dump_audio.tobytes())
                     else:
                         task_inner_queue.popleft()
                 except Exception as e:
@@ -222,7 +231,7 @@ class HandlerTTS(HandlerBase, ABC):
                     logger.info('current sentence' + sentence)
                     task = HandlerTask(speech_id=speech_id)
                     tts_info = {
-                        "text": sentence,
+                        "text": sentence + '。',
                         "key": task.id,
                         "session_id": context.session_id
                     
@@ -242,14 +251,14 @@ class HandlerTTS(HandlerBase, ABC):
                 context.task_queue.append(task)
             context.input_text = ''
             end_task = HandlerTask(speech_id=speech_id, speech_end=True)
-            end_task.result_queue.put(np.zeros(shape=(1, 50), dtype=np.float32))
+            end_task.result_queue.put(np.zeros(shape=(1, self.sample_rate), dtype=np.float32))
             end_task.result_queue.put(None)
             logger.info(f"speech end {end_task}")
             context.task_queue.append(end_task)
 
     def destroy_context(self, context: HandlerContext):
         context = cast(TTSContext, context)
-        logger.info('destory context')
+        logger.info('destroy context')
         del self.task_queue_map[context.session_id]
         context.task_queue.clear()
         context.task_queue.append(None)

@@ -22,12 +22,13 @@ from utils.directory_info import DirectoryInfo
 #     spk_id: str = field(default=None)
 #     ref_audio_text: str = field(default=None)
 #     ref_audio_buffer: np.ndarray = None
-#     sample_rate: int = field(defalut=24000)
+#     sample_rate: int = field(default=24000)
 spawn_context = mp.get_context('spawn')   
 
 class TTSCosyVoiceProcessor(spawn_context.Process):
-    def __init__(self, config: any, input_queue: Queue, output_queue: Queue):
+    def __init__(self, handler_root: str, config: any, input_queue: Queue, output_queue: Queue):
         super().__init__()
+        self.handler_root = handler_root
         self.model = None
         self.model_name = config.model_name
         self.api_url = config.api_url
@@ -52,9 +53,8 @@ class TTSCosyVoiceProcessor(spawn_context.Process):
         logger.info('start tts processor')
         # use local model
         if self.api_key is None and self.model_name is not None:
-            sys.path.append(os.path.join(DirectoryInfo.get_src_dir(), "handlers", "tts", "cosyvoice", "CosyVoice"))
-            sys.path.append(os.path.join(DirectoryInfo.get_src_dir(), "handlers", "tts", "cosyvoice",
-                            'CosyVoice', 'third_party', 'Matcha-TTS'))
+            sys.path.append(os.path.join(self.handler_root, "CosyVoice"))
+            sys.path.append(os.path.join(self.handler_root, 'CosyVoice', 'third_party', 'Matcha-TTS'))
             from handlers.tts.cosyvoice.CosyVoice.cosyvoice.utils.file_utils import load_wav
             from handlers.tts.cosyvoice.CosyVoice.cosyvoice.cli.cosyvoice import CosyVoice, CosyVoice2
             try:
@@ -68,15 +68,24 @@ class TTSCosyVoiceProcessor(spawn_context.Process):
             if self.ref_audio_path:
                 self.ref_audio_buffer = load_wav(self.ref_audio_path, self.sample_rate)
                 self.ref_audio_text = self.ref_audio_text
-            init_text = '中国2025'
+            init_text = '欢迎来到中国2025'
+            response = None
             if self.ref_audio_buffer is not None:
-                self.model.inference_zero_shot(
+                response = self.model.inference_zero_shot(
                     init_text, self.ref_audio_text, self.ref_audio_buffer, True)
             elif self.spk_id:
-                self.model.inference_sft(init_text, self.spk_id, True)
+                response = self.model.inference_sft(init_text, self.spk_id)
             else:
                 logger.error('cosyvoice need a ref_audio or spk_id')
                 return
+            if response is not None:
+                for tts_speech in response:
+                    self.output_queue.put({
+                        'key': '',
+                        'tts_speech': tts_speech,
+                        'session_id': ''
+                    })
+                    logger.debug('tts test')
         elif self.api_key is not None:
             raise TypeError('api_key not support yet')
         logger.info('tts processor started')

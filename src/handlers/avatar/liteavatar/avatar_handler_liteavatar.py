@@ -85,6 +85,7 @@ class AvatarProcessorWrapper:
         self.audio_input_thread = None
 
     def start_avatar(self,
+                     handler_root: str,
                      config: Tts2FaceConfigModel,
                      event_in_queue,
                      event_out_queue,
@@ -105,6 +106,7 @@ class AvatarProcessorWrapper:
         ]
 
         self.processor = AvatarProcessorFactory.create_avatar_processor(
+            handler_root,
             AvatarAlgoType.TTS2FACE_CPU,
             AvatarInitOption(
                 audio_sample_rate=24000,
@@ -266,8 +268,8 @@ class HandlerTts2Face(HandlerBase, ABC):
 
     def get_handler_info(self) -> HandlerBaseInfo:
         return HandlerBaseInfo(
-            name="Tts2Face",
             config_model=Tts2FaceConfigModel,
+            load_priority=-999,
         )
     
     def load(self,
@@ -277,6 +279,7 @@ class HandlerTts2Face(HandlerBase, ABC):
         # start process
         self._avatar_process = mp.Process(target=self.processor_wrapper.start_avatar,
                                           args=[
+                                              self.handler_root,
                                               handler_config,
                                               self.event_in_queue,
                                               self.event_out_queue,

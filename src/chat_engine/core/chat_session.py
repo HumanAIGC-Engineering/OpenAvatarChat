@@ -4,6 +4,7 @@ import threading
 import time
 from dataclasses import dataclass
 from typing import Optional, Dict, List, Tuple, Iterable
+from uuid import uuid4
 
 import numpy as np
 from loguru import logger
@@ -49,10 +50,30 @@ class DataSink:
     data_type: ChatDataType = ChatDataType.NONE
 
 
+class ChatDataSubmitter:
+    def __init__(self, handler_name: str, output_info, session_context, sinks, outputs):
+        self.handler_name = handler_name
+        self.output_info = output_info
+        self.session_context = session_context
+        self.sinks = sinks
+        self.outputs = outputs
+
+    def submit(self, data: HandlerResultType):
+        ChatSession.submit_data(
+            data,
+            self.handler_name,
+            self.output_info,
+            self.session_context,
+            self.sinks,
+            self.outputs
+        )
+
+
 class ChatSession:
     input_type_mapping = {
         EngineChannelType.VIDEO: [ChatDataType.CAMERA_VIDEO],
         EngineChannelType.AUDIO: [ChatDataType.MIC_AUDIO],
+        EngineChannelType.TEXT: [ChatDataType.HUMAN_TEXT]
     }
 
     def __init__(self, session_context: SessionContext, engine_config: ChatEngineConfigModel):
@@ -82,16 +103,21 @@ class ChatSession:
                 logger.warning(f"Channel type of {engine_channel_type} not found in engine outputs, "
                                f"configured output {output_info} will be ignored.")
                 continue
-            output_key = (output_info.handler, output_info.type)
-            if output_key in self.outputs:
-                logger.warning(f"Duplicate output {output_key} to {output_type} found, ignored.")
-                continue
-            output_queue = session_context.output_queues[engine_channel_type]
-            self.outputs[output_key] = DataSink(
-                owner="",
-                sink_queue=output_queue,
-                data_type = output_info.type,
-            )
+            if isinstance(output_info.handler, Iterable):
+                handler_names = output_info.handler
+            else:
+                handler_names = [output_info.handler]
+            for handler_name in handler_names:
+                output_key = (handler_name, output_info.type)
+                if output_key in self.outputs:
+                    logger.warning(f"Duplicate output {output_key} to {output_type} found, ignored.")
+                    continue
+                output_queue = session_context.output_queues[engine_channel_type]
+                self.outputs[output_key] = DataSink(
+                    owner="",
+                    sink_queue=output_queue,
+                    data_type = output_info.type,
+                )
 
     @classmethod
     def packet_audio_data(cls, session_context: SessionContext, audio_data: Tuple[int, np.ndarray],
@@ -116,6 +142,17 @@ class ChatSession:
         input_image = image[np.newaxis, ...]
         data_bundle.set_main_data(input_image)
         return data_bundle
+    
+    @classmethod
+    def packet_text_data(cls, session_context: SessionContext, text_data: Tuple,
+                           _target_type: ChatDataType):
+        _, text = text_data 
+        definition = session_context.get_input_text_definition()
+        data_bundle = DataBundle(definition)
+        data_bundle.set_main_data(text)
+        data_bundle.add_meta('speech_id', str(uuid4()))
+        data_bundle.add_meta('human_text_end', True)
+        return data_bundle
 
     @classmethod
     def packet_input_data(cls, session_context: SessionContext, input_data, target_type: ChatDataType):
@@ -131,6 +168,8 @@ class ChatSession:
             data_bundle = cls.packet_audio_data(session_context, input_data, target_type)
         elif target_type.channel_type == EngineChannelType.VIDEO:
             data_bundle = cls.packet_video_data(session_context, input_data, target_type)
+        elif target_type.channel_type == EngineChannelType.TEXT:
+            data_bundle = cls.packet_text_data(session_context, input_data, target_type)
         if data_bundle is None:
             logger.warning(f"Unsupported target type {target_type}")
             return None
@@ -285,10 +324,14 @@ class ChatSession:
         for handler_name, handler_record in self.handlers.items():
             start_args = (self.session_context, handler_record.env,
                           self.data_sinks, self.outputs)
-            handler_record.env.context.data_submitter = lambda data: self.submit_data(
-                data, handler_name, handler_record.env.output_info, self.session_context,
-                self.data_sinks, self.outputs
+            handler_submitter = ChatDataSubmitter(
+                handler_name,
+                handler_record.env.output_info,
+                self.session_context,
+                self.data_sinks,
+                self.outputs,
             )
+            handler_record.env.context.data_submitter = handler_submitter
             handler_record.env.handler.start_context(self.session_context, handler_record.env.context)
             handler_record.pump_thread = threading.Thread(target=self.handler_pumper, args=start_args)
             handler_record.pump_thread.start()

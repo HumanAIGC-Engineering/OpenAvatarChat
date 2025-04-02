@@ -90,7 +90,7 @@ Demo can be start in a linux container or start in host os.
     ```
 
 #### Configs
-The default parameter will load config from **<project_root>/configs/sample.yaml**. Config can be loaded from other file by add the --config parameter.
+The default parameter will load config from **<project_root>/configs/chat_with_minicpm.yaml**. Config can be loaded from other file by add the --config parameter.
 ```bash
 python src/demo.py --config <absolute-path-to-the-config>.yaml
 ```
@@ -180,26 +180,9 @@ The local startup requirements for MiniCPM-o are relatively high. If you already
 
 > If you encounter any issues, feel free to submit an [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues).
 
-* Modify `src/demo.py`
+start the demo with ```python src/demo.py --config config/llm_openai_compatible.yaml```
 
-```python
-# Uncomment the three processors
-from handlers.asr.sensevoice.asr_handler_sensevoice import HandlerASR
-
-engine.register_handler(HandlerASR())
-from handlers.llm.openai_compatible.llm_handler_openai_compatible import HandlerLLM
-
-engine.register_handler(HandlerLLM())
-from chat_engine.output_handlers.output_handler_tts import HandlerTTS
-
-engine.register_handler(HandlerTTS())
-
-# Comment out MiniCPM processing
-# from chat_engine.think_handlers.handler_s2s import HandlerS2SMiniCPM
-# engine.register_handler(HandlerS2SMiniCPM())
-```
-
-* Modify `config/sample.yaml` for LLM_Bailian Configuration
+* Modify `config/llm_openai_compatible.yaml` for LLM_Bailian Configuration
 The internal calling method follows OpenAI's standard format and should theoretically be compatible with similar APIs.
 ```yaml
 LLM_Bailian: 

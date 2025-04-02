@@ -143,15 +143,13 @@ class HandlerAudioVAD(HandlerBase, ABC):
 
     def get_handler_info(self):
         return HandlerBaseInfo(
-            name="SileroVad",
             config_model=SileroVADConfigModel
         )
 
     def load(self, engine_config: ChatEngineConfigModel, handler_config = None):
         import onnxruntime
         model_name = "silero_vad.onnx"
-        model_path = os.path.join(DirectoryInfo.get_src_dir(),
-                                  "handlers", "vad", "silerovad", "silero_vad",
+        model_path = os.path.join(self.handler_root, "silero_vad",
                                   "src", "silero_vad", "data",
                                   model_name)
         options = onnxruntime.SessionOptions()
@@ -175,7 +173,7 @@ class HandlerAudioVAD(HandlerBase, ABC):
         context.history_length_limit = math.ceil((context.config.start_delay + context.config.buffer_look_back)
                                                  / context.clip_size)
         return context
-    
+
     def start_context(self, session_context, handler_context):
         pass
 

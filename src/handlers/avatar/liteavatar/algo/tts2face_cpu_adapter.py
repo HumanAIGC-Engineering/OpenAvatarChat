@@ -2,6 +2,7 @@
 import os
 import shutil
 import sys
+from typing import Optional
 
 from loguru import logger
 
@@ -17,10 +18,14 @@ class Tts2faceCpuAdapter(BaseAlgoAdapter):
 
     TARGET_FPS = 30
 
-    def __init__(self):
+    def __init__(self, handler_root: Optional[str] = None):
         super().__init__()
         self.tts2face = None
         self._bg_counter = None
+        self.handler_root = handler_root
+        if self.handler_root is None:
+            self.handler_root = os.path.join(DirectoryInfo.get_project_dir(),
+                                             "src", "handlers", "avatar", "liteavatar")
 
     def init(self, init_option: AvatarInitOption):
         self.change_to_algo_dir()
@@ -75,8 +80,7 @@ class Tts2faceCpuAdapter(BaseAlgoAdapter):
         data_dir = os.path.join(extract_dir, "preload")
         if not os.path.exists(data_dir):
             # extract avatar data to dir
-            data_zip_path = os.path.join(project_dir, "src", "handlers", "avatar", "liteavatar", "algo",
-                                         "liteavatar", "data", f"{avatar_name}.zip")
+            data_zip_path = os.path.join(self.handler_root, "algo", "liteavatar", "data", f"{avatar_name}.zip")
             logger.info("extract avatar data to dir {}", extract_dir)
             assert os.path.exists(data_zip_path)
             shutil.unpack_archive(data_zip_path, extract_dir)
@@ -84,9 +88,7 @@ class Tts2faceCpuAdapter(BaseAlgoAdapter):
         return data_dir
 
     def change_to_algo_dir(self):
-        project_dir = DirectoryInfo.get_project_dir()
-        algo_dir = os.path.join(project_dir, "src", "handlers", "avatar", "liteavatar", "algo", "liteavatar")
-        algo_dir = os.path.abspath(algo_dir)
+        algo_dir = os.path.join(self.handler_root, "algo", "liteavatar")
         sys.path.insert(0, algo_dir)
         os.chdir(algo_dir)
         

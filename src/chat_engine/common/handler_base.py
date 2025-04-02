@@ -15,8 +15,10 @@ from chat_engine.data_models.runtime_data.data_bundle import DataBundleDefinitio
 
 @dataclass
 class HandlerBaseInfo:
-    name: str
+    name: Optional[str] = None
     config_model: Optional[type[HandlerBaseConfigModel]] = None
+    # Handler load priority, the smaller, the higher
+    load_priority: int = 0
 
 
 @dataclass
@@ -34,7 +36,7 @@ class HandlerDetail:
 
 class HandlerBase(ABC):
     def __init__(self):
-        pass
+        self.handler_root: Optional[str] = None
 
     @abstractmethod
     def get_handler_info(self) -> HandlerBaseInfo:

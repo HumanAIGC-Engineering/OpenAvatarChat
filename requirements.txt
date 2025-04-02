@@ -36,8 +36,8 @@ vocos~=0.1.0
 pillow~=11.1.0
 openai
 # project specified version
+#src/third_party/gradio_webrtc_videochat/dist/fastrtc-0.0.15.dev0-py3-none-any.whl
 src/third_party/gradio_webrtc_videochat/dist/gradio_webrtc-0.0.30.dev0-py3-none-any.whl
-
 
 # extra version for cosyvocie
 HyperPyYAML==1.2.2
