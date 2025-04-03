@@ -1,7 +1,7 @@
 <h1 style='text-align: center; margin-bottom: 1rem'> Open Avatar Chat </h1>
 
 <div align="center">
-<strong><a href="README.md">English</a>|中文</strong>
+<strong><a href="README.md">English</a> | 中文</strong>
 </div>
 <h3 style='text-align: center'>
 模块化的交互数字人对话实现，能够在单台PC上运行完整功能。
@@ -10,7 +10,7 @@
 <a href="https://github.com/HumanAIGC-Engineering/OpenAvatarChat" target="_blank"><img alt="Static Badge" style="display: block; padding-right: 5px; height: 20px;" src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"></a>
 </div>
 
-## Demo
+## 1. Demo
 
 我们部署了一个服务，音频部分采用SenseVoice + Qwen-VL + CosyVoice实现，
 <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
@@ -24,13 +24,13 @@
 <video controls src="https://github.com/user-attachments/assets/89753aea-370f-4f10-9d05-f4b104f87dd8">
 </video>
 
-## 社区
+## 2. 社区
 
 * 微信群
 
 <img alt="community_wechat.png" height="200" src="assets/images/community_wechat.png" width="200"/>
 
-## 系统需求
+## 3. 系统需求
 * Python版本 3.10+
 * 支持CUDA的GPU
 * 未量化的多模态语言模型需要20GB以上的显存。
@@ -39,10 +39,10 @@
 > 可以使用云端的LLM模型 api 来替代MiniCPM-o，可以大大减低配置需求，具体可参考 [ASR + LLM + TTS方式](#asr--llm--tts-替代本地-minicpm-o)，这两种模式的结构如下图所示
 > <img src="./assets/images/data_flow.svg" />
 
-## 性能
+## 4. 性能
 我们在测试PC上记录了回答的延迟时间，10次平均时间约为2.2秒，测试PC使用i9-13900KF和Nvidia RTX 4090。延迟从人的语音结束到数字人的语音开始计算，其中会包括RTC双向传输数据时间、VAD判停延迟以及整个流程的计算时间。
 
-## 组件依赖
+## 5. 组件依赖
 
 |类型|开源项目|Github地址|模型地址|
 |---|---|---|---|
@@ -54,7 +54,7 @@
 |TTS|FunAudioLLM/CosyVoice|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
 
 
-## 安装
+## 6. 安装
 
 > [!IMPORTANT]
 > 本项目子模块以及依赖模型都需要使用git lfs模块，请确认lfs功能已安装
@@ -211,12 +211,12 @@ completion = client.chat.completions.create(
 * LLM默认为百炼api_url + api_key
 * TTS默认为CosyVoice的 `iic/CosyVoice-300M-SFT` + `中文女`，可以通过修改为`其他模型`配合 `ref_audio_path` 和 `ref_audio_text` 进行音色复刻
 
-## 社区感谢
+## 7. 社区感谢
 
 感谢社区同学titan909在B站上发布的[部署教程视频](https://www.bilibili.com/video/BV1FNZ8YNEA8)
 
 
-## 贡献者
+## 8. 贡献者
 
 [程刚](https://github.com/lovepope)
 [陈涛](https://github.com/raidios)
@@ -226,7 +226,7 @@ completion = client.chat.completions.create(
 [何冠桥](https://github.com/bboygun)
 [卢益](https://github.com/HaveAnApplePie)
 
-## Star历史
+## 9. Star历史
 
 如果您觉得我们的项目还有点帮助，辛苦帮我们点个⭐，感谢！
 ![](https://api.star-history.com/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)

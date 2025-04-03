@@ -3,7 +3,7 @@
 <h1 style='text-align: center; margin-bottom: 1rem'> Open Avatar Chat </h1>
 
 <div align="center">
-<strong>English|<a href=readme_cn.md>中文</a></strong>
+<strong>English | <a href=readme_cn.md>中文</a></strong>
 </div>
 <h3 style='text-align: center'>
 A modular avatar chat implementation runs on single pc.
@@ -12,7 +12,7 @@ A modular avatar chat implementation runs on single pc.
 <a href="https://github.com/HumanAIGC-Engineering/OpenAvatarChat" target="_blank"><img alt="Static Badge" style="display: block; padding-right: 5px; height: 20px;" src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"></a>
 </div>
 
-## Demo
+## 1. Demo
 
 <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
  <img alt="Static Badge" style="height: 14px; margin-left: 5px; " src="./assets/images/modelscope_logo.png">    
@@ -24,13 +24,13 @@ Demo
 <br>
 <video src="https://github.com/user-attachments/assets/89753aea-370f-4f10-9d05-f4b104f87dd8" controls="controls"></video>
 
-## Community
+## 2. Community
 
 * Wechat Group
 
 <img alt="community_wechat.png" height="200" src="assets/images/community_wechat.png" width="200"/>
 
-## Requirements
+## 3. Requirements
 * Need Python 3.10+
 * Cuda capable GPU
 * 20GB+ VRam needed to load omni-llm model without quantization. 
@@ -40,11 +40,11 @@ Demo
 > <img src="./assets/images/data_flow.svg" />
 
 
-## Performance
+## 4. Performance
 Response delay is around 2.2 seconds averaged by 10 measturements on test pc (i9-13900KF and Nvidia RTX 4090).
 It's counted between human voice end and subsequent avatar audio starts, which includes bidirectional rtc delay, vad delay and the pipeline computation time.
 
-## Components Dependency
+## 5. Components Dependency
 
 |Type|Project|Github|Model|
 |---|---|---|---|
@@ -55,7 +55,7 @@ It's counted between human voice end and subsequent avatar audio starts, which i
 |Avatar|HumanAIGC/lite-avatar|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC/lite-avatar)||
 |TTS|FunAudioLLM/CosyVoice|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
 
-## Installation
+## 6. Installation
 
 > [!IMPORTANT]
 > Submodules referred by this project and the models all need git lfs module to be cloned properly, please install it before clone any code.
@@ -227,11 +227,11 @@ completion = client.chat.completions.create(
 - LLM defaults to Bailian API URL + API key.
 - TTS defaults to CosyVoice's `iic/CosyVoice-300M-SFT` + `Chinese Female`. You can modify it to other models and use `ref_audio_path` and `ref_audio_text` for voice cloning.
 
-## Community Thanks
+## 7. Community Thanks
 
 Thanks to community member titan909 for posting the [installation tutorial video](https://www.bilibili.com/video/BV1FNZ8YNEA8) on B station.
 
-## Contributors
+## 8. Contributors
 
 [Gang Cheng](https://github.com/lovepope)
 [Tao Chen](https://github.com/raidios)
@@ -241,6 +241,6 @@ Thanks to community member titan909 for posting the [installation tutorial video
 [Guanqiao He](https://github.com/bboygun)
 [Yi Lu](https://github.com/HaveAnApplePie)
 
-## Star History
+## 9. Star History
 If you find this project useful, please ⭐️ star the repository. 
 ![](https://api.star-history.com/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)
