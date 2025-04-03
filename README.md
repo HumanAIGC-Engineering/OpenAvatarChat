@@ -9,16 +9,18 @@
 A modular avatar chat implementation runs on single pc.
 </h3>
 <div style="display: flex; flex-direction: row; justify-content: center">
-
 <a href="https://github.com/HumanAIGC-Engineering/OpenAvatarChat" target="_blank"><img alt="Static Badge" style="display: block; padding-right: 5px; height: 20px;" src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"></a>
 </div>
-Demo service using SenseVoice + qwen-plus + CosyVoice, one concurrent session, without VL.
+
+## Demo
+
 <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
-    <img alt="Static Badge" style="height: 14px; margin-left: 5px; " src="./assets/images/modelscope_logo.png">
+ <img alt="Static Badge" style="height: 14px; margin-left: 5px; " src="./assets/images/modelscope_logo.png">    
+Demo
 </a>
+ service using SenseVoice + Qwen-VL + CosyVoice.
 
-The following is a demo video:
-
+#### Demo Video
 <br>
 <video src="https://github.com/user-attachments/assets/89753aea-370f-4f10-9d05-f4b104f87dd8" controls="controls"></video>
 
@@ -102,7 +104,7 @@ Demo can be start in a linux container or start in host os.
     ```
 
 #### Configs
-The default parameter will load config from **<project_root>/configs/sample.yaml**. Config can be loaded from other file by add the --config parameter.
+The default parameter will load config from **<project_root>/configs/chat_with_minicpm.yaml**. Config can be loaded from other file by add the --config parameter.
 ```bash
 python src/demo.py --config <absolute-path-to-the-config>.yaml
 ```
@@ -191,27 +193,11 @@ The local startup requirements for MiniCPM-o are relatively high. If you already
 
 > If you encounter any issues, feel free to submit an [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues).
 
-* Modify `src/demo.py`
+start the demo with ```python src/demo.py --config config/llm_openai_compatible.yaml```
 
-```python
-# Uncomment the three processors
-from handlers.asr.sensevoice.asr_handler_sensevoice import HandlerASR
+* Modify `config/llm_openai_compatible.yaml` for LLM_Bailian Configuration
 
-engine.register_handler(HandlerASR())
-from handlers.llm.openai_compatible.llm_handler_openai_compatible import HandlerLLM
 
-engine.register_handler(HandlerLLM())
-from chat_engine.output_handlers.output_handler_tts import HandlerTTS
-
-engine.register_handler(HandlerTTS())
-
-# Comment out MiniCPM processing
-# from chat_engine.think_handlers.handler_s2s import HandlerS2SMiniCPM
-# engine.register_handler(HandlerS2SMiniCPM())
-```
-
-* Modify `config/sample.yaml` for LLM_Bailian Configuration
-The internal calling method follows OpenAI's standard format and should theoretically be compatible with similar APIs.
 ```yaml
 LLM_Bailian: 
   model_name: "qwen-plus"
