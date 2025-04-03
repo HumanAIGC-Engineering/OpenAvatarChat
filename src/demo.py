@@ -237,7 +237,7 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
             array = np.zeros((1, 1), dtype=np.float32)
         return self.output_sample_rate, array
     
-    def on_chat_datachannel(self, message: Dict, channel):
+    async def on_chat_datachannel(self, message: Dict, channel):
         # {"type":"chat",id:"标识属于同一段话", "message":"Hello, world!"}
         # unique_id = uuid.uuid4().hex
         if self.session is None:
