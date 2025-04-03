@@ -229,7 +229,7 @@ completion = client.chat.completions.create(
 
 ## 7. Community Thanks
 
-Thanks to community member titan909 for posting the [installation tutorial video](https://www.bilibili.com/video/BV1FNZ8YNEA8) on B station.
+Thanks to community member titan909 for posting the [installation tutorial video](https://www.bilibili.com/video/BV1FNZ8YNEA8) on BiliBili.
 
 ## 8. Contributors
 
