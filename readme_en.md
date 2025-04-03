@@ -12,8 +12,8 @@ A modular avatar chat implementation runs on single pc.
 
 <a href="https://github.com/HumanAIGC-Engineering/OpenAvatarChat" target="_blank"><img alt="Static Badge" style="display: block; padding-right: 5px; height: 20px;" src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"></a>
 </div>
-Demo service using SenseVoice + qwen-plus + CosyVoice, one concurrent session, without VL.
 <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
+    Demo service using SenseVoice + Qwen-VL + CosyVoice.
     <img alt="Static Badge" style="height: 14px; margin-left: 5px; " src="./assets/images/modelscope_logo.png">
 </a>
 
