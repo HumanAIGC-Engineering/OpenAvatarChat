@@ -132,7 +132,7 @@ scripts/download_MiniCPM-o_2.6-int4.sh
 > [!NOTE]
 > Both full precision version and the int4 quantized one are supported. However，the int4 version need a special version of AutoGPTQ to load, refer to the [model card](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4) please.
 
-### Prepare ssl certificates.
+### Prepare ssl certificates
 Since we use rtc to stream the video and audio, if not linked from localhost an ssl certificates is needed, user can put exist ones into the ssl_certs folder and config them in the config file or create a new self signed one with the provided script. Run the script under project root to put the result into proper position.
 ```bash
 scripts/create_ssl_certs.sh
