@@ -9,7 +9,7 @@
 </p>
 
 <p align="center" style="display: flex; flex-direction: row; justify-content: center">
- 🖥️ <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat">Demo</a>&nbsp&nbsp|&nbsp&nbsp💬 <a href="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/blob/main/assets/images/community_wechat.png">WeChat</a>
+ 🤗 <a href="https://huggingface.co/spaces/HumanAIGC-Engineering-Team/open-avatar-chat">Demo</a>&nbsp&nbsp|&nbsp&nbsp<img alt="Static Badge" style="height: 10px;" src="./assets/images/modelscope_logo.png"> <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat">Demo</a>&nbsp&nbsp|&nbsp&nbsp💬 <a href="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/blob/main/assets/images/community_wechat.png">WeChat</a>
 </p>
 
 ## 🔥 Core Highlights
@@ -38,12 +38,16 @@
 
 ## Demo
 
-We have deployed a demo service on ModelScope. The audio part is implemented using SenseVoice + Qwen-VL + CosyVoice. 
+We have deployed a demo service on 
 <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
-Welcome to experience it.
-    <img alt="Static Badge" style="height: 14px; margin-right: 5px;" src="./assets/images/modelscope_logo.png">
+    <img alt="Static Badge" style="height: 10px; margin-right: 1px;" src="./assets/images/modelscope_logo.png">
+ModelScope
 </a>
-<br>
+and 
+<a href="https://huggingface.co/spaces/HumanAIGC-Engineering-Team/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
+    🤗
+HuggingFace
+</a>. The audio part is implemented using SenseVoice + Qwen-VL + CosyVoice. Feel free to try it out.
 
 <div align="center">
   <video controls src="https://github.com/user-attachments/assets/89753aea-370f-4f10-9d05-f4b104f87dd8">
