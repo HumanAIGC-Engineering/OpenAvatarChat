@@ -55,9 +55,12 @@ HuggingFace
 
 
 <div align="center">
-  <video controls src="https://github.com/user-attachments/assets/89753aea-370f-4f10-9d05-f4b104f87dd8">
+  <video controls src="https://github.com/user-attachments/assets/e2861200-84b0-4c7a-93f0-f46268a0878b">
   </video>
 </div>
+
+
+
 
 
 ## 📖目录 <!-- omit in toc -->
