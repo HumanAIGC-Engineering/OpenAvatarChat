@@ -60,8 +60,7 @@ max-port=65535
 verbose
 fingerprint
 lt-cred-mech
-use-auth-secret
-static-auth-secret=your-secret-here
+user=username:password
 realm=$REALM
 EOF
 
@@ -82,4 +81,4 @@ echo "- UDP 3478"
 echo "- TCP 3478"
 echo "- UDP 5349"
 echo "- TCP 5349"
-echo "- UDP 49152-65535" 
+echo "- UDP 49152-65535"
