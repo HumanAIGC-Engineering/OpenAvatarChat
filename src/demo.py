@@ -14,7 +14,7 @@ if project_dir not in sys.path:
 
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle
 from service.logger_config_data import LoggerConfigData
-from service.service_config_data import ServiceConfigData, TwilioConfigData
+from service.service_config_data import ServiceConfigData, TwilioConfigData, TurnServerConfigData
 
 import argparse
 import asyncio
@@ -125,10 +125,25 @@ def connect_to_twilio(config: TwilioConfigData):
 def prepare_rtc_configuration(config: ServiceConfigData):
     client_entities = None
     out_rtc_configuration = None
+
     if config.rtc_config is not None:
         logger.info(f"Using RTC config: {config.rtc_config}")
         if isinstance(config.rtc_config, TwilioConfigData):
             out_rtc_configuration, client_entities = connect_to_twilio(config.rtc_config)
+        elif isinstance(config.rtc_config, TurnServerConfigData):
+            out_rtc_configuration = {
+                "iceServers": [
+                    {
+                        "urls": config.rtc_config.urls,
+                        "username": config.rtc_config.username,
+                        "credential": config.rtc_config.credential
+                    }
+                ],
+            }
+            logger.info(f"Using custom TURN server configuration {json.dumps(out_rtc_configuration)}")
+        else:
+            logger.warning(f"Unknown RTC config type: {type(config.rtc_config)}")
+
     return out_rtc_configuration, client_entities
 
 
