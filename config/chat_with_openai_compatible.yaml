@@ -45,10 +45,11 @@ default:
         # api_key: '' # default=os.getenv("DASHSCOPE_API_KEY")
       LiteAvatar:
         module: avatar/liteavatar/avatar_handler_liteavatar
-        avatar_name: sample_data
+        avatar_name: 20250408/sample_data
         fps: 25
         debug: false
-        enable_fast_mode: True
+        enable_fast_mode: false
+        use_gpu: true
     outputs:
       video:
         handler: "LiteAvatar"
