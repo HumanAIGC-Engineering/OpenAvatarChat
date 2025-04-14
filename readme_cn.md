@@ -273,9 +273,10 @@ python src/demo.py --config <配置文件的绝对路径>.yaml
 
 |参数|默认值|说明|
 |---|---|---|
-|Tts2Face.avatar_name|sample_data|数字人数据名，目前项目仅提供了"sample_data"可供选择，敬请期待。|
-|Tts2Face.fps|25|数字人的运行帧率，在性能较好的CPU上，可以设置为30FPS|
-|Tts2Face.enable_fast_mode|True|低延迟模式，打开后可以减低回答的延迟，但在性能不足的情况下，可能会在回答的开始产生语音卡顿。|
+|LiteAvatar.avatar_name|sample_data|数字人数据名，目前在modelscope的项目LiteAvatarGallery中提供了100个数字人形象可供使用，详情见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)。|
+|LiteAvatar.fps|25|数字人的运行帧率，在性能较好的CPU上，可以设置为30FPS|
+|LiteAvatar.enable_fast_mode|False|低延迟模式，打开后可以减低回答的延迟，但在性能不足的情况下，可能会在回答的开始产生语音卡顿。|
+|LiteAvatar.use_gpu|True|LiteAvatar算法是否使用GPU，目前使用CUDA后端|
 
 > [!IMPORTANT]
 > 所有配置中的路径参数都可以使用绝对路径，或者相对于项目根目录的相对路径。

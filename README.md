@@ -271,9 +271,10 @@ Current implemented handler provide following configs:
 
 | Parameter                     | Default Value | Description                                                                 |
 |-------------------------------|---------------|-----------------------------------------------------------------------------|
-| Tts2Face.avatar_name          | sample_data   | Name of the digital human data. Currently, only "sample_data" is available. Stay tuned for more options. |
-| Tts2Face.fps                  | 25            | Frame rate for the digital human. On high-performance CPUs, it can be set to 30 FPS. |
-| Tts2Face.enable_fast_mode     | True          | Low-latency mode. Enabling this reduces response delay but may cause stuttering at the beginning of responses on underpowered systems. |
+| LiteAvatar.avatar_name          | 20250408/sample_data   | Name of the digital human data. 100 avatars provided on ModelScope. Refer to [LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery) for more details. |
+| LiteAvatar.fps                  | 25            | Frame rate for the digital human. On high-performance CPUs, it can be set to 30 FPS. |
+| LiteAvatar.enable_fast_mode     | False          | Low-latency mode. Enabling this reduces response delay but may cause stuttering at the beginning of responses on underpowered systems. |
+| LiteAvatar.use_gpu | True | Whether to use GPU acceleration. CUDA backend for now.|
 
 
 > [!IMPORTANT]
