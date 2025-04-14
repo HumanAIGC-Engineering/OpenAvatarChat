@@ -68,6 +68,7 @@ HuggingFace
   - [Download Model](#download-model)
   - [Prepare SSL Certificates](#prepare-ssl-certificates)
   - [Run The Demo](#run-the-demo)
+  - [TURN Server](#turn-server)
   - [ASR + LLM + TTS Mode](#asr--llm--tts-mode)
   - [Configuration](#Configuration)
 
@@ -160,6 +161,26 @@ The project defaults to using MiniCPM-o as the multimodal language model, which 
     ```bash
     python src/demo.py
     ```
+
+### TURN Server
+If you encounter a continuous waiting state after clicking "Start Conversation", it may be due to NAT traversal issues in your deployment environment (such as deployment on cloud machines). In this case, data relay is required. On Linux systems, you can use coturn to set up a TURN server. Follow these steps to install, start, and configure coturn on the same machine:
+
+* Run the installation script
+```console
+$ chmod 777 scripts/setup_coturn.sh
+# scripts/setup_coturn.sh
+```
+* Modify the config file, add the following configuration and start the service
+```yaml
+default:
+  service:
+    rtc_config:
+      # Use the following configuration when using turnserver
+      urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
+      username: "your-username"
+      credential: "your-credential"
+```
+* Ensure that the firewall (including cloud machine security group policies) opens the ports required by coturn
 
 ### ASR + LLM + TTS Mode
 MiniCPM-o's local startup requirements are relatively high. If you already have an LLM API key, you can start this way to experience the conversational digital human. After making the modifications, you can still use `python src/demo.py` to start.

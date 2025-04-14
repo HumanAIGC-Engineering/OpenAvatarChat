@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, List, Dict
 
 from pydantic import BaseModel, Field
 
@@ -8,7 +8,12 @@ class TwilioConfigData(BaseModel):
     twilio_auth_token: str
 
 
-RTCServiceConfigData = Union[TwilioConfigData]
+class TurnServerConfigData(BaseModel):
+    urls: List[str]
+    username: str
+    credential: str
+
+RTCServiceConfigData = Union[TwilioConfigData, TurnServerConfigData]
 
 
 class ServiceConfigData(BaseModel):

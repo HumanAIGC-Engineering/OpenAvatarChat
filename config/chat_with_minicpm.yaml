@@ -6,6 +6,14 @@ default:
     port: 8282
     cert_file: "ssl_certs/localhost.crt"
     cert_key: "ssl_certs/localhost.key"
+    # rtc_config:
+    #   # 使用turnserver时，使用以下配置
+    #   urls: ["turn:your-turn-server.com:3478"]
+    #   username: "your-username"
+    #   credential: "your-credential"
+    #   # 当使用 twilio 时，使用以下配置
+    #   account_sid: ""
+    #   auth_token: ""
   chat_engine:
     model_root: "models"
     handler_search_path:

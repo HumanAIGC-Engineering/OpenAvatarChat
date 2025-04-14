@@ -77,8 +77,10 @@ HuggingFace
   - [下载模型](#下载模型)
   - [准备ssl证书](#准备ssl证书)
   - [运行](#运行)
+  - [TURN Server](#turn-server)
   - [ASR + LLM + TTS方式](#asr--llm--tts-替代本地-minicpm-o)
   - [配置说明](#配置说明)
+  
   
 
 ## 概览
@@ -170,6 +172,26 @@ scripts/create_ssl_certs.sh
     ```bash
     python src/demo.py
     ```
+
+### TURN Server
+如果点击开始对话后，出现一直等待中的情况，可能你的部署环境存在NAT穿透方面的问题（如部署在云上机器等），需要进行数据中继。在Linux环境下，可以使用coturn来架设TURN服务。可参考以下操作在同一机器上安装、启动并配置使用coturn：
+* 运行安装脚本
+```console
+$ chmod 777 scripts/setup_coturn.sh
+# scripts/setup_coturn.sh
+```
+* 修改config配置文件，添加以下配置后启动服务
+```yaml
+default:
+  service:
+    rtc_config:
+      # 使用turnserver时，使用以下配置
+      urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
+      username: "your-username"
+      credential: "your-credential"
+```
+* 确保防火墙（包括云上机器安全组等策略）开放coturn所需端口
+
 
 ### ASR + LLM + TTS 替代本地 MiniCPM-o
 MiniCPM-o 的本地启动要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人,修改完后仍可以用 `python src/demo.py` 启动即可
