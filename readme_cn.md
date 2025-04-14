@@ -171,7 +171,7 @@ scripts/create_ssl_certs.sh
     ```
 
 ### TURN Server
-如果点击开始对话后，出现一直等待中的情况，可能你的部署环境存在NAT穿透方面的问题（如部署在云上机器等），需要进行数据中继。在Linux环境下，可以使用coturn来假设turn服务。可以参考一下操作在同一机器上安装、启动并配置使用coturn：
+如果点击开始对话后，出现一直等待中的情况，可能你的部署环境存在NAT穿透方面的问题（如部署在云上机器等），需要进行数据中继。在Linux环境下，可以使用coturn来架设TURN服务。可参考以下操作在同一机器上安装、启动并配置使用coturn：
 * 运行安装脚本
 ```console
 $ chmod 777 scripts/setup_coturn.sh
