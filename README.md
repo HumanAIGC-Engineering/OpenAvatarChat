@@ -21,6 +21,9 @@
 
 ### Changelog
 
+- [2025.04.14] ⭐️⭐️⭐️ Version 0.2.2 released:
+  - 100 new avatars released, visit [LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
+  - Run LiteAvatar use GPU by default
 - [2025.04.07] ⭐️⭐️⭐️ Version 0.2.1 released:
   - Added support for history logging
   - Support for text input
@@ -32,7 +35,7 @@
 
 ### Todo List
 
-- [ ] Achieve 100 preset digital human models (expected within 1 month)
+- [x] Achieve 100 preset digital human models (expected within 1 month)
 - [ ] Integrate [LAM](https://github.com/aigc3d/LAM) (expected within 3 weeks)
 - [ ] Integrate [Qwen2.5-Omni](https://github.com/QwenLM/Qwen2.5-Omni)
 
