@@ -38,6 +38,7 @@ class Tts2FaceConfigModel(HandlerBaseConfigModel, BaseModel):
     debug: bool = Field(default=False)
     fps: int = Field(default=25)
     enable_fast_mode: bool = Field(default=False)
+    use_gpu: bool = Field(default=True)
 
 
 class Tts2FaceOutputHandler(AvatarOutputHandler):
@@ -56,7 +57,7 @@ class Tts2FaceOutputHandler(AvatarOutputHandler):
 
     def on_audio(self, audio_result: AudioResult):
         audio_frame = audio_result.audio_frame
-        audio_data = audio_frame.to_ndarray(format="s16")
+        audio_data = audio_frame.to_ndarray()
         self.audio_output_queue.put_nowait(audio_data)
 
     def on_video(self, video_result: VideoResult):
@@ -113,7 +114,8 @@ class AvatarProcessorWrapper:
                 video_frame_rate=config.fps,
                 avatar_name=config.avatar_name,
                 debug=config.debug,
-                enable_fast_mode=config.enable_fast_mode
+                enable_fast_mode=config.enable_fast_mode,
+                use_gpu=config.use_gpu
             )
         )
         # start event input loop

@@ -13,6 +13,7 @@ from handlers.avatar.liteavatar.algo.liteavatar.lite_avatar import liteAvatar
 from handlers.avatar.liteavatar.model.algo_model import AvatarAlgoConfig, AvatarInitOption, AvatarStatus
 from src.utils.directory_info import DirectoryInfo
 from src.utils.time_utils import timeit
+from src.utils.inspect_utils import InspectUtils
 
 
 class Tts2faceCpuAdapter(BaseAlgoAdapter):
@@ -31,10 +32,18 @@ class Tts2faceCpuAdapter(BaseAlgoAdapter):
     def init(self, init_option: AvatarInitOption):
         self.change_to_algo_dir()
         data_dir = self._get_avatar_data_dir(init_option.avatar_name)
-        self.tts2face = liteAvatar(
-            data_dir=data_dir,
-            fps=init_option.video_frame_rate
-        )
+        if InspectUtils.has_init_param(liteAvatar, "use_gpu"):
+            self.tts2face = liteAvatar(
+                data_dir=data_dir,
+                fps=init_option.video_frame_rate,
+                use_gpu=init_option.use_gpu
+            )
+        else:
+            self.tts2face = liteAvatar(
+                data_dir=data_dir,
+                fps=init_option.video_frame_rate
+            )
+
         bg_step = self.TARGET_FPS // init_option.video_frame_rate
         self.tts2face.load_dynamic_model(data_dir)
         self._bg_counter = BgFrameCounter(len(self.tts2face.ref_img_list), bg_step)
