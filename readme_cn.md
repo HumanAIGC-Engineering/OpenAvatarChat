@@ -308,8 +308,8 @@ python src/demo.py --config <配置文件的绝对路径>.yaml
 
 ## 社区感谢
 
-感谢社区同学titan909在B站上发布的[部署教程视频](https://www.bilibili.com/video/BV1FNZ8YNEA8)
-
+- 感谢社区同学“titan909”在B站上发布的[部署教程视频](https://www.bilibili.com/video/BV1FNZ8YNEA8)
+- 感谢另一位社区同学“十字鱼”在B站上发布的一键安装包视频，并提供了下载（解压码在视频简介里面有,仔细找找）[一键包](https://www.bilibili.com/video/BV1V1oLYmEu3/?vd_source=29463f5b63a3510553325ba70f325293)
 
 
 ## Star历史
@@ -321,7 +321,7 @@ python src/demo.py --config <配置文件的绝对路径>.yaml
 
 ```
 @software{avatarchat2025,
-  author = {Gang Cheng, Tao Chen, Feng Wang, Binchao Huang, Hui Xu, Guanqiao He, Yi Lu},
+  author = {Gang Cheng, Tao Chen, Feng Wang, Binchao Huang, Hui Xu, Guanqiao He, Yi Lu, Shengyin Tan},
   title = {OpenAvatarChat},
   year = {2025},
   publisher = {GitHub},
