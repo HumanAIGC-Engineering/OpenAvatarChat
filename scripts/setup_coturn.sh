@@ -42,6 +42,8 @@ echo "生成的realm标识符: $REALM"
 # 配置coturn
 echo "正在配置coturn..."
 CONFIG_FILE="/etc/turnserver.conf"
+MIN_PORT=49152
+MAX_PORT=65535
 
 # 备份原始配置文件
 if [ -f "$CONFIG_FILE" ]; then
@@ -55,8 +57,8 @@ tls-listening-port=5349
 listening-ip=0.0.0.0
 relay-ip=$PRIVATE_IP
 external-ip=$PUBLIC_IP
-min-port=49152
-max-port=65535
+min-port=$MIN_PORT
+max-port=$MAX_PORT
 verbose
 fingerprint
 lt-cred-mech
@@ -81,4 +83,4 @@ echo "- UDP 3478"
 echo "- TCP 3478"
 echo "- UDP 5349"
 echo "- TCP 5349"
-echo "- UDP 49152-65535"
+echo "- UDP $MIN_PORT:$MAX_PORT"
