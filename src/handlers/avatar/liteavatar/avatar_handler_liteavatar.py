@@ -25,6 +25,9 @@ from chat_engine.data_models.chat_engine_config_data import ChatEngineConfigMode
 from utils.interval_counter import IntervalCounter
 
 
+mp.set_start_method("spawn", force=True)
+
+
 class Tts2FaceEvent(Enum):
     START = 1001
     STOP = 1002
