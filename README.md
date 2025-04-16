@@ -185,7 +185,7 @@ default:
 ### ASR + LLM + TTS Mode
 MiniCPM-o's local startup requirements are relatively high. If you already have an LLM API key, you can start this way to experience the conversational digital human. After making the modifications, you can still use `python src/demo.py` to start.
 
-1. Modify the LLM_Bailian configuration in `config/llm_openai_compatible.yaml`. The call method in the code uses the standard OpenAI approach, which should be compatible in theory.
+1. Modify the LLM_Bailian configuration in `config/chat_with_openai_compatible.yaml`. The call method in the code uses the standard OpenAI approach, which should be compatible in theory.
 
 ```yaml
 LLM_Bailian: 
@@ -195,7 +195,7 @@ LLM_Bailian:
   api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
 ```
 
-2. Modify the startup configuration to use: ```python src/demo.py --config config/llm_openai_compatible.yaml```
+2. Modify the startup configuration to use: ```python src/demo.py --config config/chat_with_openai_compatible.yaml```
 
 > [!Note]
 > * Internal Code Calling Method

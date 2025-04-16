@@ -196,7 +196,7 @@ default:
 ### ASR + LLM + TTS 替代本地 MiniCPM-o
 MiniCPM-o 的本地启动要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人,修改完后仍可以用 `python src/demo.py` 启动即可
 
-1. 修改 config/llm_openai_compatible.yaml 中的 LLM_Bailian配置，代码中的调用方式为 openai 的标准方式，理论上相同的可以兼容
+1. 修改 config/chat_with_openai_compatible.yaml 中的 LLM_Bailian配置，代码中的调用方式为 openai 的标准方式，理论上相同的可以兼容
 
 ```yaml
 LLM_Bailian: 
@@ -205,7 +205,7 @@ LLM_Bailian:
   api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
   api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
 ```
-2. 启动配置修改为 ```python src/demo.py --config config/llm_openai_compatible.yaml```
+2. 启动配置修改为 ```python src/demo.py --config config/chat_with_openai_compatible.yaml```
 
 > [!Note]
 > * 代码内部调用方式
