@@ -25,7 +25,7 @@
 ### 更新日志
 
 - [2025.04.14] ⭐️⭐️⭐️ 版本 0.2.2发布：
-  - 100个新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGCEngineering/LiteAvatarGallery)
+  - 100个新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
   - 默认使用GPU后端运行数字人
 - [2025.04.07] ⭐️⭐️⭐️ 版本 0.2.1发布： 
   - 增加历史记录支持 
