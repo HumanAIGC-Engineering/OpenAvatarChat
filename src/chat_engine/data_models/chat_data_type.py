@@ -18,3 +18,4 @@ class ChatDataType(Enum):
     AVATAR_AUDIO = ("avatar_audio", EngineChannelType.AUDIO)
     CAMERA_VIDEO = ("camera_video", EngineChannelType.VIDEO)
     AVATAR_VIDEO = ("avatar_video", EngineChannelType.VIDEO)
+    AVATAR_MOTION_DATA = ("avatar_motion_data", EngineChannelType.MOTION_DATA)

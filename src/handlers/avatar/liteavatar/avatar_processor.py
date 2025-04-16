@@ -19,7 +19,7 @@ from handlers.avatar.liteavatar.media.video_audio_aligner import VideoAudioAlign
 from handlers.avatar.liteavatar.model.algo_model import (
     AvatarInitOption, AudioResult, AudioSlice, AvatarStatus, MouthResult, SignalResult, VideoResult)
 from handlers.avatar.liteavatar.model.audio_input import SpeechAudio
-from src.utils.interval_counter import IntervalCounter
+from src.engine_utils.interval_counter import IntervalCounter
 
 
 class AvatarProcessor:
@@ -72,6 +72,8 @@ class AvatarProcessor:
         self._reset_processor_status()
         self._start_threads()
         self._session_start_time = time.time()
+        self._audio2signal_counter = IntervalCounter("generate signal")
+        self._callback_counter = IntervalCounter("avatar callback")
 
     def stop(self):
         logger.info("stop avatar processor, totol session time {:.3f}",

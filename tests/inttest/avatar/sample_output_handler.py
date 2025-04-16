@@ -4,7 +4,7 @@ import av
 from loguru import logger
 from handlers.avatar.liteavatar.avatar_output_handler import AvatarOutputHandler
 from handlers.avatar.liteavatar.model import AudioResult, AvatarInitOption, VideoResult
-from src.utils.directory_info import DirectoryInfo
+from engine_utils.directory_info import DirectoryInfo
 
 
 class SampleOutputHandler(AvatarOutputHandler):

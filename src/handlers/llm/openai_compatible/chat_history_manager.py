@@ -3,7 +3,7 @@ import re
 from typing import Literal, Optional
 
 
-from utils.media_utils import ImageUtils
+from engine_utils.media_utils import ImageUtils
 
 
 @dataclass

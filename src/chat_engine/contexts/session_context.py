@@ -13,9 +13,6 @@ from chat_engine.data_models.session_info_data import SessionInfoData, IOQueueTy
 class SharedStates:
     active: bool = False
     enable_vad: bool = True
-    is_listening: bool = False
-    speech_round: int = 0
-    human_speech_segment_num: int = 0
 
 
 class SessionContext(object):

@@ -5,43 +5,65 @@ from typing import List, Dict, Optional, Sequence, Any, Union
 import numpy as np
 
 from chat_engine.data_models.runtime_data.data_store import DataStore, DataStoreType
+from chat_engine.data_models.runtime_data.event_model import EventData
 from chat_engine.data_models.runtime_data.time_unit_type import TimeUnitType
+
+
+@dataclass
+class VariableSize:
+    min_size: Optional[int] = None
+    max_size: Optional[int] = None
+    default: int = 1
+
+    def validate(self, value: int):
+        if self.max_size is not None:
+            value = min(self.max_size, value)
+        if self.min_size is not None:
+            value = max(self.min_size, value)
+        return value
 
 
 @dataclass
 class DataBundleEntry:
     name: str
     index: int = -1
-    shape: List[int] = field(default_factory=list)
+    shape: List[Union[int, VariableSize]] = field(default_factory=list)
     time_axis: int = -1
     sample_rate: int = 0
     time_unit: TimeUnitType = TimeUnitType.NONE
+    channel_axis: Optional[int] = field(default=None)
+    channel_names: Optional[List[str]] = field(default=None)
 
     @staticmethod
     def create_audio_entry(name: str, channel_num: int, sample_rate: int) -> "DataBundleEntry":
         return DataBundleEntry(
             name=name,
-            shape=[channel_num, 1],
+            shape=[channel_num, VariableSize()],
             time_axis=1,
             sample_rate=sample_rate,
             time_unit=TimeUnitType.AUDIO_SAMPLE,
         )
 
     @staticmethod
-    def create_framed_entry(name: str, shape: List[int], time_axis: int, sample_rate: int=30):
+    def create_framed_entry(name: str, shape: List[Union[int, VariableSize]], time_axis: int, sample_rate: int=30,
+                            channel_axis: Optional[int]=None, channel_names: Optional[List[str]]=None):
+        if channel_axis is None and channel_names is not None:
+            raise RuntimeError("Channel axis must be specified, if channel names is provided.")
         return DataBundleEntry(
             name=name,
             shape=shape,
             time_axis=time_axis,
             sample_rate=sample_rate,
             time_unit=TimeUnitType.FRAME,
+            channel_axis=channel_axis,
+            channel_names=channel_names,
         )
 
     @staticmethod
     def create_text_entry(name: str):
         return DataBundleEntry(
             name=name,
-            shape=[1],
+            shape=[VariableSize()],
             time_axis=-1,
             sample_rate=-1,
             time_unit=TimeUnitType.NONE,
@@ -51,22 +73,43 @@ class DataBundleEntry:
         shape_size = len(shape)
         if self.time_unit != TimeUnitType.NONE:
             if self.time_axis < 0 or self.time_axis >= shape_size:
-                raise RuntimeError(f"Invalid time axis {self.time_axis} for shape {self.shape}")
+                msg = f"Invalid time axis {self.time_axis} for shape {self.shape}"
+                raise RuntimeError(msg)
         else:
             return 0
         return shape[self.time_axis]
 
-    def calculate_shape(self, timed_axis_size: int):
-        if self.time_unit != TimeUnitType.NONE:
-            if timed_axis_size < 0:
-                raise RuntimeError(f"Invalid time axis size {timed_axis_size}")
-            if self.time_axis < 0 or self.time_axis >= len(self.shape):
-                raise RuntimeError(f"Invalid time axis {self.time_axis} for shape {self.shape}")
-        else:
-            return self.shape.copy()
+    def calculate_shape(self, timed_axis_size: Optional[int]=None, reference_shape: Optional[Sequence[int]]=None):
         result = self.shape.copy()
-        result[self.time_axis] = timed_axis_size
+        if reference_shape is not None:
+            if len(reference_shape) != len(self.shape):
+                msg = f"Reference shape size {reference_shape} does not match definition shape {self.shape}"
+                raise RuntimeError(msg)
+        elif timed_axis_size is not None and self.time_unit != TimeUnitType.NONE:
+            if timed_axis_size < 0:
+                msg = f"Invalid time axis size {timed_axis_size}"
+                raise RuntimeError(msg)
+            if self.time_axis < 0 or self.time_axis >= len(self.shape):
+                msg = f"Invalid time axis {self.time_axis} for shape {self.shape}"
+                raise RuntimeError(msg)
+        for i, shape_size in enumerate(result):
+            if isinstance(shape_size, VariableSize):
+                if reference_shape is not None:
+                    result[i] = shape_size.validate(reference_shape[i])
+                else:
+                    result[i] = shape_size.default
+        if timed_axis_size is not None:
+            result[self.time_axis] = timed_axis_size
         return result
+
+    def create_default_data(self, data_type: np.dtype):
+        if self.time_unit == TimeUnitType.NONE:
+            return np.zeros([0], dtype=np.uint8)
+        else:
+            return np.zeros(self.calculate_shape(timed_axis_size=1), dtype=data_type)
+
+    def is_temporal_data(self) -> bool:
+        return self.time_unit != TimeUnitType.NONE
 
 
 @dataclass
@@ -90,6 +133,11 @@ class DataBundleDefinition:
         if self.main_entry_name is None:
             self.main_entry_name = entry.name
         self._mark_dirty()
+
+    def find_entry(self, entry_name: str):
+        if entry_name not in self.entries:
+            return None
+        return self.entries[entry_name]
 
     def set_main_entry(self, name: str):
         if self._locked:
@@ -155,8 +203,11 @@ class DataBundle:
     def __init__(self, definition: DataBundleDefinition):
         self._definition: DataBundleDefinition = definition.lockdown()
         self.metadata: dict[str, Any] = {}
+        self.events: List[EventData] = []
         self._data_entries: List[DataBundleEntry] = []
         self.data: List[DataStore] = []
+        self.start_of_stream: bool = False
+        self.end_of_stream: bool = False
         for entry_name, entry in self._definition.entries.items():
             self._data_entries.append(entry)
             self.data.append(DataStore(None, DataStoreType.INVALID))
@@ -228,7 +279,7 @@ class DataBundle:
         timed_axis_size = entry.get_time_axis_size(data.shape)
         if timed_axis_size is None or timed_axis_size <= 0:
             raise RuntimeError(f"Dimension mismatch: {name}: {data.shape} is not valid")
-        allowed_shape = entry.calculate_shape(timed_axis_size=timed_axis_size)
+        allowed_shape = entry.calculate_shape(timed_axis_size=timed_axis_size, reference_shape=data.shape)
         if not np.array_equal(data.shape, allowed_shape):
             raise RuntimeError(f"Shape mismatch: Shape of {name} is {data.shape}, not fit defined {allowed_shape}")
         data_store = self.get_data_store(name, read_only=False)
@@ -247,7 +298,8 @@ class DataBundle:
         elif isinstance(data, str):
             return self.set_text_data(name, entry, data)
         else:
-            raise RuntimeError(f"Input data type {type(data)} is not supported.")
+            msg = f"Input data type {type(data)} is not supported."
+            raise RuntimeError(msg)
 
     def set_main_data(self, data: Union[np.ndarray, str]):
         main_data_name = self._definition.main_entry_name

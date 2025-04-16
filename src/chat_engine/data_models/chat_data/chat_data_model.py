@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Tuple, Optional
 
-from chat_engine.common.chat_data_type import ChatDataType
+from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle
 
 

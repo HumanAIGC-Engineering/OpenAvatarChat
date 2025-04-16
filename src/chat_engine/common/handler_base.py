@@ -1,22 +1,27 @@
+import weakref
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Union, Tuple
+from enum import Enum
+from typing import Optional, Dict
 
-import numpy as np
-from loguru import logger
-
-from chat_engine.common.chat_data_type import ChatDataType
+from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.contexts.handler_context import HandlerContext
 from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_engine_config_data import ChatEngineConfigModel, HandlerBaseConfigModel
-from chat_engine.data_models.runtime_data.data_bundle import DataBundleDefinition, DataBundle
+from chat_engine.data_models.runtime_data.data_bundle import DataBundleDefinition
+
+
+class ChatDataConsumeMode(Enum):
+    ONCE = -1
+    DEFAULT = 0
 
 
 @dataclass
 class HandlerBaseInfo:
     name: Optional[str] = None
     config_model: Optional[type[HandlerBaseConfigModel]] = None
+    client_session_delegate_class: Optional[type] = None
     # Handler load priority, the smaller, the higher
     load_priority: int = 0
 
@@ -25,6 +30,13 @@ class HandlerBaseInfo:
 class HandlerDataInfo:
     type: ChatDataType = ChatDataType.NONE
     definition: Optional[DataBundleDefinition] = None
+    input_priority: int = 0
+    input_consume_mode: ChatDataConsumeMode = ChatDataConsumeMode.DEFAULT
+
+    def __lt__(self, other):
+        if self.input_priority == other.input_priority:
+            return self.type.value < other.type.value
+        return self.input_priority < other.input_priority
 
 
 @dataclass
@@ -36,7 +48,11 @@ class HandlerDetail:
 
 class HandlerBase(ABC):
     def __init__(self):
+        self.engine: Optional[weakref.ReferenceType] = None
         self.handler_root: Optional[str] = None
+
+    def on_before_register(self):
+        pass
 
     @abstractmethod
     def get_handler_info(self) -> HandlerBaseInfo:

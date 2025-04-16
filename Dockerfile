@@ -1,6 +1,8 @@
 FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04
 LABEL authors="HumanAIGC-Engineering"
 
+ARG CONFIG_FILE=config/chat_with_minicpm.yaml
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 # 替换为清华大学的APT源
@@ -14,19 +16,30 @@ RUN apt-get update && \
 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
 
-# 安装PyTorch GPU版本
-RUN pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
-
-
 ARG WORK_DIR=/root/open-avatar-chat
 WORKDIR $WORK_DIR
-ADD ./requirements.txt $WORK_DIR/requirements.txt
-ADD ./src/third_party/gradio_webrtc_videochat $WORK_DIR/src/third_party/gradio_webrtc_videochat
-RUN pip install -r $WORK_DIR/requirements.txt
 
 ADD ./src $WORK_DIR/src
 ADD ./resource $WORK_DIR/resource
 ADD ./scripts $WORK_DIR/scripts
+ADD ./.env* $WORK_DIR/
+
+#安装核心依赖
+COPY ./install.py $WORK_DIR/install.py
+COPY ./pyproject.toml $WORK_DIR/pyproject.toml
+RUN pip install uv && \
+    uv venv --python 3.10 && \
+    uv sync --no-install-workspace
+
+
+#安装config依赖
+RUN echo "Using config file: ${CONFIG_FILE}"
+COPY $CONFIG_FILE /tmp/build_config.yaml
+RUN uv run install.py \
+    --config /tmp/build_config.yaml \
+    --uv \
+    --skip-core && \
+    rm /tmp/build_config.yaml
 
 WORKDIR $WORK_DIR
-ENTRYPOINT ["python3", "src/demo.py"]
+ENTRYPOINT ["uv", "run", "src/demo.py"]

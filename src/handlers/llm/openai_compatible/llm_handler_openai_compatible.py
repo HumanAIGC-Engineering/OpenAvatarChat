@@ -7,12 +7,11 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from abc import ABC
 from openai import OpenAI
-import torch
 from chat_engine.contexts.handler_context import HandlerContext
 from chat_engine.data_models.chat_engine_config_data import ChatEngineConfigModel, HandlerBaseConfigModel
 from chat_engine.common.handler_base import HandlerBase, HandlerBaseInfo, HandlerDataInfo, HandlerDetail
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
-from chat_engine.common.chat_data_type import ChatDataType
+from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBundleDefinition, DataBundleEntry
 from handlers.llm.openai_compatible.chat_history_manager import ChatHistory, HistoryMessage

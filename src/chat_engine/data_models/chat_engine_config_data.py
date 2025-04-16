@@ -2,7 +2,7 @@ from typing import Dict, Optional, List, Union
 
 from pydantic import BaseModel, Field
 
-from chat_engine.common.chat_data_type import ChatDataType
+from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.common.engine_channel_type import EngineChannelType
 
 

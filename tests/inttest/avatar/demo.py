@@ -7,8 +7,8 @@ from loguru import logger
 from handlers.avatar.liteavatar.avatar_processor_factory import AvatarAlgoType, AvatarProcessorFactory
 from handlers.avatar.liteavatar.model import AvatarInitOption
 from handlers.avatar.liteavatar.model import SpeechAudio
-from src.utils.directory_info import DirectoryInfo
-from src.utils.media_utils import AudioUtils
+from engine_utils.directory_info import DirectoryInfo
+from engine_utils.media_utils import AudioUtils
 from tests.inttest.avatar.sample_output_handler import SampleOutputHandler
 
 

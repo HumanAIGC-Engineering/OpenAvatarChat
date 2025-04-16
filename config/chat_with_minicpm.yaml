@@ -19,6 +19,8 @@ default:
     handler_search_path:
       - "src/handlers"
     handler_configs:
+      RtcClient:
+        module: client/rtc_client/client_handler_rtc
       SileroVad:
         module: vad/silerovad/vad_handler_silero
         speaking_threshold: 0.5
@@ -41,14 +43,4 @@ default:
         fps: 25
         debug: false
         enable_fast_mode: false
-        use_gpu: true
-    outputs:
-      video:
-        handler: "LiteAvatar"
-        type: "avatar_video"
-      audio:
-        handler: "LiteAvatar"
-        type: "avatar_audio"
-      text:
-        handler: ""
-        type: "avatar_text"
+        use_gpu: false

@@ -1,0 +1,18 @@
+[project]
+name = "liteavatar"
+version = "0.1.0"
+requires-python = ">=3.10, <3.13"
+dependencies = [
+    "funasr~=1.2.3",
+    "h5py~=3.12.1",
+    "jieba~=0.42.1",
+    "pillow~=11.1.0",
+    "pydub~=0.25.1",
+    "pypinyin~=0.53.0",
+    "torchvision==0.20.1",
+    "transformers==4.44.1",
+    "typeguard==2.13.3",
+    "vector-quantize-pytorch~=1.21.7",
+    "vocos~=0.1.0",
+    "onnxruntime-gpu~=1.20.1",
+]

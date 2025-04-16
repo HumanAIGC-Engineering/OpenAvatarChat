@@ -11,7 +11,7 @@ import PIL
 from loguru import logger
 import numpy as np
 
-from src.utils.directory_info import DirectoryInfo
+from src.engine_utils.directory_info import DirectoryInfo
 
 
 class AudioUtils:
@@ -73,9 +73,9 @@ class ImageUtils:
 
         # 添加 Base64 数据头（可选）
         data_url = f"data:image/{format.lower()};base64,{base64_image}"
-        dump_image = True
+        dump_image = False
         if dump_image:
-            from utils.directory_info import DirectoryInfo 
+            from engine_utils.directory_info import DirectoryInfo
             ImageUtils.save_base64_image(base64_image, f"{DirectoryInfo.get_project_dir()}/temp/{time.localtime().tm_min}_{time.localtime().tm_sec}.jpg")
         return data_url
     

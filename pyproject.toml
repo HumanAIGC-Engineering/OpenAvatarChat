@@ -1,0 +1,64 @@
+[project]
+name = "open-video-chat"
+version = "0.1.0"
+description = "A modular interactive digital human conversation implementation that runs full-featured on a single PC."
+readme = "README.md"
+requires-python = ">=3.10, <3.12"
+dependencies = [
+    "aiohttp~=3.11.12",
+    "aiortc~=1.10.1",
+    "dynaconf~=3.2.7",
+    "fastapi[standard]~=0.115.12",
+    "fastrtc",
+    "gradio~=5.9.1",
+    "librosa~=0.10.2",
+    "loguru~=0.7.3",
+    "modelscope>=1.25.0",
+    "numpy<=1.26.4",
+    "openai>=1.72.0",
+    "opencv-python-headless~=4.11.0",
+    "pip>=25.0.1",
+    "pyaml>=25.1.0",
+    "pydantic~=2.10.6",
+    "pyyaml~=6.0.2",
+    "scipy~=1.15.1",
+    "setuptools>=78.1.0",
+    "soundfile~=0.13.1",
+    "starlette~=0.41.3",
+    "tqdm~=4.67.1",
+    "typing-extensions~=4.12.2",
+    "uvicorn~=0.34.0",
+    "torch==2.5.1",
+    "torchvision==0.20.1",
+    "torchaudio==2.5.1",
+    "python-dotenv>=1.1.0",
+]
+
+[tool.uv.workspace]
+members = [
+    "src/handlers/tts/edgetts",
+    "src/handlers/tts/cosyvoice",
+    "src/handlers/llm/minicpm",
+    "src/handlers/avatar/liteavatar",
+    "src/handlers/avatar/lam",
+    "src/handlers/vad/silerovad",
+    "src/handlers/tts/bailian_tts",
+    "src/handlers/asr/sensevoice",
+]
+
+[tool.uv.sources]
+fastrtc = { path = "src/third_party/gradio_webrtc_videochat/dist/fastrtc-0.0.19.dev0-py3-none-any.whl" }
+torch = [
+    { index = "pytorch-cu124" },
+]
+torchvision = [
+    { index = "pytorch-cu124" },
+]
+torchaudio = [
+    { index = "pytorch-cu124" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true

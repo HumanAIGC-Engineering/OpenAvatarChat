@@ -7,3 +7,4 @@ class EngineChannelType(str, Enum):
     AUDIO = "audio"
     VIDEO = "video"
     EVENT = "event"
+    MOTION_DATA = "motion_data"

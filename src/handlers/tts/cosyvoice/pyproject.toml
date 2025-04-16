@@ -1,0 +1,20 @@
+[project]
+name = "cosyvoice"
+version = "0.1.0"
+requires-python = ">=3.10, <3.13"
+dependencies = [
+    "conformer==0.3.2",
+    "dashscope>=1.23.1",
+    "diffusers==0.29.0",
+    "gdown==5.1.0",
+    "hyperpyyaml==1.2.2",
+    "inflect>=6.5.0",
+    "lightning==2.2.4",
+    "matplotlib==3.7.5",
+    "openai-whisper==20240930",
+    "pyarrow>=19.0.1",
+    "pynini==2.1.6",
+    "pyworld==0.3.4",
+    "wetextprocessing~=1.0.3",
+    "wget==3.2",
+]

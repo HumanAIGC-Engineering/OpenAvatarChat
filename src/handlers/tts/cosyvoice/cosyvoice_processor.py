@@ -11,7 +11,7 @@ from loguru import logger
 import numpy as np
 import requests
 
-from utils.directory_info import DirectoryInfo
+from engine_utils.directory_info import DirectoryInfo
 
 
 # @dataclass

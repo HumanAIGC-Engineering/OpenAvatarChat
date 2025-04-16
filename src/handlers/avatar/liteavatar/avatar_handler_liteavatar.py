@@ -10,19 +10,25 @@ from loguru import logger
 from pydantic import BaseModel, Field
 import torch.multiprocessing as mp
 
+from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBundleDefinition, DataBundleEntry, \
+    VariableSize
 from handlers.avatar.liteavatar.avatar_output_handler import AvatarOutputHandler
 from handlers.avatar.liteavatar.avatar_processor import AvatarProcessor
 from handlers.avatar.liteavatar.avatar_processor_factory import AvatarProcessorFactory, AvatarAlgoType
 from handlers.avatar.liteavatar.model.algo_model import AvatarInitOption, AudioResult, VideoResult, AvatarStatus
 from handlers.avatar.liteavatar.model.audio_input import SpeechAudio
 from chat_engine.common.engine_channel_type import EngineChannelType
-from chat_engine.common.handler_base import HandlerBase, HandlerDetail, HandlerBaseInfo, HandlerDataInfo
-from chat_engine.common.chat_data_type import ChatDataType
+from chat_engine.common.handler_base import HandlerBase, HandlerDetail, HandlerBaseInfo, HandlerDataInfo, \
+    ChatDataConsumeMode
+from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.contexts.handler_context import HandlerContext
 from chat_engine.contexts.session_context import SessionContext, SharedStates
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_engine_config_data import ChatEngineConfigModel, HandlerBaseConfigModel
-from utils.interval_counter import IntervalCounter
+from engine_utils.interval_counter import IntervalCounter
+
+
+mp.set_start_method('spawn', force=True)
 
 
 class Tts2FaceEvent(Enum):
@@ -172,8 +178,8 @@ class HandlerTts2FaceContext(HandlerContext):
                  audio_out_queue,
                  video_out_queue,
                  event_out_queue,
-                 rtc_audio_queue,
-                 rtc_video_queue,
+                 # rtc_audio_queue,
+                 # rtc_video_queue,
                  shared_status):
         super().__init__(session_id)
         self.result_handler: Optional[Tts2FaceOutputHandler] = None
@@ -181,9 +187,11 @@ class HandlerTts2FaceContext(HandlerContext):
         self.audio_out_queue: mp.Queue = audio_out_queue
         self.video_out_queue: mp.Queue = video_out_queue
         self.event_out_queue: mp.Queue = event_out_queue
-        self.rtc_audio_queue: asyncio.Queue = rtc_audio_queue
-        self.rtc_video_queue: asyncio.Queue = rtc_video_queue
+        # self.rtc_audio_queue: asyncio.Queue = rtc_audio_queue
+        # self.rtc_video_queue: asyncio.Queue = rtc_video_queue
         self.shared_state: SharedStates = shared_status
+
+        self.output_data_definitions: Dict[ChatDataType, DataBundleDefinition] = {}
         
         self.media_out_thread: threading.Thread = None
         self.event_out_thread: threading.Thread = None
@@ -194,6 +202,20 @@ class HandlerTts2FaceContext(HandlerContext):
         self.event_out_thread = threading.Thread(target=self._event_out_loop)
         self.event_out_thread.start()
 
+    def return_data(self, data, chat_data_type: ChatDataType):
+        definition = self.output_data_definitions.get(chat_data_type)
+        if definition is None:
+            return
+        data_bundle = DataBundle(definition)
+        if chat_data_type.channel_type == EngineChannelType.AUDIO:
+            data_bundle.set_main_data(data.squeeze()[np.newaxis, ...])
+        elif chat_data_type.channel_type == EngineChannelType.VIDEO:
+            data_bundle.set_main_data(data[np.newaxis, ...])
+        else:
+            return
+        chat_data = ChatData(type=chat_data_type, data=data_bundle)
+        self.submit_data(chat_data)
+
     def _media_out_loop(self):
         while self.loop_running:
             no_output = True
@@ -202,7 +224,8 @@ class HandlerTts2FaceContext(HandlerContext):
                 no_output = False
                 try:
                     audio = self.audio_out_queue.get_nowait()
-                    self.rtc_audio_queue.put_nowait(audio)
+                    # self.rtc_audio_queue.put_nowait(audio)
+                    self.return_data(audio, ChatDataType.AVATAR_AUDIO)
                     no_output = False
                 except Exception:
                     pass
@@ -211,7 +234,8 @@ class HandlerTts2FaceContext(HandlerContext):
                 no_output = False
                 try:
                     video = self.video_out_queue.get_nowait()
-                    self.rtc_video_queue.put_nowait(video)
+                    # self.rtc_video_queue.put_nowait(video)
+                    self.return_data(video, ChatDataType.AVATAR_VIDEO)
                     no_output = False
                 except Exception:
                     pass
@@ -259,7 +283,9 @@ class HandlerTts2Face(HandlerBase, ABC):
         self.audio_in_queue = self.managerInstance.Queue()
         self.audio_out_queue = self.managerInstance.Queue()
         self.video_out_queue = self.managerInstance.Queue()
-   
+
+        self.output_data_definitions: Dict[ChatDataType, DataBundleDefinition] = {}
+
         self.shared_state: SharedStates = None
         
         self.rtc_audio_queue: asyncio.Queue = None
@@ -277,6 +303,26 @@ class HandlerTts2Face(HandlerBase, ABC):
     def load(self,
              engine_config: ChatEngineConfigModel,
              handler_config: Optional[Tts2FaceConfigModel] = None):
+
+        audio_output_definition = DataBundleDefinition()
+        audio_output_definition.add_entry(DataBundleEntry.create_audio_entry(
+            "avatar_audio",
+            1,
+            24000,
+        ))
+        audio_output_definition.lockdown()
+        self.output_data_definitions[ChatDataType.AVATAR_AUDIO] = audio_output_definition
+
+        video_output_definition = DataBundleDefinition()
+        video_output_definition.add_entry(DataBundleEntry.create_framed_entry(
+            "avatar_video",
+            [VariableSize(), VariableSize(), VariableSize(), 3],
+            0,
+            30
+        ))
+        video_output_definition.lockdown()
+        self.output_data_definitions[ChatDataType.AVATAR_VIDEO] = video_output_definition
+
         self.processor_wrapper = AvatarProcessorWrapper()
         # start process
         self._avatar_process = mp.Process(target=self.processor_wrapper.start_avatar,
@@ -295,31 +341,44 @@ class HandlerTts2Face(HandlerBase, ABC):
                        handler_config: Optional[Tts2FaceConfigModel] = None) -> HandlerContext:
         self.shared_state = session_context.shared_states
         
-        self.rtc_audio_queue = session_context.output_queues.get(EngineChannelType.AUDIO)
-        self.rtc_video_queue = session_context.output_queues.get(EngineChannelType.VIDEO)
+        # self.rtc_audio_queue = session_context.output_queues.get(EngineChannelType.AUDIO)
+        # self.rtc_video_queue = session_context.output_queues.get(EngineChannelType.VIDEO)
         
         self.event_in_queue.put_nowait(Tts2FaceEvent.START)
 
-        return HandlerTts2FaceContext("session",
+        context = HandlerTts2FaceContext("session",
                                       self.event_in_queue,
                                       self.audio_out_queue,
                                       self.video_out_queue,
                                       self.event_out_queue,
-                                      self.rtc_audio_queue,
-                                      self.rtc_video_queue,
+                                      # self.rtc_audio_queue,
+                                      # self.rtc_video_queue,
                                       self.shared_state)
-    
+        context.output_data_definitions = self.output_data_definitions
+        return context
+
     def start_context(self, session_context, handler_context):
         pass
 
     def get_handler_detail(self, session_context: SessionContext,
                            context: HandlerContext) -> HandlerDetail:
+        context = cast(HandlerTts2FaceContext, context)
         inputs = {
             ChatDataType.AVATAR_AUDIO: HandlerDataInfo(
                 type=ChatDataType.AVATAR_AUDIO,
+                input_consume_mode=ChatDataConsumeMode.ONCE,
             )
         }
-        outputs = {}
+        outputs = {
+            ChatDataType.AVATAR_AUDIO: HandlerDataInfo(
+                type=ChatDataType.AVATAR_AUDIO,
+                definition=context.output_data_definitions[ChatDataType.AVATAR_AUDIO],
+            ),
+            ChatDataType.AVATAR_VIDEO: HandlerDataInfo(
+                type=ChatDataType.AVATAR_VIDEO,
+                definition=context.output_data_definitions[ChatDataType.AVATAR_VIDEO],
+            ),
+        }
         return HandlerDetail(
             inputs=inputs, outputs=outputs,
         )

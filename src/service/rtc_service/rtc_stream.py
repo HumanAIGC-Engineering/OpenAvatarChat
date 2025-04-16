@@ -1,0 +1,229 @@
+import asyncio
+import json
+import uuid
+import weakref
+from typing import Optional, Dict
+
+import numpy as np
+# noinspection PyPackageRequirements
+from fastrtc import AsyncAudioVideoStreamHandler, AudioEmitType, VideoEmitType
+from loguru import logger
+
+from chat_engine.common.client_handler_base import ClientHandlerDelegate, ClientSessionDelegate
+from chat_engine.common.engine_channel_type import EngineChannelType
+from chat_engine.data_models.chat_data.chat_data_model import ChatData
+from chat_engine.data_models.chat_data_type import ChatDataType
+from chat_engine.data_models.chat_signal import ChatSignal
+from chat_engine.data_models.chat_signal_type import ChatSignalType, ChatSignalSourceType
+from engine_utils.interval_counter import IntervalCounter
+
+
+class RtcStream(AsyncAudioVideoStreamHandler):
+    def __init__(self,
+                 session_id: Optional[str],
+                 expected_layout="mono",
+                 input_sample_rate=16000,
+                 output_sample_rate=24000,
+                 output_frame_size=480,
+                 fps=30,
+                 stream_start_delay = 0.5,
+                 ):
+        super().__init__(
+            expected_layout=expected_layout,
+            input_sample_rate=input_sample_rate,
+            output_sample_rate=output_sample_rate,
+            output_frame_size=output_frame_size,
+            fps=fps
+        )
+        self.client_handler_delegate: Optional[ClientHandlerDelegate] = None
+        self.client_session_delegate: Optional[ClientSessionDelegate] = None
+
+        self.weak_factory: Optional[weakref.ReferenceType[RtcStream]] = None
+
+        self.session_id = session_id
+        self.stream_start_delay = stream_start_delay
+
+        self.chat_channel = None
+        self.first_audio_emitted = False
+
+        self.quit = asyncio.Event()
+        self.last_frame_time = 0
+
+        self.emit_counter = IntervalCounter("emit counter")
+
+        self.start_time = None
+        self.timestamp_base = self.input_sample_rate
+
+        self.streams: Dict[str, RtcStream] = {}
+
+
+    # copy is used as create_instance in fastrtc
+    def copy(self, **kwargs) -> AsyncAudioVideoStreamHandler:
+        try:
+            if self.client_handler_delegate is None:
+                raise Exception("ClientHandlerDelegate is not set.")
+            session_id = kwargs.get("webrtc_id", None)
+            if session_id is None:
+                session_id = uuid.uuid4().hex
+            new_stream = RtcStream(
+                session_id,
+                expected_layout=self.expected_layout,
+                input_sample_rate=self.input_sample_rate,
+                output_sample_rate=self.output_sample_rate,
+                output_frame_size=self.output_frame_size,
+                fps=self.fps,
+                stream_start_delay=self.stream_start_delay,
+            )
+            new_stream.weak_factory = weakref.ref(self)
+            new_session_delegate = self.client_handler_delegate.start_session(
+                session_id=session_id,
+                timestamp_base=self.input_sample_rate,
+            )
+            new_stream.client_session_delegate = new_session_delegate
+            if session_id in self.streams:
+                msg = f"Stream {session_id} already exists."
+                raise RuntimeError(msg)
+            self.streams[session_id] = new_stream
+            return new_stream
+        except Exception as e:
+            logger.opt(exception=True).error(f"Failed to create stream: {e}")
+            raise
+
+    async def emit(self) -> AudioEmitType:
+        try:
+            if not self.args_set.is_set():
+                await self.wait_for_args()
+
+            if not self.first_audio_emitted:
+                self.client_session_delegate.clear_data()
+                self.first_audio_emitted = True
+
+            while not self.quit.is_set():
+                chat_data = await self.client_session_delegate.get_data(EngineChannelType.AUDIO)
+                if chat_data is None or chat_data.data is None:
+                    continue
+                audio_array = chat_data.data.get_main_data()
+                if audio_array is None:
+                    continue
+                sample_num = audio_array.shape[-1]
+                self.emit_counter.add_property("emit_audio", sample_num / self.output_sample_rate)
+                return self.output_sample_rate, audio_array
+        except Exception as e:
+            logger.opt(exception=e).error(f"Error in emit: ")
+            raise
+
+    async def video_emit(self) -> VideoEmitType:
+        try:
+            if not self.first_audio_emitted:
+                await asyncio.sleep(0.1)
+            self.emit_counter.add_property("emit_video")
+            while not self.quit.is_set():
+                video_frame_data: ChatData = await self.client_session_delegate.get_data(EngineChannelType.VIDEO)
+                if video_frame_data is None or video_frame_data.data is None:
+                    continue
+                frame_data = video_frame_data.data.get_main_data().squeeze()
+                if frame_data is None:
+                    continue
+                return frame_data
+        except Exception as e:
+            logger.opt(exception=e).error(f"Error in video_emit: ")
+            raise
+
+    async def receive(self, frame: tuple[int, np.ndarray]):
+        if self.client_session_delegate is None:
+            return
+        timestamp = self.client_session_delegate.get_timestamp()
+        if timestamp[0] / timestamp[1] < self.stream_start_delay:
+            return
+        _, array = frame
+        self.client_session_delegate.put_data(
+            EngineChannelType.AUDIO,
+            array,
+            timestamp,
+            self.input_sample_rate,
+        )
+
+    async def video_receive(self, frame):
+        if self.client_session_delegate is None:
+            return
+        timestamp = self.client_session_delegate.get_timestamp()
+        if timestamp[0] / timestamp[1] < self.stream_start_delay:
+            return
+        self.client_session_delegate.put_data(
+            EngineChannelType.VIDEO,
+            frame,
+            timestamp,
+            self.fps,
+        )
+
+    async def on_chat_datachannel(self, message: Dict, channel):
+        # {"type":"chat",id:"标识属于同一段话", "message":"Hello, world!"}
+        # unique_id = uuid.uuid4().hex
+
+        if not self.chat_channel:
+            self.chat_channel = channel
+
+            async def process_chat_history():
+                role = None
+                chat_id = None
+                while not self.quit.is_set():
+                    chat_data = await self.client_session_delegate.get_data(EngineChannelType.TEXT)
+                    if chat_data is None or chat_data.data is None:
+                        continue
+                    logger.info(f"Got chat data {str(chat_data)}")
+                    current_role = 'human' if chat_data.type == ChatDataType.HUMAN_TEXT else 'avatar'
+                    chat_id = uuid.uuid4().hex if current_role != role else chat_id
+                    role = current_role
+                    self.chat_channel.send(json.dumps({'type': 'chat', 'message': chat_data.data.get_main_data(), 
+                                                        'id': chat_id, 'role': current_role}))  
+            asyncio.create_task(process_chat_history())
+            
+        if self.client_session_delegate is None:
+            return
+        timestamp = self.client_session_delegate.get_timestamp()
+        if timestamp[0] / timestamp[1] < self.stream_start_delay:
+            return
+        logger.info(f'on_chat_datachannel: {message}')
+
+        
+        if message['type'] == 'stop_chat':
+            self.client_session_delegate.emit_signal(
+                ChatSignal(
+                    type=ChatSignalType.INTERRUPT,
+                    source_type=ChatSignalSourceType.CLIENT,
+                    source_name="rtc",
+                )
+            )
+        elif message['type'] == 'chat':
+            channel.send(json.dumps({'type': 'avatar_end'}))
+            if self.client_session_delegate.shared_states.enable_vad is False:
+                return
+            self.client_session_delegate.shared_states.enable_vad = False
+            self.client_session_delegate.emit_signal(
+                ChatSignal(
+                    # begin a new round of responding
+                    type=ChatSignalType.BEGIN,
+                    stream_type=ChatDataType.AVATAR_AUDIO,
+                    source_type=ChatSignalSourceType.CLIENT,
+                    source_name="rtc",
+                )
+            )
+            self.client_session_delegate.put_data(
+                EngineChannelType.TEXT,
+                message['data'],
+                loopback=True
+            )
+        # else:
+
+        # channel.send(json.dumps({"type": "chat", "unique_id": unique_id, "message": message}))
+
+    def shutdown(self):
+        self.quit.set()
+        factory = None
+        if self.weak_factory is not None:
+            factory = self.weak_factory()
+        if factory is None:
+            factory = self
+        self.client_session_delegate = None
+        if factory.client_handler_delegate is not None:
+            factory.client_handler_delegate.stop_session(self.session_id)

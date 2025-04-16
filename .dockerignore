@@ -1,5 +1,4 @@
 .git/*
 models/*
 ssl_certs/*
-config/*
 build/*

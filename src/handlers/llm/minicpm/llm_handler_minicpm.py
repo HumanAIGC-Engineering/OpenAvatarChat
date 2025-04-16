@@ -16,14 +16,14 @@ from pydantic import BaseModel, Field
 from transformers import AutoModel, AutoTokenizer
 
 from chat_engine.common.handler_base import HandlerBase, HandlerDetail, HandlerBaseInfo, HandlerDataInfo
-from chat_engine.common.chat_data_type import ChatDataType
+from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.contexts.handler_context import HandlerContext
 from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_engine_config_data import ChatEngineConfigModel, HandlerBaseConfigModel
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBundleDefinition, DataBundleEntry
-from utils.directory_info import DirectoryInfo
-from utils.general_slicer import SliceContext, slice_data
+from engine_utils.directory_info import DirectoryInfo
+from engine_utils.general_slicer import SliceContext, slice_data
 
 
 class MiniCPMConfig(HandlerBaseConfigModel, BaseModel):
@@ -142,7 +142,7 @@ class HandlerS2SMiniCPM(HandlerBase, ABC):
                 auto_gptq = importlib.import_module("auto_gptq")
             except ModuleNotFoundError:
                 logger.warning("AutoGPTQ not installed, try to install it.")
-                from utils.components_builder.autogptq_minicpmo_builder import AutoGPTQMiniCPMOBuilder
+                from engine_utils.components_builder.autogptq_minicpmo_builder import AutoGPTQMiniCPMOBuilder
                 builder = AutoGPTQMiniCPMOBuilder()
                 builder.install()
                 auto_gptq = importlib.import_module("auto_gptq")

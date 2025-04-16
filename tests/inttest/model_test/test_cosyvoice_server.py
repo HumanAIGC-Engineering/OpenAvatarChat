@@ -25,7 +25,7 @@ if __name__ == '__main__':
     #     tts_audio += r
     # tts_speech = np.array(np.frombuffer(tts_audio, dtype=np.int16))
     sys.path.append(os.getcwd())
-    from src.utils.directory_info import DirectoryInfo
+    from engine_utils.directory_info import DirectoryInfo
 
     sys.path.append(os.path.join(DirectoryInfo.get_src_dir(), 'third_party', 'CosyVoice'))
     sys.path.append(os.path.join(DirectoryInfo.get_src_dir(), 'third_party',

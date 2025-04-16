@@ -15,7 +15,8 @@ done
 echo "${CONFIG_PATH}"
 
 docker build \
-     -t open-avatar-chat:0.0.1 . 
+    --build-arg CONFIG_FILE=${CONFIG_PATH}  \
+    -t open-avatar-chat:0.0.1 . 
 docker run --rm --gpus all -it --name open-avatar-chat \
     -v `pwd`/build:/root/open-avatar-chat/build \
     -v `pwd`/models:/root/open-avatar-chat/models \

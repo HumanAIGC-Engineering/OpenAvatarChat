@@ -2,7 +2,6 @@ import inspect
 
 
 class InspectUtils:
-
     @staticmethod
     def has_init_param(clazz, param_name):
         if not hasattr(clazz, '__init__'):

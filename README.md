@@ -59,18 +59,26 @@ HuggingFace
 
 ## 📖 Contents <!-- omit in toc -->
 
+- [🔥 Core Highlights](#-core-highlights)
+- [📢 News](#-news)
+  - [Changelog](#changelog)
+  - [Todo List](#todo-list)
+- [Demo](#demo)
 - [Overview](#overview)
   - [Introduction](#introduction)
   - [Requirements](#requirements)
   - [Performance](#performance)
   - [Component Dependencies](#component-dependencies)
 - [Installation](#installation)
-  - [Download Model](#download-model)
-  - [Prepare SSL Certificates](#prepare-ssl-certificates)
-  - [Run The Demo](#run-the-demo)
+  - [Download model](#download-model)
+  - [Prepare ssl certificates](#prepare-ssl-certificates)
+  - [Run the demo](#run-the-demo)
   - [TURN Server](#turn-server)
   - [ASR + LLM + TTS Mode](#asr--llm--tts-mode)
-  - [Configuration](#Configuration)
+  - [Configuration](#configuration)
+- [Community Thanks](#community-thanks)
+- [Star History](#star-history)
+- [Citation](#citation)
 
 ## Overview
 

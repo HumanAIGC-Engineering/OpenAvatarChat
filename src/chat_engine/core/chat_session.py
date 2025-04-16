@@ -9,13 +9,15 @@ from uuid import uuid4
 import numpy as np
 from loguru import logger
 
-from chat_engine.common.chat_data_type import ChatDataType
+from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.common.engine_channel_type import EngineChannelType
-from chat_engine.common.handler_base import HandlerBase, HandlerBaseInfo, HandlerDataInfo
+from chat_engine.common.handler_base import HandlerBase, HandlerBaseInfo, HandlerDataInfo, ChatDataConsumeMode
 from chat_engine.contexts.handler_context import HandlerContext, HandlerResultType
 from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_engine_config_data import HandlerBaseConfigModel, ChatEngineConfigModel
+from chat_engine.data_models.chat_signal import ChatSignal
+from chat_engine.data_models.chat_signal_type import ChatSignalSourceType, ChatSignalType
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle
 from chat_engine.data_models.session_info_data import IOQueueType
 
@@ -47,7 +49,26 @@ class DataSource:
 class DataSink:
     owner: str = ""
     sink_queue: queue.Queue = None
-    data_type: ChatDataType = ChatDataType.NONE
+    consume_info: Optional[HandlerDataInfo] = None
+
+
+class ChatDataSubmitter:
+    def __init__(self, handler_name: str, output_info, session_context, sinks, outputs):
+        self.handler_name = handler_name
+        self.output_info = output_info
+        self.session_context = session_context
+        self.sinks = sinks
+        self.outputs = outputs
+
+    def submit(self, data: HandlerResultType):
+        ChatSession.submit_data(
+            data,
+            self.handler_name,
+            self.output_info,
+            self.session_context,
+            self.sinks,
+            self.outputs
+        )
 
 
 class ChatDataSubmitter:
@@ -103,7 +124,7 @@ class ChatSession:
                 logger.warning(f"Channel type of {engine_channel_type} not found in engine outputs, "
                                f"configured output {output_info} will be ignored.")
                 continue
-            if isinstance(output_info.handler, Iterable):
+            if isinstance(output_info.handler, List):
                 handler_names = output_info.handler
             else:
                 handler_names = [output_info.handler]
@@ -116,7 +137,7 @@ class ChatSession:
                 self.outputs[output_key] = DataSink(
                     owner="",
                     sink_queue=output_queue,
-                    data_type = output_info.type,
+                    consume_info = HandlerDataInfo(type=output_info.type),
                 )
 
     @classmethod
@@ -263,6 +284,8 @@ class ChatSession:
             if sink.owner == data.source:
                 continue
             sink.sink_queue.put_nowait(data)
+            if sink.consume_info.input_consume_mode == ChatDataConsumeMode.ONCE:
+                break
 
     @classmethod
     def submit_data(cls, data: HandlerResultType, handler_name: str, output_info, session_context: SessionContext,
@@ -313,14 +336,22 @@ class ChatSession:
         inputs = io_detail.inputs
         for input_type, input_info in inputs.items():
             sink_list = self.data_sinks.setdefault(input_type, [])
-            data_sink = DataSink(owner=handler_info.name, sink_queue=handler_env.input_queue)
+            data_sink = DataSink(owner=handler_info.name, sink_queue=handler_env.input_queue, consume_info=input_info)
             sink_list.append(data_sink)
         handler_env.output_info = io_detail.outputs
 
         self.handlers[handler_info.name] = HandlerRecord(env=handler_env)
+        return handler_env
+
+    def sort_sinks(self):
+        for input_type, sink_list in self.data_sinks.items():
+            sink_list.sort(key=lambda x: x.consume_info)
 
     def start(self):
+        if self.session_context.shared_states.active:
+            return
         self.session_context.shared_states.active = True
+        self.sort_sinks()
         for handler_name, handler_record in self.handlers.items():
             start_args = (self.session_context, handler_record.env,
                           self.data_sinks, self.outputs)
@@ -356,3 +387,8 @@ class ChatSession:
 
     def get_timestamp(self):
         return self.session_context.get_timestamp()
+
+    def emit_signal(self, signal: ChatSignal):
+        # TODO this is temp implementation a full signal infrastructure is needed.
+        if signal.source_type == ChatSignalSourceType.CLIENT and signal.type == ChatSignalType.END:
+            self.session_context.shared_states.enable_vad = True

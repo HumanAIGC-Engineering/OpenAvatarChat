@@ -28,7 +28,7 @@ results
 /build_and_run*.sh
 models/MiniCPM-o-2_6*
 models/iic
-
+models
 resource/audio
 resource/avatar/*
 !resource/avatar/put_avatar_here.txt
