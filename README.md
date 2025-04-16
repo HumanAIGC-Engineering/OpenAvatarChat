@@ -36,7 +36,7 @@
 ### Todo List
 
 - [x] Achieve 100 preset digital human models (expected within 1 month)
-- [ ] Integrate [LAM](https://github.com/aigc3d/LAM) (expected within 3 weeks)
+- [ ] Integrate [LAM](https://github.com/aigc3d/LAM): A project that build 3D interactive chatting avatar with one image in seconds! (expected within 3 weeks)
 - [ ] Integrate [Qwen2.5-Omni](https://github.com/QwenLM/Qwen2.5-Omni)
 
 ## Demo
