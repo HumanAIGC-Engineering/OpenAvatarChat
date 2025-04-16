@@ -1,4 +1,4 @@
-
+from loguru import logger
 from handlers.avatar.liteavatar.model.algo_model import AvatarInitOption
 from handlers.avatar.liteavatar.avatar_processor import AvatarProcessor
 
@@ -14,6 +14,7 @@ class AvatarProcessorFactory:
     def create_avatar_processor(handler_root: str, algo_type: AvatarAlgoType,
                                 init_option: AvatarInitOption) -> AvatarProcessor:
         algo_adapter = None
+        logger.info("create avatar processor with init option: {}", init_option)
         if algo_type == AvatarAlgoType.SAMPLE:
             from tests.inttest.avatar.sample_adapter import SampleAdapter
             algo_adapter = SampleAdapter()

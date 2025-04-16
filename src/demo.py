@@ -14,7 +14,7 @@ if project_dir not in sys.path:
 
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle
 from service.logger_config_data import LoggerConfigData
-from service.service_config_data import ServiceConfigData, TwilioConfigData
+from service.service_config_data import ServiceConfigData, TwilioConfigData, TurnServerConfigData
 
 import argparse
 import asyncio
@@ -125,10 +125,25 @@ def connect_to_twilio(config: TwilioConfigData):
 def prepare_rtc_configuration(config: ServiceConfigData):
     client_entities = None
     out_rtc_configuration = None
+
     if config.rtc_config is not None:
         logger.info(f"Using RTC config: {config.rtc_config}")
         if isinstance(config.rtc_config, TwilioConfigData):
             out_rtc_configuration, client_entities = connect_to_twilio(config.rtc_config)
+        elif isinstance(config.rtc_config, TurnServerConfigData):
+            out_rtc_configuration = {
+                "iceServers": [
+                    {
+                        "urls": config.rtc_config.urls,
+                        "username": config.rtc_config.username,
+                        "credential": config.rtc_config.credential
+                    }
+                ],
+            }
+            logger.info(f"Using custom TURN server configuration {json.dumps(out_rtc_configuration)}")
+        else:
+            logger.warning(f"Unknown RTC config type: {type(config.rtc_config)}")
+
     return out_rtc_configuration, client_entities
 
 
@@ -148,6 +163,8 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
 
         self.start_stream_delay = 0.5
         self.chat_channel = None
+        self.first_audio_emitted = False
+
         self.audio_input_queue = asyncio.Queue()
         self.audio_output_queue = asyncio.Queue()
         self.video_input_queue = asyncio.Queue(maxsize=30)
@@ -185,13 +202,15 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
             session_id=str(uuid.uuid4()),
             timestamp_base=self.INPUT_AUDIO_SAMPLERATE,
         )
-
+        self.first_audio_emitted = False
         self.session = chat_engine.create_session(session_info=session_info,
                                                   input_queues=inputs,
                                                   output_queues=outputs)
         self.session.start()
 
     async def video_emit(self):
+        if not self.first_audio_emitted:
+            await asyncio.sleep(0.1)
         self.emit_counter.add_property("emit_video")
         video_frame = await self._get_data_from_queue(self.video_output_queue)
         return video_frame
@@ -225,6 +244,9 @@ class ChatStreamHandler(AsyncAudioVideoStreamHandler):
                 await self.wait_for_args()
             if self.session is None:
                 self.start_session()
+
+            if not self.first_audio_emitted:
+                self.first_audio_emitted = True
             output = await self._get_data_from_queue(self.audio_output_queue)
             if isinstance(output, DataBundle):
                 array = output.get_data("avatar_audio")

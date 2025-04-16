@@ -3,6 +3,7 @@ import os
 import shutil
 import sys
 from typing import Optional
+import subprocess as sp
 
 from loguru import logger
 
@@ -12,6 +13,7 @@ from handlers.avatar.liteavatar.algo.liteavatar.lite_avatar import liteAvatar
 from handlers.avatar.liteavatar.model.algo_model import AvatarAlgoConfig, AvatarInitOption, AvatarStatus
 from src.utils.directory_info import DirectoryInfo
 from src.utils.time_utils import timeit
+from src.utils.inspect_utils import InspectUtils
 
 
 class Tts2faceCpuAdapter(BaseAlgoAdapter):
@@ -30,10 +32,18 @@ class Tts2faceCpuAdapter(BaseAlgoAdapter):
     def init(self, init_option: AvatarInitOption):
         self.change_to_algo_dir()
         data_dir = self._get_avatar_data_dir(init_option.avatar_name)
-        self.tts2face = liteAvatar(
-            data_dir=data_dir,
-            fps=init_option.video_frame_rate
-        )
+        if InspectUtils.has_init_param(liteAvatar, "use_gpu"):
+            self.tts2face = liteAvatar(
+                data_dir=data_dir,
+                fps=init_option.video_frame_rate,
+                use_gpu=init_option.use_gpu
+            )
+        else:
+            self.tts2face = liteAvatar(
+                data_dir=data_dir,
+                fps=init_option.video_frame_rate
+            )
+
         bg_step = self.TARGET_FPS // init_option.video_frame_rate
         self.tts2face.load_dynamic_model(data_dir)
         self._bg_counter = BgFrameCounter(len(self.tts2face.ref_img_list), bg_step)
@@ -74,18 +84,40 @@ class Tts2faceCpuAdapter(BaseAlgoAdapter):
         )
 
     def _get_avatar_data_dir(self, avatar_name):
-        project_dir = DirectoryInfo.get_project_dir()
-        logger.info(", use default avatar name {}", avatar_name)
-        extract_dir = os.path.join(project_dir, "resource", "avatar", avatar_name)
-        data_dir = os.path.join(extract_dir, "preload")
-        if not os.path.exists(data_dir):
+        logger.info("use avatar name {}", avatar_name)
+        avatar_zip_path = self._download_from_modelscope(avatar_name)
+        avatar_dir = self.get_avatar_dir()
+        extract_dir = os.path.join(avatar_dir, os.path.dirname(avatar_name))
+        avatar_data_dir = os.path.join(avatar_dir, avatar_name)
+        if not os.path.exists(avatar_data_dir):
             # extract avatar data to dir
-            data_zip_path = os.path.join(self.handler_root, "algo", "liteavatar", "data", f"{avatar_name}.zip")
             logger.info("extract avatar data to dir {}", extract_dir)
-            assert os.path.exists(data_zip_path)
-            shutil.unpack_archive(data_zip_path, extract_dir)
-        assert os.path.exists(data_dir)
-        return data_dir
+            assert os.path.exists(avatar_zip_path)
+            shutil.unpack_archive(avatar_zip_path, extract_dir)
+        assert os.path.exists(avatar_data_dir)
+        return avatar_data_dir
+    
+    def _download_from_modelscope(self, avatar_name: str) -> str:
+        """
+        download avatar data from modelscope to resource/avatar/liteavatar
+        return avatar_zip_path
+        """
+        if not avatar_name.endswith(".zip"):
+            avatar_name = avatar_name + ".zip"
+        avatar_dir = self.get_avatar_dir()
+        avatar_zip_path = os.path.join(avatar_dir, avatar_name)
+        if not os.path.exists(avatar_zip_path):
+            cmd = [
+                "modelscope", "download", "--model", "HumanAIGC-Engineering/LiteAvatarGallery", avatar_name,
+                "--local_dir", avatar_dir
+                ]
+            logger.info("download avatar data from modelscope, cmd: {}", " ".join(cmd))
+            sp.run(cmd)
+        return avatar_zip_path
+
+    @staticmethod
+    def get_avatar_dir():
+        return os.path.join(DirectoryInfo.get_project_dir(), "resource", "avatar", "liteavatar")
 
     def change_to_algo_dir(self):
         algo_dir = os.path.join(self.handler_root, "algo", "liteavatar")

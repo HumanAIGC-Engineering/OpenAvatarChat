@@ -17,6 +17,7 @@ class AvatarInitOption(BaseModel):
     avatar_name: str
     debug: bool = False
     enable_fast_mode: bool = False
+    use_gpu: bool = True
 
 
 class AudioSlice(BaseModel):

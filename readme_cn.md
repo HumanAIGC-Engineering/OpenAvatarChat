@@ -1,68 +1,127 @@
 <h1 style='text-align: center; margin-bottom: 1rem'> Open Avatar Chat </h1>
 
-<div align="center">
+<p align="center">
 <strong><a href="README.md">English</a> | 中文</strong>
-</div>
-<h3 style='text-align: center'>
-模块化的交互数字人对话实现，能够在单台PC上运行完整功能。
-</h3>
-<div style="display: flex; flex-direction: row; justify-content: center">
-<a href="https://github.com/HumanAIGC-Engineering/OpenAvatarChat" target="_blank"><img alt="Static Badge" style="display: block; padding-right: 5px; height: 20px;" src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"></a>
-</div>
-
-## 0. ToDo
-
-我们后续计划：
-1. 预置100个数字人模型发布；(1个月内)
-2. 接入[LAM](https://github.com/aigc3d/LAM)（3周内）
-3. 接入[Qwen2.5-Omni](https://github.com/QwenLM/Qwen2.5-Omni)
+</p>
 
 
-## 1. Demo
+<p align="center">
+<strong>模块化的交互数字人对话实现，能够在单台PC上运行完整功能。</strong>
+</p>
 
-我们部署了一个服务，音频部分采用SenseVoice + Qwen-VL + CosyVoice实现，
+
+<p align="center" style="display: flex; flex-direction: row; justify-content: center">
+ 🤗 <a href="https://huggingface.co/spaces/HumanAIGC-Engineering-Team/open-avatar-chat">Demo</a>&nbsp&nbsp|&nbsp&nbsp<img alt="Static Badge" style="height: 10px;" src="./assets/images/modelscope_logo.png"> <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat">Demo</a>&nbsp&nbsp|&nbsp&nbsp💬 <a href="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/blob/main/assets/images/community_wechat.png">WeChat (微信)</a>
+</p>
+
+## 🔥核心亮点
+- **低延迟数字人实时对话：平均回答延迟在2.2秒左右。**
+- **多模态语言模型：支持多模态语言模型，包括文本、音频、视频等。**
+- **模块化设计：使用模块化的设计，可以灵活地替换组件，实现不同功能组合。**
+
+
+## 📢 最新动态
+
+### 更新日志
+
+- [2025.04.14] ⭐️⭐️⭐️ 版本 0.2.2发布：
+  - 100个新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
+  - 默认使用GPU后端运行数字人
+- [2025.04.07] ⭐️⭐️⭐️ 版本 0.2.1发布： 
+  - 增加历史记录支持 
+  - 支持文本输入 
+  - 启动时不再强制要求摄像头存在 
+  - 优化模块化加载方式
+- [2025.02.20] ⭐️⭐️⭐️ 版本 0.1.0发布： 
+  - 模块化的实时交互对话数字人 
+  - 支持MiniCPM-o作为多模态语言模型和云端的 api 两种调用方
+
+### 待办清单
+
+- [x] 预置的数字人模型达到100个（预计1个月内）
+- [ ] 接入[LAM](https://github.com/aigc3d/LAM):能够单图秒级打造超写实3D数字人的开源项目（预计3周内）
+- [ ] 接入[Qwen2.5-Omni](https://github.com/QwenLM/Qwen2.5-Omni)
+
+## Demo
+
+我们部署在
 <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
-欢迎体验
-    <img alt="Static Badge" style="height: 14px; margin-right: 5px;" src="./assets/images/modelscope_logo.png">。
+    <img alt="Static Badge" style="height: 10px; margin-right: 1px;" src="./assets/images/modelscope_logo.png">
+ModelScope
  </a>
-<br>
+和
+<a href="https://huggingface.co/spaces/HumanAIGC-Engineering-Team/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
+    🤗
+HuggingFace
+ </a>
+上均部署了一个体验服务，音频部分采用SenseVoice + Qwen-VL + CosyVoice实现，欢迎体验。
 
-#### Demo 演示
 
-<video controls src="https://github.com/user-attachments/assets/89753aea-370f-4f10-9d05-f4b104f87dd8">
-</video>
+<div align="center">
+  <video controls src="https://github.com/user-attachments/assets/e2861200-84b0-4c7a-93f0-f46268a0878b">
+  </video>
+</div>
 
-## 2. 社区
 
-* 微信群
 
-<img alt="community_wechat.png" height="200" src="assets/images/community_wechat.png" width="200"/>
 
-## 3. 系统需求
+
+## 📖目录 <!-- omit in toc -->
+
+- [概览](#概览)
+  - [简介](#简介)
+  - [系统需求](#系统需求)
+  - [性能指标](#性能指标)
+  - [组件依赖](#组件依赖)
+- [安装部署](#安装部署)
+  - [下载模型](#下载模型)
+  - [准备ssl证书](#准备ssl证书)
+  - [运行](#运行)
+  - [TURN Server](#turn-server)
+  - [ASR + LLM + TTS方式](#asr--llm--tts-替代本地-minicpm-o)
+  - [配置说明](#配置说明)
+  
+  
+
+## 概览
+
+### 简介
+
+Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单台PC上运行完整功能。目前支持MiniCPM-o作为多模态语言模型或者使用云端的 api 替换实现常规的ASR + LLM + TTS。这两种模式的结构如下图所示。
+
+<p align="center">
+<img src="./assets/images/data_flow.svg" />
+</p>
+
+### 系统需求
 * Python版本 3.10+
 * 支持CUDA的GPU
-* 未量化的多模态语言模型需要20GB以上的显存。
-  * 使用int4量化版本的语言模型可以在不到10GB现存的显卡上运行，但可能会因为量化而影响效果。
+* 未量化的多模态语言模型MiniCPM-o需要20GB以上的显存。
 * 数字人部分使用CPU进行推理，测试设备CPU为i9-13980HX，可以达到30FPS.
-> 可以使用云端的LLM模型 api 来替代MiniCPM-o，可以大大减低配置需求，具体可参考 [ASR + LLM + TTS方式](#asr--llm--tts-替代本地-minicpm-o)，这两种模式的结构如下图所示
-> <img src="./assets/images/data_flow.svg" />
 
-## 4. 性能
-我们在测试PC上记录了回答的延迟时间，10次平均时间约为2.2秒，测试PC使用i9-13900KF和Nvidia RTX 4090。延迟从人的语音结束到数字人的语音开始计算，其中会包括RTC双向传输数据时间、VAD判停延迟以及整个流程的计算时间。
+> [!TIP]
+> 
+> 使用int4量化版本的语言模型可以在不到10GB现存的显卡上运行，但可能会因为量化而影响效果。
+> 
+> 使用云端的 api 替换MiniCPM-o实现常规的ASR + LLM + TTS，可以大大减低配置需求，具体可参考 [ASR + LLM + TTS方式](#asr--llm--tts-替代本地-minicpm-o)
 
-## 5. 组件依赖
+
+### 性能指标
+在我们的测试中，使用配备 i9-13900KF 处理器和 Nvidia RTX 4090 显卡的 PC，我们记录了回答的延迟时间。经过十次测试，平均延迟约为 2.2 秒。延迟时间是从用户语音结束到数字人开始语音的时间间隔，其中包含了 RTC 双向数据传输时间、VAD（语音活动检测）停止延迟以及整个流程的计算时间。
+
+### 组件依赖
 
 |类型|开源项目|Github地址|模型地址|
 |---|---|---|---|
 |RTC|HumanAIGC-Engineering/gradio-webrtc|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC-Engineering/gradio-webrtc)||
 |VAD|snakers4/silero-vad|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/snakers4/silero-vad)||
 |LLM|OpenBMB/MiniCPM-o|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)| [🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6) |
-|LLM-int4|||[🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)|
+|LLM-int4|OpenBMB/MiniCPM-o|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)|[🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)|
 |Avatar|HumanAIGC/lite-avatar|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC/lite-avatar)||
 |TTS|FunAudioLLM/CosyVoice|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
 
 
-## 6. 安装
+## 安装部署
 
 > [!IMPORTANT]
 > 本项目子模块以及依赖模型都需要使用git lfs模块，请确认lfs功能已安装
@@ -75,9 +134,12 @@
 > git submodule update --init --recursive
 > ```
 > 强烈建议：国内用户依然使用git clone的方式下载，而不要直接下载zip文件，方便这里的git submodule和git lfs的操作，github访问的问题，可以参考[github访问问题](https://github.com/maxiaof/github-hosts)
+> 
+> 如果遇到问题欢迎提 [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues) 给我们
 
 
-#### 下载模型
+
+### 下载模型
 本项目中大部分的模型与资源文件都包含在引入的子模块中了。多模态语言模型任然需要用户自行下载。本项目目前使用MiniCPM-o-2.6作为多模态语言模型为数字人提供对话能力，用户可以按需从[Huggingface](https://huggingface.co/openbmb/MiniCPM-o-2_6)或者[Modelscope](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6)下载相关模型。建议将模型直接下载到 \<ProjectRoot\>/models/ 默认配置的模型路径指向这里，如果放置与其他位置，需要修改配置文件。scripts目录中有对应模型的下载脚本，可供在linux环境下使用，请在项目根目录下运行脚本：
 ```bash
 scripts/download_MiniCPM-o_2.6.sh
@@ -86,17 +148,17 @@ scripts/download_MiniCPM-o_2.6.sh
 scripts/download_MiniCPM-o_2.6-int4.sh
 ```
 
-> [!WARNING]
+> [!NOTE]
 > 本项目支持MiniCPM-o-2.6的原始模型以及int4量化版本，但量化版本需要安装专用分支的AutoGPTQ，相关细节请参考官方的[说明](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)
 
-#### 准备ssl证书
+### 准备ssl证书
 由于本项目使用rtc作为视音频传输的通道，用户如果需要从localhost以为的地方连接服务的话，需要准备ssl证书以开启https，默认配置会读取ssl_certs目录下的localhost.crt和localhost.key，用户可以相应修改配置来使用自己的证书。我们也在scripts目录下提供了生成自签名证书的脚本。需要在项目根目录下运行脚本以使生成的证书被放到默认位置。
 ```bash
 scripts/create_ssl_certs.sh
 ```
 
-#### 运行
-本项目可以以linux容器方式被启动，或者也可以直接启动
+### 运行
+本项目默认以MiniCPM-o作为多模态语言模型，可以以linux容器方式被启动，或者也可以直接启动
   * 容器化运行：容器依赖nvidia的容器环境，在准备好支持GPU的docker环境后，运行以下命令即可完成镜像的构建与启动：
     ```bash
     build_and_run.sh
@@ -111,7 +173,63 @@ scripts/create_ssl_certs.sh
     python src/demo.py
     ```
 
-#### 配置
+### TURN Server
+如果点击开始对话后，出现一直等待中的情况，可能你的部署环境存在NAT穿透方面的问题（如部署在云上机器等），需要进行数据中继。在Linux环境下，可以使用coturn来架设TURN服务。可参考以下操作在同一机器上安装、启动并配置使用coturn：
+* 运行安装脚本
+```console
+$ chmod 777 scripts/setup_coturn.sh
+# scripts/setup_coturn.sh
+```
+* 修改config配置文件，添加以下配置后启动服务
+```yaml
+default:
+  service:
+    rtc_config:
+      # 使用turnserver时，使用以下配置
+      urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
+      username: "your-username"
+      credential: "your-credential"
+```
+* 确保防火墙（包括云上机器安全组等策略）开放coturn所需端口
+
+
+### ASR + LLM + TTS 替代本地 MiniCPM-o
+MiniCPM-o 的本地启动要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人,修改完后仍可以用 `python src/demo.py` 启动即可
+
+1. 修改 config/chat_with_openai_compatible.yaml 中的 LLM_Bailian配置，代码中的调用方式为 openai 的标准方式，理论上相同的可以兼容
+
+```yaml
+LLM_Bailian: 
+  moedl_name: "qwen-plus"
+  system_prompt: "你是个AI对话数字人，你要用简短的对话来回答我的问题，并在合理的地方插入标点符号"
+  api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+  api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
+```
+2. 启动配置修改为 ```python src/demo.py --config config/chat_with_openai_compatible.yaml```
+
+> [!Note]
+> * 代码内部调用方式
+> ```python
+> client = OpenAI(
+>       api_key= self.api_key, 
+>       base_url=self.api_url,
+>   )
+> completion = client.chat.completions.create(
+>     model=self.model_name,
+>     messages=[
+>        self.system_prompt,
+>         {'role': 'user', 'content': chat_text}
+>     ],
+>     stream=True
+>     )
+> ```
+> * ASR默认为funasr 调用 iic/SenseVoiceSmall
+> * LLM默认为百炼api_url + api_key
+> * TTS默认为CosyVoice的 `iic/CosyVoice-300M-SFT` + `中文女`，可以通过修改为`其他模型`配合 `ref_audio_path` 和 `ref_audio_text` 进行音色复刻
+
+
+
+### 配置说明
 程序默认启动时，会读取 **<project_root>/configs/chat_with_minicpm.yaml** 中的配置，用户也可以在启动命令后加上--config参数来选择从其他配置文件启动。
 ```bash
 python src/demo.py --config <配置文件的绝对路径>.yaml
@@ -180,62 +298,35 @@ python src/demo.py --config <配置文件的绝对路径>.yaml
 
 |参数|默认值|说明|
 |---|---|---|
-|Tts2Face.avatar_name|sample_data|数字人数据名，目前项目仅提供了"sample_data"可供选择，敬请期待。|
-|Tts2Face.fps|25|数字人的运行帧率，在性能较好的CPU上，可以设置为30FPS|
-|Tts2Face.enable_fast_mode|True|低延迟模式，打开后可以减低回答的延迟，但在性能不足的情况下，可能会在回答的开始产生语音卡顿。|
+|LiteAvatar.avatar_name|sample_data|数字人数据名，目前在modelscope的项目LiteAvatarGallery中提供了100个数字人形象可供使用，详情见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)。|
+|LiteAvatar.fps|25|数字人的运行帧率，在性能较好的CPU上，可以设置为30FPS|
+|LiteAvatar.enable_fast_mode|False|低延迟模式，打开后可以减低回答的延迟，但在性能不足的情况下，可能会在回答的开始产生语音卡顿。|
+|LiteAvatar.use_gpu|True|LiteAvatar算法是否使用GPU，目前使用CUDA后端|
 
 > [!IMPORTANT]
 > 所有配置中的路径参数都可以使用绝对路径，或者相对于项目根目录的相对路径。
 
-#### ASR + LLM + TTS 替代本地 MiniCPM-o
-MiniCPM-o 的本地启动要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人,修改完后仍可以用 `python src/demo.py` 启动即可
-> 如果遇到问题欢迎 [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues)给我们
+## 社区感谢
 
-启动配置修改为 ```python src/demo.py --config config/llm_openai_compatible.yaml```
-* 修改 config/llm_openai_compatible.yaml 中的 LLM_Bailian配置，代码中的调用方式为 openai 的标准方式，理论上相同的可以兼容
-
-```yaml
-LLM_Bailian: 
-  moedl_name: "qwen-plus"
-  system_prompt: "你是个AI对话数字人，你要用简短的对话来回答我的问题，并在合理的地方插入标点符号"
-  api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
-  api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
-```
-* 代码内部调用方式
-```python
-client = OpenAI(
-      api_key= self.api_key, 
-      base_url=self.api_url,
-  )
-completion = client.chat.completions.create(
-    model=self.model_name,
-    messages=[
-        self.system_prompt,
-        {'role': 'user', 'content': chat_text}
-    ],
-    stream=True
-    )
-```
-* ASR默认为funasr 调用 iic/SenseVoiceSmall
-* LLM默认为百炼api_url + api_key
-* TTS默认为CosyVoice的 `iic/CosyVoice-300M-SFT` + `中文女`，可以通过修改为`其他模型`配合 `ref_audio_path` 和 `ref_audio_text` 进行音色复刻
-
-## 7. 社区感谢
-
-感谢社区同学titan909在B站上发布的[部署教程视频](https://www.bilibili.com/video/BV1FNZ8YNEA8)
+- 感谢社区同学“titan909”在B站上发布的[部署教程视频](https://www.bilibili.com/video/BV1FNZ8YNEA8)
+- 感谢另一位社区同学“十字鱼”在B站上发布的一键安装包视频，并提供了下载（解压码在视频简介里面有,仔细找找）[一键包](https://www.bilibili.com/video/BV1V1oLYmEu3/?vd_source=29463f5b63a3510553325ba70f325293)
 
 
-## 8. 贡献者
-
-[程刚](https://github.com/lovepope)
-[陈涛](https://github.com/raidios)
-[王丰](https://github.com/sudowind)
-[黄斌超](https://github.com/bingochaos)
-[徐辉](https://github.com/xhup)
-[何冠桥](https://github.com/bboygun)
-[卢益](https://github.com/HaveAnApplePie)
-
-## 9. Star历史
-
-如果您觉得我们的项目还有点帮助，辛苦帮我们点个⭐，感谢！
+## Star历史
 ![](https://api.star-history.com/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)
+
+## 引用
+
+如果您在您的研究/项目中感到 OpenAvatarChat 为您提供了帮助，期待您能给一个 Star⭐和引用✏️
+
+```
+@software{avatarchat2025,
+  author = {Gang Cheng, Tao Chen, Feng Wang, Binchao Huang, Hui Xu, Guanqiao He, Yi Lu, Shengyin Tan},
+  title = {OpenAvatarChat},
+  year = {2025},
+  publisher = {GitHub},
+  url = {https://github.com/HumanAIGC-Engineering/OpenAvatarChat}
+}
+```
+
+

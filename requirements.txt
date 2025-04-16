@@ -35,6 +35,7 @@ vector_quantize_pytorch~=1.21.7
 vocos~=0.1.0
 pillow~=11.1.0
 openai
+modelscope
 # project specified version
 src/third_party/gradio_webrtc_videochat/dist/fastrtc-0.0.15.dev0-py3-none-any.whl
 
