@@ -39,7 +39,7 @@
 ### 待办清单
 
 - [x] 预置的数字人模型达到100个（预计1个月内）
-- [ ] 接入[LAM](https://github.com/aigc3d/LAM)（预计3周内）
+- [ ] 接入[LAM](https://github.com/aigc3d/LAM):能够单图秒级打造超写实3D数字人的开源项目（预计3周内）
 - [ ] 接入[Qwen2.5-Omni](https://github.com/QwenLM/Qwen2.5-Omni)
 
 ## Demo
