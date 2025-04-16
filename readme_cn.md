@@ -73,13 +73,20 @@ HuggingFace
   - [系统需求](#系统需求)
   - [性能指标](#性能指标)
   - [组件依赖](#组件依赖)
-- [安装部署](#安装部署)
-  - [下载模型](#下载模型)
+  - [预置模式](#预置模式)
+- [快速开始](#安装部署)
+  - [本地运行](#本地运行)
+    - [uv安装](#uv安装)
+    - [依赖安装](#依赖安装)
+    - [运行](#运行)
+  - [Docker运行](#dokcer运行)
+- [相关模块安装方法](#相关模块安装方法)
+  - [MiniCPM-o模块](#minicpm-o模块)
+  - [ASR + LLM + TTS API替换](#asr--llm--tts-api替换)
+- [相关部署需求](#相关部署需求)
   - [准备ssl证书](#准备ssl证书)
-  - [运行](#运行)
   - [TURN Server](#turn-server)
-  - [ASR + LLM + TTS方式](#asr--llm--tts-替代本地-minicpm-o)
-  - [配置说明](#配置说明)
+- [配置说明](#配置说明)
   
   
 
@@ -87,17 +94,17 @@ HuggingFace
 
 ### 简介
 
-Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单台PC上运行完整功能。目前支持MiniCPM-o作为多模态语言模型或者使用云端的 api 替换实现常规的ASR + LLM + TTS。这两种模式的结构如下图所示。
+Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单台PC上运行完整功能。目前支持MiniCPM-o作为多模态语言模型或者使用云端的 api 替换实现常规的ASR + LLM + TTS。这两种模式的结构如下图所示。更多的预置模式详见[下方](#预置模式)。
 
 <p align="center">
 <img src="./assets/images/data_flow.svg" />
 </p>
 
 ### 系统需求
-* Python版本 3.10+
+* Python版本 >=3.10, <3.13
 * 支持CUDA的GPU
 * 未量化的多模态语言模型MiniCPM-o需要20GB以上的显存。
-* 数字人部分使用CPU进行推理，测试设备CPU为i9-13980HX，可以达到30FPS.
+* 数字人部分可以使用GPU/CPU进行推理，测试设备CPU为i9-13980HX，CPU推理下可以达到30FPS.
 
 > [!TIP]
 > 
@@ -120,8 +127,26 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 |Avatar|HumanAIGC/lite-avatar|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC/lite-avatar)||
 |TTS|FunAudioLLM/CosyVoice|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
 
+### 预置模式
 
-## 安装部署
+| CONFIG名称                                           | ASR |    LLM    |    TTS    | AVATAR|
+|----------------------------------------------------|-----|:---------:|:---------:|------------|
+| chat_with_gs.yaml                                  |SenseVoice|    API    |API| LAM        |
+| chat_with_minicpm.yaml                             |MiniCPM-o| MiniCPM-o | MiniCPM-o | lite-avatar |
+| chat_with_openai_compatible.yaml                   |SenseVoice|API|CosyVoice| lite-avatar |
+| chat_with_openai_compatible_bailian_cosyvoice.yaml |SenseVoice|API|API| lite-avatar |
+| chat_with_openai_compatible_edge_tts.yaml          |SenseVoice|API|edgetts| lite-avatar |
+
+> [!NOTE]
+> 使用的VAD均为silero-vad，RTC均为gradio-webrtc
+
+
+## 🚀安装部署
+
+安装部署对应的模式前请先查看该模式使用到的相关模块的安装方法：[相关模块安装方法](#相关模块安装方法)和[相关部署需求](#相关部署需求)
+
+### 本地运行
+
 
 > [!IMPORTANT]
 > 本项目子模块以及依赖模型都需要使用git lfs模块，请确认lfs功能已安装
@@ -137,10 +162,55 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 > 
 > 如果遇到问题欢迎提 [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues) 给我们
 
+#### uv安装
+
+推荐安装[uv](https://docs.astral.sh/uv/)，使用uv进行进行本地环境管理。
+
+> 官方独立安装程序
+> ```bash
+> # On Windows.
+> powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+> # On macOS and Linux.
+> curl -LsSf https://astral.sh/uv/install.sh | sh
+> ```
+> PyPI安装
+> ```
+> # With pip.
+> pip install uv
+> # Or pipx.
+> pipx install uv
+> ```
+
+#### 依赖安装
+
+##### 安装全部依赖
+```bash
+uv sync --all-packages
+```
+
+##### 仅安装所需模式的依赖
+```bash
+uv sync
+uv run install.py --uv --config <配置文件的绝对路径>.yaml 
+```
+
+#### 运行
+```bash
+uv run src/demo.py --config <配置文件的绝对路径>.yaml
+```
 
 
-### 下载模型
-本项目中大部分的模型与资源文件都包含在引入的子模块中了。多模态语言模型任然需要用户自行下载。本项目目前使用MiniCPM-o-2.6作为多模态语言模型为数字人提供对话能力，用户可以按需从[Huggingface](https://huggingface.co/openbmb/MiniCPM-o-2_6)或者[Modelscope](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6)下载相关模型。建议将模型直接下载到 \<ProjectRoot\>/models/ 默认配置的模型路径指向这里，如果放置与其他位置，需要修改配置文件。scripts目录中有对应模型的下载脚本，可供在linux环境下使用，请在项目根目录下运行脚本：
+### Dokcer运行
+容器化运行：容器依赖nvidia的容器环境，在准备好支持GPU的docker环境后，运行以下命令即可完成镜像的构建与启动：
+```bash
+./build_and_run.sh --config <配置文件的绝对路径>.yaml
+```
+
+
+## 相关模块安装方法
+
+### MiniCPM-o模块
+本项目可以使用MiniCPM-o-2.6作为多模态语言模型为数字人提供对话能力，用户可以按需从[Huggingface](https://huggingface.co/openbmb/MiniCPM-o-2_6)或者[Modelscope](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6)下载相关模型。建议将模型直接下载到 \<ProjectRoot\>/models/ 默认配置的模型路径指向这里，如果放置与其他位置，需要修改配置文件。scripts目录中有对应模型的下载脚本，可供在linux环境下使用，请在项目根目录下运行脚本：
 ```bash
 scripts/download_MiniCPM-o_2.6.sh
 ```
@@ -151,52 +221,11 @@ scripts/download_MiniCPM-o_2.6-int4.sh
 > [!NOTE]
 > 本项目支持MiniCPM-o-2.6的原始模型以及int4量化版本，但量化版本需要安装专用分支的AutoGPTQ，相关细节请参考官方的[说明](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)
 
-### 准备ssl证书
-由于本项目使用rtc作为视音频传输的通道，用户如果需要从localhost以为的地方连接服务的话，需要准备ssl证书以开启https，默认配置会读取ssl_certs目录下的localhost.crt和localhost.key，用户可以相应修改配置来使用自己的证书。我们也在scripts目录下提供了生成自签名证书的脚本。需要在项目根目录下运行脚本以使生成的证书被放到默认位置。
-```bash
-scripts/create_ssl_certs.sh
-```
 
-### 运行
-本项目默认以MiniCPM-o作为多模态语言模型，可以以linux容器方式被启动，或者也可以直接启动
-  * 容器化运行：容器依赖nvidia的容器环境，在准备好支持GPU的docker环境后，运行以下命令即可完成镜像的构建与启动：
-    ```bash
-    build_and_run.sh
-    ```
-  * 直接运行:
-    * 安装依赖
-    ```bash
-    pip install -r requirements.txt
-    ```
-    * 启动程序
-    ```bash
-    python src/demo.py
-    ```
+### ASR + LLM + TTS API替换
+MiniCPM-o 的本地启动要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人。
 
-### TURN Server
-如果点击开始对话后，出现一直等待中的情况，可能你的部署环境存在NAT穿透方面的问题（如部署在云上机器等），需要进行数据中继。在Linux环境下，可以使用coturn来架设TURN服务。可参考以下操作在同一机器上安装、启动并配置使用coturn：
-* 运行安装脚本
-```console
-$ chmod 777 scripts/setup_coturn.sh
-# scripts/setup_coturn.sh
-```
-* 修改config配置文件，添加以下配置后启动服务
-```yaml
-default:
-  service:
-    rtc_config:
-      # 使用turnserver时，使用以下配置
-      urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
-      username: "your-username"
-      credential: "your-credential"
-```
-* 确保防火墙（包括云上机器安全组等策略）开放coturn所需端口
-
-
-### ASR + LLM + TTS 替代本地 MiniCPM-o
-MiniCPM-o 的本地启动要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人,修改完后仍可以用 `python src/demo.py` 启动即可
-
-1. 修改 config/chat_with_openai_compatible.yaml 中的 LLM_Bailian配置，代码中的调用方式为 openai 的标准方式，理论上相同的可以兼容
+1. 修改对应config如 config/chat_with_openai_compatible.yaml 中的 LLM_Bailian配置，代码中的调用方式为 openai 的标准方式，理论上相同的可以兼容
 
 ```yaml
 LLM_Bailian: 
@@ -205,7 +234,7 @@ LLM_Bailian:
   api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
   api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
 ```
-2. 启动配置修改为 ```python src/demo.py --config config/chat_with_openai_compatible.yaml```
+2. 启动配置修改为 ```uv run src/demo.py --config config/chat_with_openai_compatible.yaml```
 
 > [!Note]
 > * 代码内部调用方式
@@ -228,11 +257,36 @@ LLM_Bailian:
 > * TTS默认为CosyVoice的 `iic/CosyVoice-300M-SFT` + `中文女`，可以通过修改为`其他模型`配合 `ref_audio_path` 和 `ref_audio_text` 进行音色复刻
 
 
+## 相关部署需求
+### 准备ssl证书
+由于本项目使用rtc作为视音频传输的通道，用户如果需要从localhost以为的地方连接服务的话，需要准备ssl证书以开启https，默认配置会读取ssl_certs目录下的localhost.crt和localhost.key，用户可以相应修改配置来使用自己的证书。我们也在scripts目录下提供了生成自签名证书的脚本。需要在项目根目录下运行脚本以使生成的证书被放到默认位置。
+```bash
+scripts/create_ssl_certs.sh
+```
+
+### TURN Server
+如果点击开始对话后，出现一直等待中的情况，可能你的部署环境存在NAT穿透方面的问题（如部署在云上机器等），需要进行数据中继。在Linux环境下，可以使用coturn来架设TURN服务。可参考以下操作在同一机器上安装、启动并配置使用coturn：
+* 运行安装脚本
+```console
+$ chmod 777 scripts/setup_coturn.sh
+# scripts/setup_coturn.sh
+```
+* 修改config配置文件，添加以下配置后启动服务
+```yaml
+default:
+  service:
+    rtc_config:
+      # 使用turnserver时，使用以下配置
+      urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
+      username: "your-username"
+      credential: "your-credential"
+```
+* 确保防火墙（包括云上机器安全组等策略）开放coturn所需端口
 
 ### 配置说明
 程序默认启动时，会读取 **<project_root>/configs/chat_with_minicpm.yaml** 中的配置，用户也可以在启动命令后加上--config参数来选择从其他配置文件启动。
 ```bash
-python src/demo.py --config <配置文件的绝对路径>.yaml
+uv run src/demo.py --config <配置文件的绝对路径>.yaml
 ```
 
 可配置的参数列表：
