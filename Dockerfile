@@ -22,7 +22,7 @@ WORKDIR $WORK_DIR
 #安装核心依赖
 COPY ./install.py $WORK_DIR/install.py
 COPY ./pyproject.toml $WORK_DIR/pyproject.toml
-COPY ./src/third_party $WORK_DIR/third_party
+COPY ./src/third_party $WORK_DIR/src/third_party
 RUN pip install uv && \
     uv venv --python 3.10 && \
     uv sync --no-install-workspace
