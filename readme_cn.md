@@ -87,6 +87,7 @@ LightAvatar
   - [Docker运行](#dokcer运行)
 - [相关模块安装方法](#相关模块安装方法)
   - [MiniCPM-o模块](#minicpm-o模块)
+  - [CosyVoice模块](#cosyvoice模块)
   - [ASR + LLM + TTS API替换](#asr--llm--tts-api替换)
 - [相关部署需求](#相关部署需求)
   - [准备ssl证书](#准备ssl证书)
@@ -195,7 +196,6 @@ uv sync --all-packages
 
 ##### 仅安装所需模式的依赖
 ```bash
-uv sync
 uv run install.py --uv --config <配置文件的绝对路径>.yaml 
 ```
 
@@ -226,6 +226,38 @@ scripts/download_MiniCPM-o_2.6-int4.sh
 > [!NOTE]
 > 本项目支持MiniCPM-o-2.6的原始模型以及int4量化版本，但量化版本需要安装专用分支的AutoGPTQ，相关细节请参考官方的[说明](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)
 
+### CosyVoice模块
+
+> [!WARNING]
+> 因为CosyVoice依赖中的pynini包通过PyPI获取时在Windows下编译会出现编译参数不支持的问题。CosyVoice官方目前建议的解决方法是在Windows下用Conda安装
+conda-forge中的pynini预编译包。
+
+在Windows下如果使用本地的CosyVoice作为TTS的话，需要结合Conda和UV进行安装。具体依赖安装和运行流程如下：
+
+1. 安装Anaconda或者[Miniconda](https://docs.anaconda.net.cn/miniconda/install/)
+```bash
+conda create -n openavatarchat python=3.10
+conda activate openavatarchat
+conda install -c conda-forge pynini==2.1.6
+```
+
+2. 设置uv要索引的环境变量为Conda环境
+```bash
+# cmd
+set VIRTUAL_ENV=%CONDA_PREFIX%
+# powershell 
+$env:VIRTUAL_ENV=$env:CONDA_PREFIX
+```
+
+3. 在uv安装依赖和运行时，参数中添加--active，优先使用已激活的虚拟环境
+```bash
+# 安装依赖
+uv sync --active --all-packages
+# 仅安装所需依赖
+uv run --active install.py --uv --config config/chat_with_openai_compatible.yaml
+# 运行cosyvoice 
+uv run --active src/demo.py --config config/chat_with_openai_compatible.yaml
+```
 
 ### ASR + LLM + TTS API替换
 MiniCPM-o 的本地启动要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人。
