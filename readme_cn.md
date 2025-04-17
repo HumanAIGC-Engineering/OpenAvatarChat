@@ -60,7 +60,7 @@ HuggingFace
  </a>
 上均部署了一个体验服务，音频部分采用SenseVoice + Qwen-VL + CosyVoice实现，欢迎体验。
 
-LightAvatar
+LiteAvatar
 <div align="center">
   <video controls src="https://github.com/user-attachments/assets/e2861200-84b0-4c7a-93f0-f46268a0878b">
   </video>
