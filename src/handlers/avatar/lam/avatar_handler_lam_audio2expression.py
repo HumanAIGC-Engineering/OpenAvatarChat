@@ -21,7 +21,8 @@ from engine_utils.general_slicer import SliceContext, slice_data
 
 
 class AvatarLAMConfig(HandlerBaseConfigModel, BaseModel):
-    model_name: str = "audio2motion_expression"
+    model_name: str = "audio2expression"
+    feature_extractor_model_name: str = "wav2vec2-base-960h"
     audio_sample_rate: int = Field(default=24000)
 
 
@@ -37,7 +38,7 @@ class AvatarLAMContext(HandlerContext):
 class HandlerAvatarLAM(HandlerBase):
     def __init__(self):
         super().__init__()
-        self.model = None
+        self.infer = None
         self.arkit_channels: List[str] = []
 
     def get_handler_info(self) -> HandlerBaseInfo:
@@ -51,10 +52,30 @@ class HandlerAvatarLAM(HandlerBase):
         algo_module_path = os.path.join(self.handler_root, "LAM_Audio2Expression")
         if algo_module_path not in sys.path:
             sys.path.append(algo_module_path)
-        from .LAM_Audio2Expression.audio2motionexp import Audio2MotionExpression
+        from .LAM_Audio2Expression.engines.defaults import (
+            default_config_parser,
+            default_setup,
+        )
+        from .LAM_Audio2Expression.engines.infer import INFER
         project_dir = DirectoryInfo.get_project_dir()
         model_path = os.path.join(project_dir, engine_config.model_root, handler_config.model_name)
-        self.model = Audio2MotionExpression(ckpt_path=model_path)
+        wav2vec_path = os.path.join(project_dir, engine_config.model_root, handler_config.feature_extractor_model_name)
+        config_file = os.path.join(self.handler_root, "LAM_Audio2Expression",
+                                   "configs", "lam_audio2exp_config_streaming.py")
+        wav2vec_config_file = os.path.join(self.handler_root, "LAM_Audio2Expression",
+                                   "configs", "wav2vec2_config.json")
+        cfg = default_config_parser(config_file, {
+            "weight": os.path.join(model_path, "lam_audio2exp_streaming.tar"),
+            "model": {
+                "backbone": {
+                    "pretrained_encoder_path": wav2vec_path,
+                    "wav2vec2_config_path": wav2vec_config_file,
+                }
+            }
+        })
+        cfg = default_setup(cfg)
+        self.infer = INFER.build(dict(type=cfg.infer.type, cfg=cfg))
+        self.infer.model.eval()
         arkit_channel_list_path = os.path.join(self.handler_root, "assets", "arkit_face_channels.txt")
         self.arkit_channels.clear()
         for line in open(arkit_channel_list_path, "r"):
@@ -63,13 +84,12 @@ class HandlerAvatarLAM(HandlerBase):
         t_start = time.monotonic()
         # warmup the model
         context: Optional[Dict] = None
-        self.model.inference_on_array_with_context(
+        self.infer.infer_streaming_audio(
             context=context,
             audio=np.zeros([handler_config.audio_sample_rate], dtype=np.float32),
             ssr=handler_config.audio_sample_rate,
         )
         dur_warmup = time.monotonic() - t_start
-        self.model.refresh()
         logger.info(f"LAM_Audio2Expression warmup finished in {dur_warmup * 1000} milliseconds.")
 
     def create_context(self, session_context: SessionContext,
@@ -142,7 +162,7 @@ class HandlerAvatarLAM(HandlerBase):
         while not audio_segments.empty():
             t_start = time.monotonic()
             audio_segment = audio_segments.get_nowait()
-            result, context_update = self.model.inference_on_array_with_context(
+            result, context_update = self.infer.infer_streaming_audio(
                 audio=audio_segment,
                 ssr=context.config.audio_sample_rate,
                 context=context.inference_context,
@@ -150,7 +170,6 @@ class HandlerAvatarLAM(HandlerBase):
             context.inference_context = context_update
             need_flush = speech_end and audio_segments.empty()
             if need_flush:
-                self.model.refresh()
                 context.inference_context = None
             output = DataBundle(output_definition)
             arkit_data = result.get("expression")

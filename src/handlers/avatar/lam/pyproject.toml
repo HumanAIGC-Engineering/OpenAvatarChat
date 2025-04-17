@@ -3,12 +3,8 @@ name = "lam"
 version = "0.1.0"
 requires-python = ">=3.10, <3.13"
 dependencies = [
-    "easydict~=1.13",
-    "fasttext-wheel~=0.9.2",
-    "ipython~=8.20.0",
-    "lmdb~=1.4.1",
-    "matplotlib>=3.7.5",
-    "pyarrow>=19.0.1",
-    "pykalman~=0.9.7",
-    "transformers==4.44.1",
+    "addict~=2.4.0",
+    "yapf==0.40.1",
+    "transformers~=4.44.1",
+    "termcolor~=3.0.1",
 ]

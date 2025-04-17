@@ -19,18 +19,15 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
 ARG WORK_DIR=/root/open-avatar-chat
 WORKDIR $WORK_DIR
 
-ADD ./src $WORK_DIR/src
-ADD ./resource $WORK_DIR/resource
-ADD ./scripts $WORK_DIR/scripts
-ADD ./.env* $WORK_DIR/
-
 #安装核心依赖
 COPY ./install.py $WORK_DIR/install.py
 COPY ./pyproject.toml $WORK_DIR/pyproject.toml
+COPY ./src/third_party $WORK_DIR/third_party
 RUN pip install uv && \
     uv venv --python 3.10 && \
     uv sync --no-install-workspace
 
+ADD ./src $WORK_DIR/src
 
 #安装config依赖
 RUN echo "Using config file: ${CONFIG_FILE}"
@@ -40,6 +37,10 @@ RUN uv run install.py \
     --uv \
     --skip-core && \
     rm /tmp/build_config.yaml
+
+ADD ./resource $WORK_DIR/resource
+ADD ./scripts $WORK_DIR/scripts
+ADD ./.env* $WORK_DIR/
 
 WORKDIR $WORK_DIR
 ENTRYPOINT ["uv", "run", "src/demo.py"]
