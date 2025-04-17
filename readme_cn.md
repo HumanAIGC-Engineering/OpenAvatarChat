@@ -24,6 +24,10 @@
 
 ### 更新日志
 
+- [2025.04.17] ⭐️⭐️⭐️ 版本 0.3.0发布：
+  - 数字人添加[LAM](https://github.com/aigc3d/LAM)的支持，数字人选用LAM时支持并发配置。 tts添加edge_tts和百炼cosyvoice的支持
+  - 更新基于uv和handler模块的依赖管理方式，支持直接运行或者用docker运行
+  - CSS响应式布局更新
 - [2025.04.14] ⭐️⭐️⭐️ 版本 0.2.2发布：
   - 100个新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
   - 默认使用GPU后端运行数字人
@@ -38,8 +42,8 @@
 
 ### 待办清单
 
-- [x] 预置的数字人模型达到100个（预计1个月内）
-- [ ] 接入[LAM](https://github.com/aigc3d/LAM):能够单图秒级打造超写实3D数字人的开源项目（预计3周内）
+- [x] 预置的数字人模型达到100个
+- [x] 接入[LAM](https://github.com/aigc3d/LAM)：能够单图秒级打造超写实3D数字人的开源项目
 - [ ] 接入[Qwen2.5-Omni](https://github.com/QwenLM/Qwen2.5-Omni)
 
 ## Demo
@@ -56,11 +60,12 @@ HuggingFace
  </a>
 上均部署了一个体验服务，音频部分采用SenseVoice + Qwen-VL + CosyVoice实现，欢迎体验。
 
-
+LightAvatar
 <div align="center">
   <video controls src="https://github.com/user-attachments/assets/e2861200-84b0-4c7a-93f0-f46268a0878b">
   </video>
 </div>
+
 
 
 
@@ -101,7 +106,7 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 </p>
 
 ### 系统需求
-* Python版本 >=3.10, <3.13
+* Python版本 >=3.10, <3.12
 * 支持CUDA的GPU
 * 未量化的多模态语言模型MiniCPM-o需要20GB以上的显存。
 * 数字人部分可以使用GPU/CPU进行推理，测试设备CPU为i9-13980HX，CPU推理下可以达到30FPS.
@@ -118,14 +123,14 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 
 ### 组件依赖
 
-|类型|开源项目|Github地址|模型地址|
-|---|---|---|---|
-|RTC|HumanAIGC-Engineering/gradio-webrtc|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC-Engineering/gradio-webrtc)||
-|VAD|snakers4/silero-vad|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/snakers4/silero-vad)||
-|LLM|OpenBMB/MiniCPM-o|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)| [🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6) |
-|LLM-int4|OpenBMB/MiniCPM-o|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)|[🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)|
-|Avatar|HumanAIGC/lite-avatar|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC/lite-avatar)||
-|TTS|FunAudioLLM/CosyVoice|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
+| 类型       | 开源项目                                |Github地址|模型地址|
+|----------|-------------------------------------|---|---|
+| RTC      | HumanAIGC-Engineering/gradio-webrtc |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC-Engineering/gradio-webrtc)||
+| VAD      | snakers4/silero-vad                 |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/snakers4/silero-vad)||
+| LLM      | OpenBMB/MiniCPM-o                   |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)| [🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6) |
+| LLM-int4 | OpenBMB/MiniCPM-o                   |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)|[🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)|
+| Avatar   | HumanAIGC/lite-avatar               |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC/lite-avatar)||
+| TTS      | FunAudioLLM/CosyVoice               |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
 
 ### 预置模式
 
@@ -259,7 +264,7 @@ LLM_Bailian:
 
 ## 相关部署需求
 ### 准备ssl证书
-由于本项目使用rtc作为视音频传输的通道，用户如果需要从localhost以为的地方连接服务的话，需要准备ssl证书以开启https，默认配置会读取ssl_certs目录下的localhost.crt和localhost.key，用户可以相应修改配置来使用自己的证书。我们也在scripts目录下提供了生成自签名证书的脚本。需要在项目根目录下运行脚本以使生成的证书被放到默认位置。
+由于本项目使用rtc作为视音频传输的通道，用户如果需要从localhost以外的地方连接服务的话，需要准备ssl证书以开启https，默认配置会读取ssl_certs目录下的localhost.crt和localhost.key，用户可以相应修改配置来使用自己的证书。我们也在scripts目录下提供了生成自签名证书的脚本。需要在项目根目录下运行脚本以使生成的证书被放到默认位置。
 ```bash
 scripts/create_ssl_certs.sh
 ```
@@ -348,7 +353,7 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
 |TTS_CosyVoice.ref_audio_text||参考音频的文本内容|
 |TTS_CosyVoice.sample_rate|24000|输出音频采样率|
 
-* 数字人
+* LiteAvatar数字人
 
 |参数|默认值|说明|
 |---|---|---|
