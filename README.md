@@ -312,12 +312,6 @@ _TTS CosyVoice Model_
 | LiteAvatar.enable_fast_mode     | False          | Low-latency mode. Enabling this reduces response delay but may cause stuttering at the beginning of responses on underpowered systems. |
 | LiteAvatar.use_gpu | True | Whether to use GPU acceleration. CUDA backend for now.|
 
-| Parameter                 | Default Value | Description                                                                                                                            |
-| ------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Tts2Face.avatar_name      | sample_data   | Name of the digital human data. Currently, only "sample_data" is available. Stay tuned for more options.                               |
-| Tts2Face.fps              | 25            | Frame rate for the digital human. On high-performance CPUs, it can be set to 30 FPS.                                                   |
-| Tts2Face.enable_fast_mode | True          | Low-latency mode. Enabling this reduces response delay but may cause stuttering at the beginning of responses on underpowered systems. |
-
 > [!IMPORTANT]
 > All path parameters in the configuration can use either absolute paths or paths relative to the project root directory.
 
