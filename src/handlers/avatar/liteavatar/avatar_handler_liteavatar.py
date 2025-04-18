@@ -31,6 +31,9 @@ from engine_utils.interval_counter import IntervalCounter
 mp.set_start_method('spawn', force=True)
 
 
+mp.set_start_method("spawn", force=True)
+
+
 class Tts2FaceEvent(Enum):
     START = 1001
     STOP = 1002
