@@ -67,11 +67,6 @@ LiteAvatar
   </video>
 </div>
 
-
-
-
-
-
 ## 📖目录 <!-- omit in toc -->
 
 - [概览](#概览)
@@ -81,15 +76,22 @@ LiteAvatar
   - [组件依赖](#组件依赖)
   - [预置模式](#预置模式)
 - [快速开始](#安装部署)
+  - [选择配置](#选择配置)
   - [本地运行](#本地运行)
     - [uv安装](#uv安装)
     - [依赖安装](#依赖安装)
     - [运行](#运行)
   - [Docker运行](#dokcer运行)
-- [相关模块安装方法](#相关模块安装方法)
-  - [MiniCPM-o模块](#minicpm-o模块)
-  - [CosyVoice模块](#cosyvoice模块)
-  - [ASR + LLM + TTS API替换](#asr--llm--tts-api替换)
+- [Handler依赖安装说明](#handler依赖安装说明)
+  - [服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)
+  - [LAM端侧渲染 Client Handler](#lam端侧渲染-client-handler)
+  - [OpenAI兼容API的语言模型Handler](#openai兼容api的语言模型handler)
+  - [MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)
+  - [百炼 CosyVoice Handler](#百炼-cosyvoice-handler)
+  - [CosyVoice本地推理Handler](#cosyvoice本地推理handler)
+  - [Edge TTS Handler](#edge-tts-handler)
+  - [LiteAvatar数字人Handler](#liteavatar数字人handler)
+  - [LAM数字人驱动Handler](#lam数字人驱动handler)
 - [相关部署需求](#相关部署需求)
   - [准备ssl证书](#准备ssl证书)
   - [TURN Server](#turn-server)
