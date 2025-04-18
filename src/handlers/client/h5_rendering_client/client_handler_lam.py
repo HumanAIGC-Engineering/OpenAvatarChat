@@ -123,11 +123,12 @@ class ClientHandlerLam(ClientHandlerRtc):
         self.prepare_rtc_definitions()
 
         candidate_path = []
-        asset_path = os.path.abspath(self.handler_config.asset_path)
+        asset_path = self.handler_config.asset_path
         if os.path.isabs(asset_path):
-            candidate_path.append(os.path.join(DirectoryInfo.get_project_dir(), self.handler_config.asset_path))
+            candidate_path.append(asset_path)
         else:
-            candidate_path.append(os.path.abspath(self.handler_config.asset_path))
+            candidate_path.append(os.path.abspath(asset_path))
+            candidate_path.append(os.path.join(self.handler_root, asset_path))
             candidate_path.append(os.path.join(DirectoryInfo.get_project_dir(), asset_path))
 
         for asset_path in candidate_path:

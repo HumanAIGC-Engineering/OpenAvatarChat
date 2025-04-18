@@ -21,7 +21,7 @@ from engine_utils.general_slicer import SliceContext, slice_data
 
 
 class AvatarLAMConfig(HandlerBaseConfigModel, BaseModel):
-    model_name: str = "audio2expression"
+    model_name: str = "LAM_audio2exp"
     feature_extractor_model_name: str = "wav2vec2-base-960h"
     audio_sample_rate: int = Field(default=24000)
 

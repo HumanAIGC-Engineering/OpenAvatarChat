@@ -13,7 +13,7 @@ default:
     handler_configs:
       LamClient:
         module: client/h5_rendering_client/client_handler_lam
-        asset_path: "resource/avatar/lam/p2-1.zip"
+        asset_path: "lam_samples/barbara.zip"
         concurrent_limit: 5
       SileroVad:
         module: vad/silerovad/vad_handler_silero

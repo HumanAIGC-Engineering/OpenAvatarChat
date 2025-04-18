@@ -13,3 +13,6 @@
 [submodule "src/third_party/CosyVoice"]
 	path = src/handlers/tts/cosyvoice/CosyVoice
 	url = https://github.com/FunAudioLLM/CosyVoice.git
+[submodule "src/handlers/avatar/lam/LAM_Audio2Expression"]
+	path = src/handlers/avatar/lam/LAM_Audio2Expression
+	url = https://github.com/aigc3d/LAM_Audio2Expression.git
