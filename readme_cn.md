@@ -423,11 +423,13 @@ LiteAvatar:
 * LAM_audio2exp [🤗](https://huggingface.co/3DAIGC/LAM_audio2exp)
   * 从huggingface下载, 确保lfs已安装，使当前路径位于项目根目录，执行：
   ```
-  git clone --depth 1 https://huggingface.co/3DAIGC/LAM_audio2exp ./models/LAM_audio2exp
+  wget https://huggingface.co/3DAIGC/LAM_audio2exp/resolve/main/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
+  tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
   ```
   * 国内用户可以从oss地址下载, 使当前路径位于项目根目录，执行：
   ```
   wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
+  tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
   ```
 
 ## 相关部署需求
