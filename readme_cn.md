@@ -23,10 +23,11 @@
 ## 📢 最新动态
 
 ### 更新日志
-
-- [2025.04.17] ⭐️⭐️⭐️ 版本 0.3.0发布：
-  - 数字人添加[LAM](https://github.com/aigc3d/LAM)的支持，数字人选用LAM时支持并发配置。 tts添加edge_tts和百炼cosyvoice的支持
-  - 更新基于uv和handler模块的依赖管理方式，支持直接运行或者用docker运行
+- [2025.04.18] ⭐️⭐️⭐️ 版本 0.3.0发布:
+  - 增加对LAM数字人 (能够单图秒级打造超写实3D数字人的开源项目) 的支持
+  - 增加使用百炼API的tts handler，可以大幅减少对GPU的依赖
+  - 增加对微软Edge TTS的支持
+  - 现在使用uv进行python的包管理，依赖可以按照配置中所激活的handler进行安装
   - CSS响应式布局更新
 - [2025.04.14] ⭐️⭐️⭐️ 版本 0.2.2发布：
   - 100个新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
@@ -116,7 +117,7 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 > 
 > 使用int4量化版本的语言模型可以在不到10GB现存的显卡上运行，但可能会因为量化而影响效果。
 > 
-> 使用云端的 api 替换MiniCPM-o实现常规的ASR + LLM + TTS，可以大大减低配置需求，具体可参考 [ASR + LLM + TTS方式](#asr--llm--tts-替代本地-minicpm-o)
+> 使用云端的 api 替换MiniCPM-o实现常规的ASR + LLM + TTS，可以大大减低配置需求，具体可参考 [ASR + LLM + TTS方式](#chat_with_openai_compatible_bailian_cosyvoiceyaml)
 
 
 ### 性能指标
@@ -132,6 +133,8 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 | LLM-int4 | OpenBMB/MiniCPM-o                   |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)|[🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)|
 | Avatar   | HumanAIGC/lite-avatar               |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC/lite-avatar)||
 | TTS      | FunAudioLLM/CosyVoice               |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
+|Avatar|aigc3d/LAM_Audio2Expression|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/aigc3d/LAM_Audio2Expression)|[🤗](https://huggingface.co/3DAIGC/LAM_audio2exp)|
+||facebook/wav2vec2-base-960h||[🤗](https://huggingface.co/facebook/wav2vec2-base-960h)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/AI-ModelScope/wav2vec2-base-960h)|
 
 ### 预置模式
 
@@ -143,13 +146,77 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 | chat_with_openai_compatible_bailian_cosyvoice.yaml |SenseVoice|API|API| lite-avatar |
 | chat_with_openai_compatible_edge_tts.yaml          |SenseVoice|API|edgetts| lite-avatar |
 
-> [!NOTE]
-> 使用的VAD均为silero-vad，RTC均为gradio-webrtc
-
 
 ## 🚀安装部署
 
-安装部署对应的模式前请先查看该模式使用到的相关模块的安装方法：[相关模块安装方法](#相关模块安装方法)和[相关部署需求](#相关部署需求)
+安装部署对应的模式前请先查看该模式使用到的**相关模块的安装方法**和[相关部署需求](#相关部署需求)。
+
+### 选择配置
+OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择的配置现在依赖的模型以及需要准备的ApiKey。项目在config目录下，提供以下预置的配置文件供参考：
+
+#### chat_with_gs.yaml
+使用[LAM](https://github.com/aigc3d/LAM)项目生成的gaussion splatting资产进行端侧渲染，语音使用百炼上的Cosyvoice，只有vad和asr运行在本地gpu，对机器性能依赖很轻，可以支持一机多路。
+##### 使用的Handler
+|类别|Handler|安装说明|
+|---|---|---|
+|Client|client/h5_rendering_client/cllient_handler_lam| [LAM端侧渲染 Client Handler](#lam端侧渲染-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|ASR|asr/sensevoice/asr_handler_sensevoice||
+|LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI兼容API的语言模型Handler](#openai兼容api的语言模型handler)
+|TTS|tts/bailian_tts/tts_handler_cosyvoice_bailian|[百炼 CosyVoice Handler](#百炼-cosyvoice-handler)|
+|Avatar|avatar/lam/avatar_handler_lam_audio2expression|[LAM数字人驱动Handler](#lam数字人驱动handler)|
+||||
+
+#### chat_with_minicpm.yaml
+使用minicpm进行本地的语音到语音的对话生成，对GPU的性能与显存大小有一定要求。
+##### 使用的Handler
+|类别|Handler|安装说明|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|LLM|llm/minicpm/llm_handler_minicpm|[MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
+|||| 
+
+#### chat_with_openai_compatible.yaml
+该配置使用云端语言模型API，TTS使用cosyvoice，运行在本地。
+#### 使用的Handler
+|类别|Handler|安装说明|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|ASR|asr/sensevoice/asr_handler_sensevoice||
+|LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI兼容API的语言模型Handler](#openai兼容api的语言模型handler)
+|TTS|tts/cosyvoice/tts_handler_cosyvoice|[CosyVoice本地推理Handler](#cosyvoice本地推理handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
+||||
+
+#### chat_with_openai_compatible_bailian_cosyvoice.yaml
+语言模型与TTS都使用云端API，2D数字人下对设备要求较低的配置。
+#### 使用的Handler
+|类别|Handler|安装说明|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|ASR|asr/sensevoice/asr_handler_sensevoice||
+|LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI兼容API的语言模型Handler](#openai兼容api的语言模型handler)
+|TTS|tts/bailian_tts/tts_handler_cosyvoice_bailian|[百炼 CosyVoice Handler](#百炼-cosyvoice-handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
+||||
+
+#### chat_with_openai_compatible_edge_tts.yaml
+该配置使用edge tts，效果稍差，但不需要百炼的API Key。
+#### 使用的Handler
+|类别|Handler|安装说明|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|ASR|asr/sensevoice/asr_handler_sensevoice||
+|LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI兼容API的语言模型Handler](#openai兼容api的语言模型handler)
+|TTS|tts/edgetts/tts_handler_edgetts|[Edge TTS Handler](#edge-tts-handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
+||||
+
 
 ### 本地运行
 
@@ -205,16 +272,61 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
 ```
 
 
-### Dokcer运行
+### Docker运行
 容器化运行：容器依赖nvidia的容器环境，在准备好支持GPU的docker环境后，运行以下命令即可完成镜像的构建与启动：
 ```bash
 ./build_and_run.sh --config <配置文件的绝对路径>.yaml
 ```
 
 
-## 相关模块安装方法
+## Handler依赖安装说明
+### 服务端渲染 RTC Client Handler
+暂无特别依赖和需要配置的内容。
 
-### MiniCPM-o模块
+### LAM端侧渲染 Client Handler
+端侧渲染基于[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)扩展，支持多路链接，可以通过配置文件选择形象。
+#### 形象选择
+形象可以通过LAM项目进行训练（LAM对话数字人资产生产流程待完善，敬请期待），本项目中预置了4个范例形象，位于src/handlers/client/h5_rendering_client/lam_samples下。用户可以通过在配置文件中用asset_path字段进行选择，也可以选择自行训练的资产文件。参考配置如下：
+```yaml
+LamClient:
+  module: client/h5_rendering_client/client_handler_lam
+  asset_path: "lam_samples/barbara.zip"
+  concurrent_limit: 5
+```
+### OpenAI兼容API的语言模型Handler
+本地推理的语言模型要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人。
+可以通过配置文件选择所使用模型、系统prompt、API和API Key。参考配置如下，其中apikey可以被环境变量覆盖。
+```yaml
+LLM_Bailian: 
+  moedl_name: "qwen-plus"
+  system_prompt: "你是个AI对话数字人，你要用简短的对话来回答我的问题，并在合理的地方插入标点符号"
+  api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+  api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
+```
+> [!TIP]
+> 系统默认会获取项目当前目录下的.env文件用来获取环境变量。
+
+> [!Note]
+> * 代码内部调用方式
+> ```python
+> client = OpenAI(
+>       api_key= self.api_key, 
+>       base_url=self.api_url,
+>   )
+> completion = client.chat.completions.create(
+>     model=self.model_name,
+>     messages=[
+>        self.system_prompt,
+>         {'role': 'user', 'content': chat_text}
+>     ],
+>     stream=True
+>     )
+> ```
+> * LLM默认为百炼api_url + api_key
+
+### MiniCPM多模态语言模型Handler
+#### 依赖模型
+* MiniCPM-o-2.6
 本项目可以使用MiniCPM-o-2.6作为多模态语言模型为数字人提供对话能力，用户可以按需从[Huggingface](https://huggingface.co/openbmb/MiniCPM-o-2_6)或者[Modelscope](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6)下载相关模型。建议将模型直接下载到 \<ProjectRoot\>/models/ 默认配置的模型路径指向这里，如果放置与其他位置，需要修改配置文件。scripts目录中有对应模型的下载脚本，可供在linux环境下使用，请在项目根目录下运行脚本：
 ```bash
 scripts/download_MiniCPM-o_2.6.sh
@@ -226,7 +338,21 @@ scripts/download_MiniCPM-o_2.6-int4.sh
 > [!NOTE]
 > 本项目支持MiniCPM-o-2.6的原始模型以及int4量化版本，但量化版本需要安装专用分支的AutoGPTQ，相关细节请参考官方的[说明](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)
 
-### CosyVoice模块
+### 百炼 CosyVoice Handler
+可以使用百炼提供CosyVoice API调用TTS能力，比本地推理对系统性能要求低，但需要在百炼上开通对应的能力。
+参考配置如下：
+```
+CosyVoice:
+  module: tts/bailian_tts/tts_handler_cosyvoice_bailian
+  voice: "longxiaocheng"
+  model_name: "cosyvoice-v1"
+  api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
+```
+同[OpenAI兼容API的语言模型Handler]一样，可以将api_key设置在配置中或通过环境变量来覆盖。
+> [!TIP]
+> 系统默认会获取项目当前目录下的.env文件用来获取环境变量。
+
+### CosyVoice本地推理Handler
 
 > [!WARNING]
 > 因为CosyVoice依赖中的pynini包通过PyPI获取时在Windows下编译会出现编译参数不支持的问题。CosyVoice官方目前建议的解决方法是在Windows下用Conda安装
@@ -258,41 +384,49 @@ uv run --active install.py --uv --config config/chat_with_openai_compatible.yaml
 # 运行cosyvoice 
 uv run --active src/demo.py --config config/chat_with_openai_compatible.yaml
 ```
-
-### ASR + LLM + TTS API替换
-MiniCPM-o 的本地启动要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人。
-
-1. 修改对应config如 config/chat_with_openai_compatible.yaml 中的 LLM_Bailian配置，代码中的调用方式为 openai 的标准方式，理论上相同的可以兼容
-
-```yaml
-LLM_Bailian: 
-  moedl_name: "qwen-plus"
-  system_prompt: "你是个AI对话数字人，你要用简短的对话来回答我的问题，并在合理的地方插入标点符号"
-  api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
-  api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
-```
-2. 启动配置修改为 ```uv run src/demo.py --config config/chat_with_openai_compatible.yaml```
-
 > [!Note]
-> * 代码内部调用方式
-> ```python
-> client = OpenAI(
->       api_key= self.api_key, 
->       base_url=self.api_url,
->   )
-> completion = client.chat.completions.create(
->     model=self.model_name,
->     messages=[
->        self.system_prompt,
->         {'role': 'user', 'content': chat_text}
->     ],
->     stream=True
->     )
-> ```
-> * ASR默认为funasr 调用 iic/SenseVoiceSmall
-> * LLM默认为百炼api_url + api_key
-> * TTS默认为CosyVoice的 `iic/CosyVoice-300M-SFT` + `中文女`，可以通过修改为`其他模型`配合 `ref_audio_path` 和 `ref_audio_text` 进行音色复刻
+> TTS默认为CosyVoice的 `iic/CosyVoice-300M-SFT` + `中文女`，可以通过修改为`其他模型`配合 `ref_audio_path` 和 `ref_audio_text` 进行音色复刻
 
+### Edge TTS Handler
+集成微软的edge-tts，使用云端推理，无需申请api key，参考配置如下：
+```yaml
+Edge_TTS:
+  module: tts/edgetts/tts_handler_edgetts
+  voice: "zh-CN-XiaoxiaoNeural"
+```
+
+### LiteAvatar数字人Handler
+集成LiteAvatar算法生产2D数字人对话，目前在modelscope的项目LiteAvatarGallery中提供了100个数字人形象可供使用，详情见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)。
+LiteAvatar可以运行在CPU或GPU上，如果其他handler都没有对GPU的大开销，建议使用GPU进行推理。
+参考配置如下：
+```yaml
+LiteAvatar:
+  module: avatar/liteavatar/avatar_handler_liteavatar
+  avatar_name: 20250408/sample_data
+  fps: 25
+  use_gpu: true
+```
+
+### LAM数字人驱动Handler
+#### 依赖模型
+* facebook/wav2vec2-base-960h [🤗](https://huggingface.co/facebook/wav2vec2-base-960h) [<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/AI-ModelScope/wav2vec2-base-960h)
+  * 从huggingface下载, 确保lfs已安装，使当前路径位于项目根目录，执行：
+  ```
+  git clone --depth 1 https://huggingface.co/facebook/wav2vec2-base-960h ./models/wav2vec2-base-960h
+  ```
+  * 从modelscope下载, 确保lfs已安装，使当前路径位于项目根目录，执行：
+  ```
+  git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ./models/wav2vec2-base-960h
+  ```
+* LAM_audio2exp [🤗](https://huggingface.co/3DAIGC/LAM_audio2exp)
+  * 从huggingface下载, 确保lfs已安装，使当前路径位于项目根目录，执行：
+  ```
+  git clone --depth 1 https://huggingface.co/3DAIGC/LAM_audio2exp ./models/LAM_audio2exp
+  ```
+  * 国内用户可以从oss地址下载, 使当前路径位于项目根目录，执行：
+  ```
+  wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
+  ```
 
 ## 相关部署需求
 ### 准备ssl证书
@@ -419,5 +553,3 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
   url = {https://github.com/HumanAIGC-Engineering/OpenAvatarChat}
 }
 ```
-
-
