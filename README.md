@@ -20,8 +20,7 @@
 ## 📢 News
 
 ### Changelog
-
-- [2025.04.17] ⭐️⭐️⭐️ Version 0.3.0 Released:
+- [2025.04.18] ⭐️⭐️⭐️ Version 0.3.0 Released:
   - Added support for [LAM](https://github.com/aigc3d/LAM) in digital humans, enabling concurrent configuration when LAM is selected. TTS now supports edge_tts and BaiLian CosyVoice.
   - Updated dependency management approach based on UV and handler modules, supporting direct execution or using Docker.
   - CSS responsive layout updated.
@@ -72,15 +71,22 @@ LiteAvatar
   - [Component Dependencies](#component-dependencies)
   - [Pre-set Modes](#pre-set-modes)
 - [Get Started](#-get-started)
+  - [Select a Config](#select-a-config)
   - [Local Execution](#local-execution)
     - [UV Installation](#uv-installation)
     - [Dependency Installation](#dependency-installation)
     - [Run](#run)
   - [Docker Execution](#docker-execution)
-- [Module Installation](#module-installation)
-  - [MiniCPM-o Module](#minicpm-o-module)
-  - [CosyVoice Module](#cosyvoice-module)
-  - [ASR + LLM + TTS API Replacement](#asr--llm--tts-api-replacement)
+- [Handler Dependencies Installation Notes](#handler-dependencies-installation-notes)
+  - [Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)
+  - [LAM Client Rendering Handler](#lam-client-rendering-handler)
+  - [OpenAI Compatible LLM Handler](#openai-compatible-llm-handler)
+  - [MiniCPM Omni Speech2Speech Handler](#minicpm-omni-speech2speech-handler)
+  - [Bailian CosyVoice Handler](#bailian-cosyvoice-handler)
+  - [CosyVoice Local Inference Handler](#cosyvoice-local-inference-handler)
+  - [Edge TTS Handler](#edge-tts-handler)
+  - [LiteAvatar Avatar Handler](#liteavatar-avatar-handler)
+  - [LAM Avatar Driver Handler](#lam-avatar-driver-handler)
 - [Optional Deployment](#optional-deployment)
   - [Prepare ssl certificates](#prepare-ssl-certificates)
   - [TURN Server](#turn-server)
@@ -107,7 +113,7 @@ Open Avatar Chat is a modular interactive digital human dialogue implementation 
 > 
 > Using the int4 quantized version of the language model can run on graphics cards with less than 10GB of VRAM, but quantization may affect the performance.
 > 
-> Replacing MiniCPM-o with cloud APIs to implement the typical ASR + LLM + TTS functions can greatly reduce configuration requirements. For more details, see [ASR + LLM + TTS Mode](#asr--llm--tts-api-replacement).
+> Replacing MiniCPM-o with cloud APIs to implement the typical ASR + LLM + TTS functions can greatly reduce configuration requirements. For more details, see [ASR + LLM + TTS Mode](#chat_with_openai_compatible_bailian_cosyvoiceyaml).
 
 ### Performance
 In our tests, using a PC equipped with an i9-13900KF processor and Nvidia RTX 4090 graphics card, we recorded the response delay. After ten tests, the average delay was about 2.2 seconds. The delay time is the interval from the end of the user's speech to the start of the digital human's speech, including RTC two-way data transmission time, VAD (Voice Activity Detection) stop delay, and the entire process computation time.
@@ -122,6 +128,8 @@ In our tests, using a PC equipped with an i9-13900KF processor and Nvidia RTX 40
 | LLM-int4 | OpenBMB/MiniCPM-o                   |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)|[🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)|
 | Avatar   | HumanAIGC/lite-avatar               |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC/lite-avatar)||
 | TTS      | FunAudioLLM/CosyVoice               |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
+|Avatar|aigc3d/LAM_Audio2Expression|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/aigc3d/LAM_Audio2Expression)|[🤗](https://huggingface.co/3DAIGC/LAM_audio2exp)|
+||facebook/wav2vec2-base-960h||[🤗](https://huggingface.co/facebook/wav2vec2-base-960h)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/AI-ModelScope/wav2vec2-base-960h)|
 
 ### Pre-set Modes
 
@@ -133,13 +141,78 @@ In our tests, using a PC equipped with an i9-13900KF processor and Nvidia RTX 40
 | chat_with_openai_compatible_bailian_cosyvoice.yaml   | SenseVoice |    API    |   API     | lite-avatar  |
 | chat_with_openai_compatible_edge_tts.yaml            | SenseVoice |    API    | edgetts   | lite-avatar  |
 
-> [!NOTE]
-> The VAD used is silero-vad, and the RTC is gradio-webrtc.
-
 
 ## 🚀 Get Started
 
-Before installing and deploying the corresponding mode, please refer to the installation methods for relevant modules: [Module Installation](#module-installation) and [Optional Deployment](#optional-deployment).
+Before installing and deploying the corresponding mode, please refer to the **installation methods for relevant modules** and [Optional Deployment](#optional-deployment).
+
+### Select a config
+The functionalities of OpenAvatarChat will follow the config specified during startup. We provided several sample config files under the config folder.
+
+#### chat_with_gs.yaml
+This config uses [LAM](https://github.com/aigc3d/LAM) generated gaussion splatting asset as client-side rendered avatar. With api based openai compatible llm and tts from Bailian platform, only vad and asr handlers are run locally, so this is the lightest config choice, which supports multiple connection on single service.
+
+##### Used Handlers
+|Type|Handler|Install Notes|
+|---|---|---|
+|Client|client/h5_rendering_client/cllient_handler_lam| [LAM Client Rendering Handler](#lam-client-rendering-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|ASR|asr/sensevoice/asr_handler_sensevoice||
+|LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI Compatible LLM Handler](#openai-compatible-llm-handler)
+|TTS|tts/bailian_tts/tts_handler_cosyvoice_bailian|[Bailian CosyVoice Handler](#bailian-cosyvoice-handler)|
+|Avatar|avatar/lam/avatar_handler_lam_audio2expression|[LAM Avatar Driver Handler](#lam-avatar-driver-handler)|
+||||
+
+#### chat_with_minicpm.yaml
+Use MiniCPM-o-2.6 as audio2audio chat model, it need enough VRAM and GPU computaion power.
+
+##### Used Handlers
+|Type|Handler|Install Notes|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|LLM|llm/minicpm/llm_handler_minicpm|[MiniCPM Omni Speech2Speech Handler](#minicpm-omni-speech2speech-handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
+|||| 
+
+#### chat_with_openai_compatible.yaml
+This config use openai-compatible api as llm provider and CosyVoice as local tts model.
+
+##### Used Handlers
+|Type|Handler|Install Notes|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|ASR|asr/sensevoice/asr_handler_sensevoice||
+|LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI Compatible LLM Handler](#openai-compatible-llm-handler)
+|TTS|tts/cosyvoice/tts_handler_cosyvoice|[CosyVoice Local Inference Handler](#cosyvoice-local-inference-handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
+
+#### chat_with_openai_compatible_bailian_cosyvoice.yaml
+Both LLM and TTS are provided by API, it is the lightest config for LiteAvatar.
+
+##### Used Handlers
+|Type|Handler|Install Notes|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|ASR|asr/sensevoice/asr_handler_sensevoice||
+|LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI Compatible LLM Handler](#openai-compatible-llm-handler)
+|TTS|tts/bailian_tts/tts_handler_cosyvoice_bailian|[Bailian CosyVoice Handler](#bailian-cosyvoice-handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
+||||
+
+#### chat_with_openai_compatible_edge_tts.yaml
+This config use Edge TTS, it does not need an API Key of Bailian.
+|Type|Handler|Install Notes|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|ASR|asr/sensevoice/asr_handler_sensevoice||
+|LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI Compatible LLM Handler](#openai-compatible-llm-handler)
+|TTS|tts/edgetts/tts_handler_edgetts|[Edge TTS Handler](#edge-tts-handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
+||||
 
 ### Local Execution
 
@@ -193,9 +266,55 @@ Containerized execution: The container relies on NVIDIA's container environment.
 ./build_and_run.sh --config <absolute path to config file>.yaml
 ```
 
-## Module Installation
+## Handler Dependencies Installation Notes
+### Server Rendering RTC Client Handler
+Currently there is no extra dependency or essential configs.
 
-### MiniCPM-o Module
+### LAM Client Rendering Handler
+Client rendering handler is derived from [Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler). It supports multi-connection. Client avatar asset can be selected in handler config.
+#### Select the Avatar Asset
+LAM avatar asset can be generated by the [LAM project](https://github.com/aigc3d/LAM) (The ready-to-use generation pipeline is not ready yet. Stay tunned!). OpenAvatarChat provides 4 sample asset. They can be found under 
+src/handlers/client/h5_rendering_client/lam_samples. The selected asset should be set to the asset_path field in the handler config. You can use one of the sample asset, a your own asset that created by LAM, please refer to the follow handler config sample:
+```yaml
+LamClient:
+  module: client/h5_rendering_client/client_handler_lam
+  asset_path: "lam_samples/barbara.zip"
+  concurrent_limit: 5
+```
+
+### OpenAI Compatible LLM Handler
+Local llm handler has relatively high startup requirements. If you already have an available LLM api_key, you can start it this way to experience interactive digital humans.
+Modify the corresponding config, such as the LLM_Bailian configuration in config/chat_with_openai_compatible.yaml. The invocation method in the code uses the standard OpenAI approach, which should theoretically be compatible with similar setups.
+```yaml
+LLM_Bailian: 
+  model_name: "qwen-plus"
+  system_prompt: "You are an AI digital human. Respond to my questions briefly and insert punctuation where appropriate."
+  api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+  api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
+```
+>[!TIP]
+>OpenAvatarChat will acquire the .env file in current working directory, it is can be used to set the environment variables without change the config file.
+
+> [!Note]
+> * Internal Code Calling Method
+> ```python
+> client = OpenAI(
+>       api_key= self.api_key, 
+>       base_url=self.api_url,
+>   )
+> completion = client.chat.completions.create(
+>     model=self.model_name,
+>     messages=[
+>        self.system_prompt,
+>         {'role': 'user', 'content': chat_text}
+>     ],
+>     stream=True
+>     )
+> ```
+> * The default LLM API is Bailian api_url.
+
+### MiniCPM Omni Speech2Speech Handler
+#### Models used
 In this project, MiniCPM-o-2.6 can be used as a multimodal language model to provide dialogue capabilities for digital humans. Users can download the relevant model as needed from [Huggingface](https://huggingface.co/openbmb/MiniCPM-o-2_6) or [Modelscope](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6). It is recommended to directly download the model to <ProjectRoot>/models/. The default configuration points to this path, so if the model is placed elsewhere, you need to modify the configuration file. There is a corresponding model download script in the scripts directory, which can be used in a Linux environment. Please run the script in the project root directory:
 
 ```bash
@@ -208,7 +327,21 @@ scripts/download_MiniCPM-o_2.6-int4.sh
 > [!NOTE]
 > Both full precision version and the int4 quantized one are supported. However，the int4 version need a special version of AutoGPTQ to load, refer to the [model card](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4) please.
 
-### CosyVoice Module
+### Bailian CosyVoice Handler
+Bailian provides CosyVoice API, it can be used as an alternative to local tts inference handler. Though it requires an Bailian API Key, it reduces quite amount of system requirments.
+Sample handler config looks like this:
+```
+CosyVoice:
+  module: tts/bailian_tts/tts_handler_cosyvoice_bailian
+  voice: "longxiaocheng"
+  model_name: "cosyvoice-v1"
+  api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
+```
+Same as [OpenAI Compatible LLM Handler](#openai-compatible-llm-handler), api_key can be set in the handler config or from environment variables.
+>[!TIP]
+>OpenAvatarChat will acquire the .env file in current working directory, it is can be used to set the environment variables without change the config file.
+
+### CosyVoice Local Inference Handler
 > [!WARNING]
 > Due to an issue where the pynini package dependency fails to compile with unsupported parameters when fetched via PyPI on Windows, the current recommended workaround by CosyVoice is to install the precompiled pynini package from conda-forge on Windows using Conda.
 
@@ -237,45 +370,51 @@ uv run --active install.py --uv --config config/chat_with_openai_compatible.yaml
 # Run CosyVoice 
 uv run --active src/demo.py --config config/chat_with_openai_compatible.yaml
 ```
+> [!Note]
+> - TTS defaults to CosyVoice's `iic/CosyVoice-300M-SFT` + `Chinese Female` You can modify it to other models and use `ref_audio_path` and `ref_audio_text` for voice cloning.
 
-
-### ASR + LLM + TTS API Replacement
-MiniCPM-o has relatively high local startup requirements. If you already have an available LLM api_key, you can start it this way to experience interactive digital humans.
-
-
-1. Modify the corresponding config, such as the LLM_Bailian configuration in config/chat_with_openai_compatible.yaml. The invocation method in the code uses the standard OpenAI approach, which should theoretically be compatible with similar setups.
-
-
+### Edge TTS Handler
+OpenAvatarChat integrated Microsoft Edge TTS, it is inference on the cloud and api key is not esstential, the sample handler config looks like:
 ```yaml
-LLM_Bailian: 
-  model_name: "qwen-plus"
-  system_prompt: "You are an AI digital human. Respond to my questions briefly and insert punctuation where appropriate."
-  api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
-  api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
+Edge_TTS:
+  module: tts/edgetts/tts_handler_edgetts
+  voice: "zh-CN-XiaoxiaoNeural"
 ```
 
-2. Modify the startup configuration to use: ```uv run src/demo.py --config config/chat_with_openai_compatible.yaml```
+### LiteAvatar Avatar Handler
+LiteAvatar is integarted to provide 2D avatar feature. Currenty, 100 avatar assets are provided on modelscope project [LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery), please refer to this project for detail.
+LiteAvatar can be run on CPU as well as GPU. If other GPU heavy handlers are used, let liteavatar run on cpu may be a good choice.
+Sample handler config looks like:
+```yaml
+LiteAvatar:
+  module: avatar/liteavatar/avatar_handler_liteavatar
+  avatar_name: 20250408/sample_data
+  fps: 25
+  use_gpu: true
+```
 
-> [!Note]
-> * Internal Code Calling Method
-> ```python
-> client = OpenAI(
->       api_key= self.api_key, 
->       base_url=self.api_url,
->   )
-> completion = client.chat.completions.create(
->     model=self.model_name,
->     messages=[
->        self.system_prompt,
->         {'role': 'user', 'content': chat_text}
->     ],
->     stream=True
->     )
-> ```
-> - Defaults:
->   - ASR defaults to FunASR using `iic/SenseVoiceSmall`.
->   - LLM defaults to Bailian API URL + API key.
->   - TTS defaults to CosyVoice's `iic/CosyVoice-300M-SFT` + `Chinese Female`. You can modify it to other models and use `ref_audio_path` and `ref_audio_text` for voice cloning.
+### LAM Avatar Driver Handler
+#### Models used
+* facebook/wav2vec2-base-960h [🤗](https://huggingface.co/facebook/wav2vec2-base-960h) [<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/AI-ModelScope/wav2vec2-base-960h)
+  * Download from huggingface, ensure lfs is installed properly，run following cmd under root of the project:
+  ```
+  git clone --depth 1 https://huggingface.co/facebook/wav2vec2-base-960h ./models/wav2vec2-base-960h
+  ```
+  * Download from modelscope, ensure lfs is installed properly，run following cmd under root of the project:
+  ```
+  git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ./models/wav2vec2-base-960h
+  ```
+* LAM_audio2exp [🤗](https://huggingface.co/3DAIGC/LAM_audio2exp)
+  * Download form huggingface, ensure lfs is installed properly，run following cmds under root of the project:
+  ```
+  wget https://huggingface.co/3DAIGC/LAM_audio2exp/resolve/main/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
+  tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
+  ```
+  * If huggingface is reachable, it can also be downloaded from oss, run following cmds under root of the project:
+  ```
+  wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
+  tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
+  ```
 
 ## Optional Deployment
 
