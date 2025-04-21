@@ -24,7 +24,7 @@
 
 ### 更新日志
 - [2025.04.18] ⭐️⭐️⭐️ 版本 0.3.0发布:
-  - 增加对LAM数字人 (能够单图秒级打造超写实3D数字人的开源项目) 的支持
+  - 增加对[LAM](https://github.com/aigc3d/LAM)数字人 (能够单图秒级打造超写实3D数字人的开源项目) 的支持
   - 增加使用百炼API的tts handler，可以大幅减少对GPU的依赖
   - 增加对微软Edge TTS的支持
   - 现在使用uv进行python的包管理，依赖可以按照配置中所激活的handler进行安装
@@ -288,7 +288,7 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
 ### LAM端侧渲染 Client Handler
 端侧渲染基于[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)扩展，支持多路链接，可以通过配置文件选择形象。
 #### 形象选择
-形象可以通过LAM项目进行训练（LAM对话数字人资产生产流程待完善，敬请期待），本项目中预置了4个范例形象，位于src/handlers/client/h5_rendering_client/lam_samples下。用户可以通过在配置文件中用asset_path字段进行选择，也可以选择自行训练的资产文件。参考配置如下：
+形象可以通过[LAM](https://github.com/aigc3d/LAM)项目进行训练（LAM对话数字人资产生产流程待完善，敬请期待），本项目中预置了4个范例形象，位于src/handlers/client/h5_rendering_client/lam_samples下。用户可以通过在配置文件中用asset_path字段进行选择，也可以选择自行训练的资产文件。参考配置如下：
 ```yaml
 LamClient:
   module: client/h5_rendering_client/client_handler_lam
