@@ -1,5 +1,0 @@
-*.wav filter=lfs diff=lfs merge=lfs -text
-src/handlers/client/h5_rendering_client/lam_samples/barbara.zip filter=lfs diff=lfs merge=lfs -text
-src/handlers/client/h5_rendering_client/lam_samples/james.zip filter=lfs diff=lfs merge=lfs -text
-src/handlers/client/h5_rendering_client/lam_samples/status.zip filter=lfs diff=lfs merge=lfs -text
-src/handlers/client/h5_rendering_client/lam_samples/vfhq_case1.zip filter=lfs diff=lfs merge=lfs -text
