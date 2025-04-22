@@ -33,7 +33,7 @@ def load_configs(in_args):
         else Path(base_dir) / in_args.config
 
     print(f"Loading config from {config_path}")
-    with open(config_path, "r") as f:
+    with open(config_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 

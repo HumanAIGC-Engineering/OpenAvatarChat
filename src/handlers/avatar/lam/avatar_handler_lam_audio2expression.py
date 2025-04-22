@@ -64,8 +64,15 @@ class HandlerAvatarLAM(HandlerBase):
                                    "configs", "lam_audio2exp_config_streaming.py")
         wav2vec_config_file = os.path.join(self.handler_root, "LAM_Audio2Expression",
                                    "configs", "wav2vec2_config.json")
+        weight_path = os.path.join(model_path, "pretrained_models", "lam_audio2exp_streaming.tar")
+
+        weight_path = weight_path.replace("\\", "/")
+        wav2vec_path = wav2vec_path.replace("\\", "/")
+        config_file = config_file.replace("\\", "/")
+        wav2vec_config_file = wav2vec_config_file.replace("\\", "/")
+
         cfg = default_config_parser(config_file, {
-            "weight": os.path.join(model_path, "pretrained_models", "lam_audio2exp_streaming.tar"),
+            "weight": weight_path,
             "model": {
                 "backbone": {
                     "pretrained_encoder_path": wav2vec_path,
