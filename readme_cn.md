@@ -59,11 +59,19 @@ ModelScope
     🤗
 HuggingFace
  </a>
-上均部署了一个体验服务，音频部分采用SenseVoice + Qwen-VL + CosyVoice实现，欢迎体验。
+上均部署了一个LiteAvatar体验服务，音频部分采用SenseVoice + Qwen-VL + CosyVoice实现，欢迎体验。（LAM的体验服务正在部署中）
 
 LiteAvatar
 <div align="center">
   <video controls src="https://github.com/user-attachments/assets/e2861200-84b0-4c7a-93f0-f46268a0878b">
+  </video>
+</div>
+
+
+
+LAM
+<div align="center">
+  <video controls src="https://github.com/user-attachments/assets/a72a8c33-39dd-4656-a4a9-b76c5487c711">
   </video>
 </div>
 
