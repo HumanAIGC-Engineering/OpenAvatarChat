@@ -61,6 +61,15 @@ LiteAvatar
   </video>
 </div>
 
+LAM
+<div align="center">
+  <video controls src="https://github.com/user-attachments/assets/1c582c05-2232-4cd9-99b6-18382da243d4">
+  </video>
+</div>
+
+
+
+
 
 ## 📖 Contents <!-- omit in toc -->
 
