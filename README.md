@@ -53,7 +53,7 @@ and
 <a href="https://huggingface.co/spaces/HumanAIGC-Engineering-Team/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
     🤗
 HuggingFace
-</a>. The audio part is implemented using SenseVoice + Qwen-VL + CosyVoice. Feel free to try it out.
+</a>. The audio part is implemented using SenseVoice + Qwen-VL + CosyVoice. Feel free to try it out.(LAM experience service is being deployed)
 
 LiteAvatar
 <div align="center">
@@ -63,7 +63,7 @@ LiteAvatar
 
 LAM
 <div align="center">
-  <video controls src="https://github.com/user-attachments/assets/1c582c05-2232-4cd9-99b6-18382da243d4">
+  <video controls src="https://github.com/user-attachments/assets/a72a8c33-39dd-4656-a4a9-b76c5487c711">
   </video>
 </div>
 
