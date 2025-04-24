@@ -49,6 +49,7 @@
 
 ## Demo
 
+### 在线体验
 我们部署在
 <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
     <img alt="Static Badge" style="height: 10px; margin-right: 1px;" src="./assets/images/modelscope_logo.png">
@@ -61,19 +62,19 @@ HuggingFace
  </a>
 上均部署了一个LiteAvatar体验服务，音频部分采用SenseVoice + Qwen-VL + CosyVoice实现，欢迎体验。（LAM的体验服务正在部署中）
 
-LiteAvatar
-<div align="center">
-  <video controls src="https://github.com/user-attachments/assets/e2861200-84b0-4c7a-93f0-f46268a0878b">
-  </video>
-</div>
-
-
-
-LAM
-<div align="center">
-  <video controls src="https://github.com/user-attachments/assets/a72a8c33-39dd-4656-a4a9-b76c5487c711">
-  </video>
-</div>
+### 视频
+<table>
+  <tr>
+    <td align="center">
+      <h3>LiteAvatar</h3>
+      <video controls src="https://github.com/user-attachments/assets/e2861200-84b0-4c7a-93f0-f46268a0878b"></video>
+    </td>
+    <td align="center">
+      <h3>LAM</h3>
+      <video controls src="https://github.com/user-attachments/assets/a72a8c33-39dd-4656-a4a9-b76c5487c711"></video>
+    </td>
+  </tr>
+</table>
 
 ## 📖目录 <!-- omit in toc -->
 
