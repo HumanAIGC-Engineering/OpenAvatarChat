@@ -21,3 +21,4 @@ class ChatEngineConfigModel(BaseModel):
     handler_search_path: List[str] = Field(default_factory=list)
     handler_configs: Optional[Dict[str, Dict]] = None
     outputs: Dict[EngineChannelType, ChatEngineOutputSource] = Field(default_factory=dict)
+    rtc_config: Optional[Dict] = Field(default=None)

@@ -6,13 +6,15 @@ from pydantic import BaseModel
 
 from engine_utils.singleton import SingletonMeta
 from service.rtc_service.turn_providers.twilio_service import TwilioTurnProvider
+from service.rtc_service.turn_providers.turn_service import TurnServerProvider
 from service.service_data_models.service_config_data import ServiceConfigData
 
 
 class RTCProvider(metaclass=SingletonMeta):
     def __init__(self):
         self.rtc_turn_providers = {
-            "twilio": TwilioTurnProvider()
+            "twilio": TwilioTurnProvider(),
+            "turn_server": TurnServerProvider(),
         }
 
     def prepare_rtc_configuration(self, config: Union[ServiceConfigData, BaseModel, Dict]):

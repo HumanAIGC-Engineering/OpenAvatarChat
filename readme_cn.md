@@ -458,9 +458,9 @@ $ chmod 777 scripts/setup_coturn.sh
 * 修改config配置文件，添加以下配置后启动服务
 ```yaml
 default:
-  service:
+  chat_engine:
     rtc_config:
-      # 使用turnserver时，使用以下配置
+      turn_provider: "turn_server"
       urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
       username: "your-username"
       credential: "your-credential"

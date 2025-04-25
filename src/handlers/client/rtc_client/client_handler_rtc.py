@@ -171,9 +171,7 @@ class ClientHandlerRtc(ClientHandlerBase):
         self.prepare_rtc_definitions()
 
     def setup_rtc_ui(self, ui, parent_block, **extra_rtc_params):
-        turn_entity = RTCProvider().prepare_rtc_configuration(self.handler_config.turn_config)
-        if turn_entity is None:
-            turn_entity = RTCProvider().prepare_rtc_configuration(self.engine_config)
+        turn_entity = RTCProvider().prepare_rtc_configuration(self.engine_config.rtc_config)
         if parent_block is None:
             parent_block = ui
         with ui:

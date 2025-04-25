@@ -8,4 +8,3 @@ class ServiceConfigData(BaseModel):
     port: int = Field(default=8080)
     cert_file: Optional[str] = Field(default=None)
     cert_key: Optional[str] = Field(default=None)
-    rtc_config: Optional[Dict] = Field(default=None)

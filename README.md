@@ -449,9 +449,9 @@ $ chmod 777 scripts/setup_coturn.sh
 * Modify the config file, add the following configuration and start the service
 ```yaml
 default:
-  service:
+  chat_engine:
     rtc_config:
-      # Use the following configuration when using turnserver
+      turn_provider: "turn_server"
       urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
       username: "your-username"
       credential: "your-credential"
