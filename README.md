@@ -55,7 +55,7 @@ and
 <a href="https://huggingface.co/spaces/HumanAIGC-Engineering-Team/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
     🤗
 HuggingFace
-</a>. The audio part is implemented using SenseVoice + Qwen-VL + CosyVoice. Feel free to try it out.(LAM experience service is being deployed)
+</a>. The audio part is implemented using ``SenseVoice + Qwen-VL + CosyVoice``. Now you can switch between ``LiteAvatar`` and ``LAM``. Feel free to try it out.
 
 ### Demo Video
 

@@ -60,7 +60,7 @@ ModelScope
     🤗
 HuggingFace
  </a>
-上均部署了一个LiteAvatar体验服务，音频部分采用SenseVoice + Qwen-VL + CosyVoice实现，欢迎体验。（LAM的体验服务正在部署中）
+上均部署了一个体验服务，音频部分采用``SenseVoice + Qwen-VL + CosyVoice``实现，可以对``LiteAvatar``和``LAM``两种数字人能力进行切换，欢迎体验。
 
 ### 视频
 <table>
