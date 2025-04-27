@@ -450,11 +450,13 @@ $ chmod 777 scripts/setup_coturn.sh
 ```yaml
 default:
   chat_engine:
-    rtc_config:
-      turn_provider: "turn_server"
-      urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
-      username: "your-username"
-      credential: "your-credential"
+    handler_configs:
+      RtcClient: # If using Lam, this config should be LamClient
+        turn_config:
+          turn_provider: "turn_server"
+          urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
+          username: "your-username"
+          credential: "your-credential"
 ```
 * Ensure that the firewall (including cloud machine security group policies) opens the ports required by coturn
 
