@@ -455,15 +455,17 @@ scripts/create_ssl_certs.sh
 $ chmod 777 scripts/setup_coturn.sh
 # scripts/setup_coturn.sh
 ```
-* 修改config配置文件，添加以下配置后启动服务
+* 修改config配置文件，添加以下配置后启动服务。
 ```yaml
 default:
   chat_engine:
-    rtc_config:
-      turn_provider: "turn_server"
-      urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
-      username: "your-username"
-      credential: "your-credential"
+    handler_configs:
+      RtcClient: #若使用Lam，则此项配置为LamClient
+        turn_config:
+          turn_provider: "turn_server"
+          urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
+          username: "your-username"
+          credential: "your-credential"
 ```
 * 确保防火墙（包括云上机器安全组等策略）开放coturn所需端口
 
