@@ -120,7 +120,7 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 
 ### 系统需求
 * Python版本 >=3.10, <3.12
-* 支持CUDA的GPU
+* 支持CUDA的GPU, NVIDIA驱动程序支持的CUDA版本需要>=12.4
 * 未量化的多模态语言模型MiniCPM-o需要20GB以上的显存。
 * 数字人部分可以使用GPU/CPU进行推理，测试设备CPU为i9-13980HX，CPU推理下可以达到30FPS.
 
@@ -245,6 +245,8 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 > 强烈建议：国内用户依然使用git clone的方式下载，而不要直接下载zip文件，方便这里的git submodule和git lfs的操作，github访问的问题，可以参考[github访问问题](https://github.com/maxiaof/github-hosts)
 > 
 > 如果遇到问题欢迎提 [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues) 给我们
+>
+> 本项目的运行依赖cuda，请确保本机NVIDIA驱动程序支持的cuda版本>=12.4
 
 #### uv安装
 
