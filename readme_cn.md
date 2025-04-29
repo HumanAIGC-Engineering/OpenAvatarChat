@@ -246,7 +246,7 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 > 
 > 如果遇到问题欢迎提 [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues) 给我们
 >
-> 本项目的运行依赖cuda，请确保本机NVIDIA驱动程序支持的cuda版本>=12.4
+> 本项目的运行依赖CUDA，请确保本机NVIDIA驱动程序支持的CUDA版本>=12.4
 
 #### uv安装
 
