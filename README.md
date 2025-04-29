@@ -119,7 +119,7 @@ Open Avatar Chat is a modular interactive digital human dialogue implementation 
 
 ### Requirements
 * Python version >=3.10, <3.12
-* CUDA-enabled GPU
+* CUDA-enabled GPU. The CUDA version supported by the NVIDIA driver needs to be >= 12.4.
 * The unquantized multimodal language model MiniCPM-o requires more than 20GB of VRAM.
 * The digital human component can perform inference using GPU/CPU. The test device is an i9-13980HX CPU, achieving up to 30 FPS for CPU inference.
 
@@ -242,6 +242,8 @@ This config use Edge TTS, it does not need an API Key of Bailian.
 > ```
 > 
 > If you encounter any issues, feel free to submit an [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues) to us.
+> 
+> This project depends on CUDA, please make sure that the CUDA version supported by the local NVIDIA driver is >= 12.4
 
 #### UV Installation
 It is recommended to install [UV](https://docs.astral.sh/uv/), using UV for local environment management.
