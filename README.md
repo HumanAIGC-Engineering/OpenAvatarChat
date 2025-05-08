@@ -21,12 +21,13 @@
 
 ### Changelog
 - [2025.04.18] ⭐️⭐️⭐️ Version 0.3.0 Released:
+  - 🎉🎉🎉 Congratulations to the [LAM](https://github.com/aigc3d/LAM) team on their paper being accepted to SIGGRAPH 2025! 🎉🎉🎉
   - Added support for [LAM](https://github.com/aigc3d/LAM) in digital humans, enabling concurrent configuration when LAM is selected. TTS now supports edge_tts and BaiLian CosyVoice.
   - Updated dependency management approach based on UV and handler modules, supporting direct execution or using Docker.
   - CSS responsive layout updated.
 - [2025.04.14] ⭐️⭐️⭐️ Version 0.2.2 released:
   - 100 new avatars released, visit [LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
-  - Run LiteAvatar use GPU by default
+  - Run [LiteAvatar](https://github.com/HumanAIGC/lite-avatar) use GPU by default
 - [2025.04.07] ⭐️⭐️⭐️ Version 0.2.1 released:
   - Added support for history logging
   - Support for text input
