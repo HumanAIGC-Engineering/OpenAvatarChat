@@ -24,6 +24,7 @@
 
 ### 更新日志
 - [2025.04.18] ⭐️⭐️⭐️ 版本 0.3.0发布:
+  - 🎉🎉🎉 热烈祝贺[LAM](https://github.com/aigc3d/LAM)论文被SIGGRAPH 2025接收！🎉🎉🎉
   - 增加对[LAM](https://github.com/aigc3d/LAM)数字人 (能够单图秒级打造超写实3D数字人的开源项目) 的支持
   - 增加使用百炼API的tts handler，可以大幅减少对GPU的依赖
   - 增加对微软Edge TTS的支持
@@ -31,7 +32,7 @@
   - CSS响应式布局更新
 - [2025.04.14] ⭐️⭐️⭐️ 版本 0.2.2发布：
   - 100个新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
-  - 默认使用GPU后端运行数字人
+  - 默认使用GPU后端运行数字人[lite-avata](https://github.com/HumanAIGC/lite-avatar)
 - [2025.04.07] ⭐️⭐️⭐️ 版本 0.2.1发布： 
   - 增加历史记录支持 
   - 支持文本输入 
