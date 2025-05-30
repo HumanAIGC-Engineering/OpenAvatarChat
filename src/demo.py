@@ -39,6 +39,13 @@ def setup_demo():
     def get_root():
         return RedirectResponse(url="/ui")
 
+    @app.get("/ui/static/fonts/system-ui/system-ui-Regular.woff2")
+    @app.get("/ui/static/fonts/ui-sans-serif/ui-sans-serif-Regular.woff2")
+    @app.get("/favicon.ico")
+    def get_font():
+        # remove confusing error
+        return {}
+
     css = """
 
 
