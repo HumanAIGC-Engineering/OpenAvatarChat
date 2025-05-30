@@ -15,6 +15,11 @@
 Currently supports Linux and Windows.  
 目前支持Linux和Windows。
 
+```
+The LAM can be run on a mac, just remove cuda related dependencies like onnxruntime-gpu to run on a cpu!
+LAM 部分可以使用mac运行，只需移除cuda 相关的依赖，比如onnxruntime-gpu，就可以在cpu 上运行
+```
+
 ### Dependency Installation / 依赖安装
 
 **Q: How to resolve onnxruntime-gpu installation failure? / 安装 onnxruntime-gpu 失败怎么办？**  
@@ -30,6 +35,15 @@ Currently supports Linux and Windows.
 3. 尝试使用 conda 环境安装  
 4. 注意平台兼容性（manylinux_2_27_x86_64, manylinux_2_28_x86_64, win_amd64）
 
+---
+
+**Q: Is RTX 50 supported / 50系显卡是否支持**
+Currently, 50 series need to use cuda12.8 or above, the corresponding pytorch-related packages need to be installed as version 12.8.
+目前50系显卡需要使用cuda12.8以上，对应pytorch相关的包需要安装成12.8的版本
+```
+#https://pytorch.org/get-started/locally/
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+```
 ---
 
 **Q: How to resolve pynini installation issues? / pynini 安装出现问题怎么办？**  
@@ -126,12 +140,21 @@ Select model IDs with vision capabilities like qwen_vl via API, or use local mul
 LiteAvatar does not support concurrency while LAM supports it via configuration file changes.  
 目前LiteAvatar数字人不支持多路并发，LAM数字人支持多路并发，可以在对应配置文件中修改。
 
+---
+**Q: Where is the front-end code? / 前端代码在哪里？**
+gradio_webrtc in the git submodule, which contains wrappers for webrtc functionality and UI-related code
+git submodule 中的 gradio_webrtc，这个组件包含了webrtc 功能的封装和 UI 相关的代码
+
+Path：OpenAvatarChat\src\third_party\gradio_webrtc_videochat
+Link： https://github.com/HumanAIGC-Engineering/gradio-webrtc.git
+
 ### Integrated Features / 集成功能
 
 **Q: How to configure Turn Server? / 如何配置 Turn Server？**  
 
 Refer to Turn Server configuration README.  
 参考Turn Server配置的readme。
+
 
 ## Best Practices / 最佳实践
 
