@@ -46,6 +46,25 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 ```
 ---
 
+**Q: Is CPU(or mac) supported / 纯CPU或者mac机器是否能部署**
+It can only run smoothly with config/chat_with_gs.yaml, but the lite-avatar self-test won't run. It seems like have to manually change all device to mps to make it work.
+只能顺畅的运行 config/chat_with_gs.yaml, lite-avatar 自测跑不动，估计要全部手动改成 mps 才可能。
+```
+#运行chat_with_gs.yaml 所需额外步骤
+#第一步：移除torchvision 依赖
+#第二步：替换onnxruntime-gpu 为 onnxruntime 依赖
+#修改 src/handlers/avatar/lam/LAM_Audio2Expression/engines/infer.py ,删除所有.cuda()方法的调用
+#按照readme 按照依赖，并运行即可
+
+```
+
+
+```
+#https://pytorch.org/get-started/locally/
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+```
+---
+
 **Q: How to resolve pynini installation issues? / pynini 安装出现问题怎么办？**  
 
 Refer to the cosyvoice module installation section in README.  
