@@ -12,6 +12,7 @@
 
 <p align="center" style="display: flex; flex-direction: row; justify-content: center">
  🤗 <a href="https://huggingface.co/spaces/HumanAIGC-Engineering-Team/open-avatar-chat">Demo</a>&nbsp&nbsp|&nbsp&nbsp<img alt="Static Badge" style="height: 10px;" src="./assets/images/modelscope_logo.png"> <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat">Demo</a>&nbsp&nbsp|&nbsp&nbsp💬 <a href="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/blob/main/assets/images/community_wechat.png">WeChat (微信)</a>
+
 </p>
 
 ## 🔥核心亮点
@@ -79,33 +80,59 @@ HuggingFace
 
 ## 📖目录 <!-- omit in toc -->
 
+- [🔥核心亮点](#核心亮点)
+- [📢 最新动态](#-最新动态)
+  - [更新日志](#更新日志)
+  - [待办清单](#待办清单)
+- [Demo](#demo)
+  - [在线体验](#在线体验)
+  - [视频](#视频)
 - [概览](#概览)
   - [简介](#简介)
   - [系统需求](#系统需求)
   - [性能指标](#性能指标)
   - [组件依赖](#组件依赖)
   - [预置模式](#预置模式)
-- [快速开始](#安装部署)
+- [🚀安装部署](#安装部署)
   - [选择配置](#选择配置)
+    - [chat\_with\_gs.yaml](#chat_with_gsyaml)
+      - [使用的Handler](#使用的handler)
+    - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
+      - [使用的Handler](#使用的handler-1)
+    - [chat\_with\_openai\_compatible.yaml](#chat_with_openai_compatibleyaml)
+    - [使用的Handler](#使用的handler-2)
+    - [chat\_with\_openai\_compatible\_bailian\_cosyvoice.yaml](#chat_with_openai_compatible_bailian_cosyvoiceyaml)
+    - [使用的Handler](#使用的handler-3)
+    - [chat\_with\_openai\_compatible\_edge\_tts.yaml](#chat_with_openai_compatible_edge_ttsyaml)
+    - [使用的Handler](#使用的handler-4)
   - [本地运行](#本地运行)
     - [uv安装](#uv安装)
     - [依赖安装](#依赖安装)
+      - [安装全部依赖](#安装全部依赖)
+      - [仅安装所需模式的依赖](#仅安装所需模式的依赖)
     - [运行](#运行)
-  - [Docker运行](#dokcer运行)
+  - [Docker运行](#docker运行)
 - [Handler依赖安装说明](#handler依赖安装说明)
   - [服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)
   - [LAM端侧渲染 Client Handler](#lam端侧渲染-client-handler)
+    - [形象选择](#形象选择)
   - [OpenAI兼容API的语言模型Handler](#openai兼容api的语言模型handler)
   - [MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)
+    - [依赖模型](#依赖模型)
   - [百炼 CosyVoice Handler](#百炼-cosyvoice-handler)
   - [CosyVoice本地推理Handler](#cosyvoice本地推理handler)
   - [Edge TTS Handler](#edge-tts-handler)
   - [LiteAvatar数字人Handler](#liteavatar数字人handler)
   - [LAM数字人驱动Handler](#lam数字人驱动handler)
+    - [依赖模型](#依赖模型-1)
 - [相关部署需求](#相关部署需求)
   - [准备ssl证书](#准备ssl证书)
   - [TURN Server](#turn-server)
-- [配置说明](#配置说明)
+  - [配置说明](#配置说明)
+- [常见问题](#常见问题)
+- [社区感谢](#社区感谢)
+- [Star历史](#star历史)
+- [引用](#引用)
   
   
 
@@ -549,10 +576,14 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
 > [!IMPORTANT]
 > 所有配置中的路径参数都可以使用绝对路径，或者相对于项目根目录的相对路径。
 
+## 常见问题
+项目过程中遇到的常见问题，可参考[链接](./docs/FAQ.md)
+
 ## 社区感谢
 
 - 感谢社区同学“titan909”在B站上发布的[部署教程视频](https://www.bilibili.com/video/BV1FNZ8YNEA8)
 - 感谢另一位社区同学“十字鱼”在B站上发布的一键安装包视频，并提供了下载（解压码在视频简介里面有,仔细找找）[一键包](https://www.bilibili.com/video/BV1V1oLYmEu3/?vd_source=29463f5b63a3510553325ba70f325293)
+- 感谢另一位同学“W&H”提供的夸克一键包[windows版本:提取码a79V](https://pan.quark.cn/s/237177126010) 和 [linux 版本:提取码：7HW3](https://pan.quark.cn/s/83e569dbef18)
 
 
 ## Star历史

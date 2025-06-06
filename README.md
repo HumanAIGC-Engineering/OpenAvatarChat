@@ -79,33 +79,58 @@ HuggingFace
 
 ## 📖 Contents <!-- omit in toc -->
 
+- [🔥 Core Highlights](#-core-highlights)
+- [📢 News](#-news)
+  - [Changelog](#changelog)
+  - [Todo List](#todo-list)
+- [Demo](#demo)
+  - [Try it Online](#try-it-online)
+  - [Demo Video](#demo-video)
 - [Overview](#overview)
   - [Introduction](#introduction)
   - [Requirements](#requirements)
   - [Performance](#performance)
   - [Component Dependencies](#component-dependencies)
   - [Pre-set Modes](#pre-set-modes)
-- [Get Started](#-get-started)
-  - [Select a Config](#select-a-config)
+- [🚀 Get Started](#-get-started)
+  - [Select a config](#select-a-config)
+    - [chat\_with\_gs.yaml](#chat_with_gsyaml)
+      - [Used Handlers](#used-handlers)
+    - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
+      - [Used Handlers](#used-handlers-1)
+    - [chat\_with\_openai\_compatible.yaml](#chat_with_openai_compatibleyaml)
+      - [Used Handlers](#used-handlers-2)
+    - [chat\_with\_openai\_compatible\_bailian\_cosyvoice.yaml](#chat_with_openai_compatible_bailian_cosyvoiceyaml)
+      - [Used Handlers](#used-handlers-3)
+    - [chat\_with\_openai\_compatible\_edge\_tts.yaml](#chat_with_openai_compatible_edge_ttsyaml)
   - [Local Execution](#local-execution)
     - [UV Installation](#uv-installation)
     - [Dependency Installation](#dependency-installation)
+      - [Install all dependencies](#install-all-dependencies)
+      - [Install dependencies for the required mode only](#install-dependencies-for-the-required-mode-only)
     - [Run](#run)
   - [Docker Execution](#docker-execution)
 - [Handler Dependencies Installation Notes](#handler-dependencies-installation-notes)
   - [Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)
   - [LAM Client Rendering Handler](#lam-client-rendering-handler)
+    - [Select the Avatar Asset](#select-the-avatar-asset)
   - [OpenAI Compatible LLM Handler](#openai-compatible-llm-handler)
   - [MiniCPM Omni Speech2Speech Handler](#minicpm-omni-speech2speech-handler)
+    - [Models used](#models-used)
   - [Bailian CosyVoice Handler](#bailian-cosyvoice-handler)
   - [CosyVoice Local Inference Handler](#cosyvoice-local-inference-handler)
   - [Edge TTS Handler](#edge-tts-handler)
   - [LiteAvatar Avatar Handler](#liteavatar-avatar-handler)
   - [LAM Avatar Driver Handler](#lam-avatar-driver-handler)
+    - [Models used](#models-used-1)
 - [Optional Deployment](#optional-deployment)
   - [Prepare ssl certificates](#prepare-ssl-certificates)
   - [TURN Server](#turn-server)
 - [Configuration](#configuration)
+- [FAQ](#faq)
+- [Community Thanks](#community-thanks)
+- [Star History](#star-history)
+- [Citation](#citation)
 
 
 ## Overview
@@ -549,10 +574,15 @@ Current implemented handler provide following configs:
 > [!IMPORTANT]
 > All path parameters in the configuration can use either absolute paths or paths relative to the project root directory.
 
+
+## FAQ
+Frequently asked questions encountered during the course of the project can be found at [link](./docs/FAQ.md)
+
 ## Community Thanks
 
 - Thanks to community member "titan909" for posting the [deployment tutorial video](https://www.bilibili.com/video/BV1FNZ8YNEA8) on Bilibili.
 - Thanks to another community member, “十字鱼”, for sharing a video on Bilibili featuring a one-click installation package, along with the download link. (The extraction code is included in the video description—take a close look!) [One-click package](https://www.bilibili.com/video/BV1V1oLYmEu3/?vd_source=29463f5b63a3510553325ba70f325293)
+- Thanks to another student "W&H" for the Quark one-click package [windows version: extract code a79V](https://pan.quark.cn/s/237177126010) and [linux version: extract code: 7HW3](https://pan.quark.cn/s/83e569dbef18)
 
 ## Star History
 ![](https://api.star-history.com/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)
