@@ -1,0 +1,37 @@
+[project]
+name = "musetalk"
+version = "0.1.0"
+requires-python = ">=3.10, <3.12"
+# Note: OpenMMLab packages (mmcv, mmdet, mmpose) should be installed via mim:
+#   pip install --no-cache-dir -U openmim
+#   mim install mmengine
+#   mim install mmcv==2.0.1
+#   mim install mmdet==3.1.0
+#   mim install mmpose==1.1.0
+dependencies = [
+    "accelerate==0.28.0",
+    "diffusers==0.30.2",
+    "einops==0.8.1",
+    "ffmpeg-python>=0.2.0",
+    "gdown>=5.1.0",
+    "huggingface-hub==0.30.2",
+    "imageio[ffmpeg]>=2.37.0",
+    "librosa==0.10.2",
+    "moviepy>=1.0.3",
+    "numpy==1.23.5",
+    "omegaconf>=2.3.0",
+    "opencv-python==4.9.0.80",
+    "requests>=2.32.3",
+    "soundfile==0.13.1",
+    "tensorboard==2.12.0",
+    "tensorflow==2.12.0",
+    "transformers==4.44.1",
+    "openmim>=0.3.9",
+    "mmengine>=0.10.3",
+    "mmcv==2.0.1",
+    "mmdet==3.1.0",
+    "mmpose==1.1.0",
+]
+
+[tool.uv]
+no-build-isolation-package = ["chumpy"]

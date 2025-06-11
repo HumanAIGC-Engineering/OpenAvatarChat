@@ -9,7 +9,6 @@ dependencies = [
     "pillow~=11.1.0",
     "pydub~=0.25.1",
     "pypinyin~=0.53.0",
-    "torchvision==0.20.1",
     "transformers==4.44.1",
     "typeguard==2.13.3",
     "vector-quantize-pytorch~=1.21.7",
