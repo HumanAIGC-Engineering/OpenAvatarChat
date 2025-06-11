@@ -24,6 +24,7 @@
 
 ### 更新日志
 - [2025.04.18] ⭐️⭐️⭐️ 版本 0.3.0发布:
+  - 🎉🎉🎉 热烈祝贺[LAM](https://github.com/aigc3d/LAM)论文被SIGGRAPH 2025接收！🎉🎉🎉
   - 增加对[LAM](https://github.com/aigc3d/LAM)数字人 (能够单图秒级打造超写实3D数字人的开源项目) 的支持
   - 增加使用百炼API的tts handler，可以大幅减少对GPU的依赖
   - 增加对微软Edge TTS的支持
@@ -31,7 +32,7 @@
   - CSS响应式布局更新
 - [2025.04.14] ⭐️⭐️⭐️ 版本 0.2.2发布：
   - 100个新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
-  - 默认使用GPU后端运行数字人
+  - 默认使用GPU后端运行数字人[lite-avata](https://github.com/HumanAIGC/lite-avatar)
 - [2025.04.07] ⭐️⭐️⭐️ 版本 0.2.1发布： 
   - 增加历史记录支持 
   - 支持文本输入 
@@ -49,6 +50,7 @@
 
 ## Demo
 
+### 在线体验
 我们部署在
 <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
     <img alt="Static Badge" style="height: 10px; margin-right: 1px;" src="./assets/images/modelscope_logo.png">
@@ -59,13 +61,21 @@ ModelScope
     🤗
 HuggingFace
  </a>
-上均部署了一个体验服务，音频部分采用SenseVoice + Qwen-VL + CosyVoice实现，欢迎体验。
+上均部署了一个体验服务，音频部分采用``SenseVoice + Qwen-VL + CosyVoice``实现，可以对``LiteAvatar``和``LAM``两种数字人能力进行切换，欢迎体验。
 
-LiteAvatar
-<div align="center">
-  <video controls src="https://github.com/user-attachments/assets/e2861200-84b0-4c7a-93f0-f46268a0878b">
-  </video>
-</div>
+### 视频
+<table>
+  <tr>
+    <td align="center">
+      <h3>LiteAvatar</h3>
+      <video controls src="https://github.com/user-attachments/assets/e2861200-84b0-4c7a-93f0-f46268a0878b"></video>
+    </td>
+    <td align="center">
+      <h3>LAM</h3>
+      <video controls src="https://github.com/user-attachments/assets/a72a8c33-39dd-4656-a4a9-b76c5487c711"></video>
+    </td>
+  </tr>
+</table>
 
 ## 📖目录 <!-- omit in toc -->
 
@@ -111,7 +121,7 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 
 ### 系统需求
 * Python版本 >=3.10, <3.12
-* 支持CUDA的GPU
+* 支持CUDA的GPU, NVIDIA驱动程序支持的CUDA版本需要>=12.4
 * 未量化的多模态语言模型MiniCPM-o需要20GB以上的显存。
 * 数字人部分可以使用GPU/CPU进行推理，测试设备CPU为i9-13980HX，CPU推理下可以达到30FPS.
 
@@ -236,6 +246,8 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 > 强烈建议：国内用户依然使用git clone的方式下载，而不要直接下载zip文件，方便这里的git submodule和git lfs的操作，github访问的问题，可以参考[github访问问题](https://github.com/maxiaof/github-hosts)
 > 
 > 如果遇到问题欢迎提 [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues) 给我们
+>
+> 本项目的运行依赖CUDA，请确保本机NVIDIA驱动程序支持的CUDA版本>=12.4
 
 #### uv安装
 
@@ -446,15 +458,17 @@ scripts/create_ssl_certs.sh
 $ chmod 777 scripts/setup_coturn.sh
 # scripts/setup_coturn.sh
 ```
-* 修改config配置文件，添加以下配置后启动服务
+* 修改config配置文件，添加以下配置后启动服务。
 ```yaml
 default:
-  service:
-    rtc_config:
-      # 使用turnserver时，使用以下配置
-      urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
-      username: "your-username"
-      credential: "your-credential"
+  chat_engine:
+    handler_configs:
+      RtcClient: #若使用Lam，则此项配置为LamClient
+        turn_config:
+          turn_provider: "turn_server"
+          urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
+          username: "your-username"
+          credential: "your-credential"
 ```
 * 确保防火墙（包括云上机器安全组等策略）开放coturn所需端口
 

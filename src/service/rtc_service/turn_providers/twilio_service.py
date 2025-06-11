@@ -16,6 +16,7 @@ class TwilioTurnEntity(BaseRtcTurnEntity):
         self.client = None
         self.token = None
 
+
 class TwilioTurnProvider(BaseRtcTurnProvider):
 
     def get_config_model(self) -> Type[BaseModel]:

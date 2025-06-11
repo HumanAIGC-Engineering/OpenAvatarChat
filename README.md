@@ -21,12 +21,13 @@
 
 ### Changelog
 - [2025.04.18] ⭐️⭐️⭐️ Version 0.3.0 Released:
+  - 🎉🎉🎉 Congratulations to the [LAM](https://github.com/aigc3d/LAM) team on their paper being accepted to SIGGRAPH 2025! 🎉🎉🎉
   - Added support for [LAM](https://github.com/aigc3d/LAM) in digital humans, enabling concurrent configuration when LAM is selected. TTS now supports edge_tts and BaiLian CosyVoice.
   - Updated dependency management approach based on UV and handler modules, supporting direct execution or using Docker.
   - CSS responsive layout updated.
 - [2025.04.14] ⭐️⭐️⭐️ Version 0.2.2 released:
   - 100 new avatars released, visit [LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
-  - Run LiteAvatar use GPU by default
+  - Run [LiteAvatar](https://github.com/HumanAIGC/lite-avatar) use GPU by default
 - [2025.04.07] ⭐️⭐️⭐️ Version 0.2.1 released:
   - Added support for history logging
   - Support for text input
@@ -44,6 +45,8 @@
 
 ## Demo
 
+### Try it Online
+
 We have deployed a demo service on 
 <a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
     <img alt="Static Badge" style="height: 10px; margin-right: 1px;" src="./assets/images/modelscope_logo.png">
@@ -53,13 +56,25 @@ and
 <a href="https://huggingface.co/spaces/HumanAIGC-Engineering-Team/open-avatar-chat" target="_blank" style="display: inline-block; vertical-align: middle;">
     🤗
 HuggingFace
-</a>. The audio part is implemented using SenseVoice + Qwen-VL + CosyVoice. Feel free to try it out.
+</a>. The audio part is implemented using ``SenseVoice + Qwen-VL + CosyVoice``. Now you can switch between ``LiteAvatar`` and ``LAM``. Feel free to try it out.
 
-LiteAvatar
-<div align="center">
-  <video controls src="https://github.com/user-attachments/assets/e2861200-84b0-4c7a-93f0-f46268a0878b">
-  </video>
-</div>
+### Demo Video
+
+<table>
+  <tr>
+    <td align="center">
+      <h3>LiteAvatar</h3>
+      <video controls src="https://github.com/user-attachments/assets/e2861200-84b0-4c7a-93f0-f46268a0878b"></video>
+    </td>
+    <td align="center">
+      <h3>LAM</h3>
+      <video controls src="https://github.com/user-attachments/assets/a72a8c33-39dd-4656-a4a9-b76c5487c711"></video>
+    </td>
+  </tr>
+</table>
+
+
+
 
 
 ## 📖 Contents <!-- omit in toc -->
@@ -105,7 +120,7 @@ Open Avatar Chat is a modular interactive digital human dialogue implementation 
 
 ### Requirements
 * Python version >=3.10, <3.12
-* CUDA-enabled GPU
+* CUDA-enabled GPU. The CUDA version supported by the NVIDIA driver needs to be >= 12.4.
 * The unquantized multimodal language model MiniCPM-o requires more than 20GB of VRAM.
 * The digital human component can perform inference using GPU/CPU. The test device is an i9-13980HX CPU, achieving up to 30 FPS for CPU inference.
 
@@ -228,6 +243,8 @@ This config use Edge TTS, it does not need an API Key of Bailian.
 > ```
 > 
 > If you encounter any issues, feel free to submit an [issue](https://github.com/HumanAIGC-Engineering/OpenAvatarChat/issues) to us.
+> 
+> This project depends on CUDA, please make sure that the CUDA version supported by the local NVIDIA driver is >= 12.4
 
 #### UV Installation
 It is recommended to install [UV](https://docs.astral.sh/uv/), using UV for local environment management.
@@ -435,12 +452,14 @@ $ chmod 777 scripts/setup_coturn.sh
 * Modify the config file, add the following configuration and start the service
 ```yaml
 default:
-  service:
-    rtc_config:
-      # Use the following configuration when using turnserver
-      urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
-      username: "your-username"
-      credential: "your-credential"
+  chat_engine:
+    handler_configs:
+      RtcClient: # If using Lam, this config should be LamClient
+        turn_config:
+          turn_provider: "turn_server"
+          urls: ["turn:your-turn-server.com:3478", "turns:your-turn-server.com:5349"]
+          username: "your-username"
+          credential: "your-credential"
 ```
 * Ensure that the firewall (including cloud machine security group policies) opens the ports required by coturn
 
