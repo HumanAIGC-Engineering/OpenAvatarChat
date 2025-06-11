@@ -33,6 +33,3 @@ dependencies = [
     "mmpose==1.3.2",
 ]
 
-[tool.uv]
-no-build-isolation-package = ["chumpy"]
-

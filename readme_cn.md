@@ -121,8 +121,8 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 </p>
 
 ### 系统需求
-* Python版本 >=3.10, <3.12
-* 支持CUDA的GPU, NVIDIA驱动程序支持的CUDA版本需要>=12.4
+* Python版本 >=3.11.7, <3.12
+* 支持CUDA的GPU
 * 未量化的多模态语言模型MiniCPM-o需要20GB以上的显存。
 * 数字人部分可以使用GPU/CPU进行推理，测试设备CPU为i9-13980HX，CPU推理下可以达到30FPS.
 
