@@ -59,7 +59,6 @@ def osmakedirs(path_list):
     for path in path_list:
         os.makedirs(path) if not os.path.exists(path) else None
 
-@torch.no_grad()
 class MuseAvatarV15:
     def __init__(self, avatar_id, video_path, bbox_shift, batch_size, force_preparation=False,
                  parsing_mode='jaw', left_cheek_width=90, right_cheek_width=90,
@@ -445,6 +444,11 @@ class MuseAvatarV15:
             logger.opt(exception=True).error(f"res2combined error: {str(e)}")
             return ori_frame
         t2 = time.time()
+        # Add protection: if res_frame is all zeros, return original frame directly
+        if np.all(res_frame == 0):
+            # if self.debug:
+            logger.warning(f"res2combined: res_frame is all zero, return ori_frame, idx={idx}")
+            return ori_frame
         # Get the corresponding mask and crop box
         mask = self.mask_list_cycle[idx % len(self.mask_list_cycle)]
         mask_crop_box = self.mask_coords_list_cycle[idx % len(self.mask_coords_list_cycle)]
@@ -485,6 +489,7 @@ class MuseAvatarV15:
             logger.info(f"[PROFILE] extract_whisper_feature: duration={t1-t0:.4f}s, segment_len={len(segment)}, sampling_rate={sampling_rate}")
         return whisper_chunks  # shape: [num_frames, 50, 384]
 
+    @torch.no_grad()
     def generate_frame(self, whisper_chunk: torch.Tensor, idx: int) -> np.ndarray:
         """
         Generate a frame based on whisper features and frame index
@@ -508,6 +513,7 @@ class MuseAvatarV15:
             self.timesteps,
             encoder_hidden_states=audio_feature
         ).sample
+
         t5 = time.time()
         pred_latents = pred_latents.to(device=self.device, dtype=self.vae.vae.dtype)
         recon = self.vae.decode_latents(pred_latents)
@@ -559,6 +565,7 @@ class MuseAvatarV15:
         frame = self.frame_list_cycle[idx % len(self.frame_list_cycle)]
         return frame
 
+    @torch.no_grad()
     def generate_frames(self, whisper_chunks: torch.Tensor, start_idx: int, batch_size: int) -> list:
         """
         Batch generate multiple frames based on whisper features and frame index
@@ -594,6 +601,8 @@ class MuseAvatarV15:
             self.timesteps,
             encoder_hidden_states=audio_feature
         ).sample
+        # # Force set pred_latents to all nan for debugging： unet get nan value
+        # pred_latents[:] = float('nan')
         t5 = time.time()
         pred_latents = pred_latents.to(device=self.device, dtype=self.vae.vae.dtype)
         recon = self.vae.decode_latents(pred_latents)
@@ -605,8 +614,18 @@ class MuseAvatarV15:
                 f"prep_whisper={t1-t0:.4f}s, prep_latent={t2-t1:.4f}s, pe={t3-t2:.4f}s, "
                 f"latent_to={t4-t3:.4f}s, unet={t5-t4:.4f}s, vae={t6-t5:.4f}s, total={t6-t0:.4f}s, total_per_frame={avg_time:.4f}s"
             )
+            # debug for nan value
+            logger.info(f"latent_batch stats: min={latent_batch.min().item()}, max={latent_batch.max().item()}, mean={latent_batch.mean().item()}, nan_count={(torch.isnan(latent_batch).sum().item() if torch.isnan(latent_batch).any() else 0)}")
+            logger.info(f"pred_latents stats: min={pred_latents.min().item()}, max={pred_latents.max().item()}, mean={pred_latents.mean().item()}, nan_count={(torch.isnan(pred_latents).sum().item() if torch.isnan(pred_latents).any() else 0)}")
+            if isinstance(recon, np.ndarray):
+                logger.info(f"recon stats: min={recon.min()}, max={recon.max()}, mean={recon.mean()}, nan_count={np.isnan(recon).sum()}")
+            elif isinstance(recon, torch.Tensor):
+                logger.info(f"recon stats: min={recon.min().item()}, max={recon.max().item()}, mean={recon.mean().item()}, nan_count={(torch.isnan(recon).sum().item() if torch.isnan(recon).is_floating_point() else 0)}")
+            else:
+                logger.info(f"recon type: {type(recon)}")
         return [(recon[i], idx_list[i]) for i in range(B)]
 
+    @torch.no_grad()
     def inference(self, audio_path, out_vid_name, fps, skip_save_images):
         """Inference to generate talking avatar video
         

@@ -353,7 +353,7 @@ class HandlerAvatarMusetalk(HandlerBase):
         """
         # Efficient debug data storage, write once at speech_end, record simplified inputs and output_definitions
         if hasattr(context, 'config') and getattr(context.config, 'debug_save_handler_audio', False):
-            debug_root = "logs/debug/"
+            debug_root = "logs/audio_segments/"
             speech_id = inputs.data.get_meta("speech_id") or "unknown"
             os.makedirs(debug_root, exist_ok=True)
             now = time.time()
@@ -484,7 +484,7 @@ class HandlerAvatarMusetalk(HandlerBase):
         """
         import pickle, os, time
         from chat_engine.data_models.chat_data_type import ChatDataType
-        debug_file = os.path.join("logs/debug", f"{speech_id}.pkl")
+        debug_file = os.path.join("logs/audio_segments", f"{speech_id}.pkl")
         if not os.path.exists(debug_file):
             logger.error(f"Debug file for speech_id {speech_id} not found.")
             return
