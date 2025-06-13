@@ -23,9 +23,10 @@
 ## 📢 最新动态
 
 ### 更新日志
-- [2025.06.12] ⭐️⭐️⭐️ 版本 0.4.0发布:
-  - 增加对[MuseTalk](https://github.com/TMElyralab/MuseTalk)数字人的支持
-  - 更新了50+着装具有职业特色的新形象，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery/file/view/master/20250612%2Favatar.md?status=1)
+
+- [2025.06.12] ⭐️⭐️⭐️ 版本 0.4.1发布:
+  - 增加对[MuseTalk](https://github.com/TMElyralab/MuseTalk)数字人的支持，支持自定义形象（底版视频自定义）
+  - 50个LiteAvatar新形象发布，丰富各种职业角色，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
 - [2025.04.18] ⭐️⭐️⭐️ 版本 0.3.0发布:
   - 🎉🎉🎉 热烈祝贺[LAM](https://github.com/aigc3d/LAM)论文被SIGGRAPH 2025接收！🎉🎉🎉
   - 增加对[LAM](https://github.com/aigc3d/LAM)数字人 (能够单图秒级打造超写实3D数字人的开源项目) 的支持
@@ -34,7 +35,7 @@
   - 现在使用uv进行python的包管理，依赖可以按照配置中所激活的handler进行安装
   - CSS响应式布局更新
 - [2025.04.14] ⭐️⭐️⭐️ 版本 0.2.2发布：
-  - 100个新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
+  - 100个LiteAvatar新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
   - 默认使用GPU后端运行数字人[lite-avata](https://github.com/HumanAIGC/lite-avatar)
 - [2025.04.07] ⭐️⭐️⭐️ 版本 0.2.1发布： 
   - 增加历史记录支持 
