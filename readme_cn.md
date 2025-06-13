@@ -23,6 +23,9 @@
 ## 📢 最新动态
 
 ### 更新日志
+- [2025.06.12] ⭐️⭐️⭐️ 版本 0.4.0发布:
+  - 增加对[MuseTalk](https://github.com/TMElyralab/MuseTalk)数字人的支持
+  - 更新了50+着装具有职业特色的新形象，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery/file/view/master/20250612%2Favatar.md?status=1)
 - [2025.04.18] ⭐️⭐️⭐️ 版本 0.3.0发布:
   - 🎉🎉🎉 热烈祝贺[LAM](https://github.com/aigc3d/LAM)论文被SIGGRAPH 2025接收！🎉🎉🎉
   - 增加对[LAM](https://github.com/aigc3d/LAM)数字人 (能够单图秒级打造超写实3D数字人的开源项目) 的支持
