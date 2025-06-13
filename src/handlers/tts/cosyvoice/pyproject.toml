@@ -5,7 +5,7 @@ requires-python = ">=3.10, <3.13"
 dependencies = [
     "conformer==0.3.2",
     "dashscope>=1.23.1",
-    "diffusers==0.29.0",
+    "diffusers==0.30.2",
     "gdown==5.1.0",
     "hyperpyyaml==1.2.2",
     "inflect>=6.5.0",

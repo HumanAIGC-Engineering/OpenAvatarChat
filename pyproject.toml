@@ -3,7 +3,7 @@ name = "open-video-chat"
 version = "0.1.0"
 description = "A modular interactive digital human conversation implementation that runs full-featured on a single PC."
 readme = "README.md"
-requires-python = ">=3.10, <3.12"
+requires-python = ">=3.11.7, <3.12"
 dependencies = [
     "aiohttp~=3.11.12",
     "aiortc~=1.10.1",
@@ -28,9 +28,9 @@ dependencies = [
     "tqdm~=4.67.1",
     "typing-extensions~=4.12.2",
     "uvicorn~=0.34.0",
-    "torch==2.5.1",
-    "torchvision==0.20.1",
-    "torchaudio==2.5.1",
+    "torch==2.4.1",
+    "torchvision",
+    "torchaudio",
     "python-dotenv>=1.1.0",
 ]
 
@@ -44,6 +44,7 @@ members = [
     "src/handlers/vad/silerovad",
     "src/handlers/tts/bailian_tts",
     "src/handlers/asr/sensevoice",
+    "src/handlers/avatar/musetalk",
 ]
 
 [tool.uv.sources]
@@ -62,3 +63,6 @@ torchaudio = [
 name = "pytorch-cu124"
 url = "https://download.pytorch.org/whl/cu124"
 explicit = true
+
+[tool.uv]
+no-build-isolation-package = ["chumpy"]

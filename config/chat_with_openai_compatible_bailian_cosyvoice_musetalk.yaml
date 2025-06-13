@@ -1,0 +1,54 @@
+default:
+  logger:
+    log_level: "INFO"
+  service:
+    host: "0.0.0.0"
+    port: 8282
+    cert_file: "ssl_certs/localhost.crt"
+    cert_key: "ssl_certs/localhost.key"
+  chat_engine:
+    model_root: "models"
+    handler_search_path:
+      - "src/handlers"
+    handler_configs:
+      RtcClient:
+        module: client/rtc_client/client_handler_rtc
+        concurrent_limit: 1
+      SileroVad:
+        module: vad/silerovad/vad_handler_silero
+        speaking_threshold: 0.5
+        start_delay: 2048
+        end_delay: 5000
+        buffer_look_back: 5000
+        speech_padding: 512
+      SenseVoice:
+        enabled: True
+        module: asr/sensevoice/asr_handler_sensevoice
+        model_name: "iic/SenseVoiceSmall"
+      CosyVoice:
+        enabled: True
+        module: tts/bailian_tts/tts_handler_cosyvoice_bailian
+        voice: "longxiaochun"
+        model_name: "cosyvoice-v1"
+        # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
+      LLM_Bailian:
+        enabled: True
+        module: llm/openai_compatible/llm_handler_openai_compatible
+        model_name: "qwen-vl-plus"
+        enable_video_input: True # ensure your llm support video input
+        # model_name: "gemini-2.0-flash"
+        system_prompt: "请你扮演一个 AI 助手，用简短的两三句对话来回答用户的问题，并在对话内容中加入合适的标点符号，不需要讨论标点符号相关的内容"
+        api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        # api_url: 'http://127.0.0.1:11434/v1' # ollama
+        # api_url: 'https://generativelanguage.googleapis.com/v1beta/openai/'
+        # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
+      AvatarMusetalk:
+        module: avatar/musetalk/avatar_handler_musetalk
+        fps: 20  # Video frame rate
+        batch_size: 2  # Batch processing frame count
+        avatar_video_path: "src/handlers/avatar/musetalk/MuseTalk/data/video/yongen.mp4"  # Initialization video path
+        avatar_model_dir: "models/musetalk/avatar_model"  # Default avatar model directory
+        force_create_avatar: false  # Whether to force regenerate digital human data
+        debug: false  # Whether to enable debug mode
+        # debug_save_handler_audio: true  # Whether to save audio frames
+        # debug_replay_speech_id: "speech-d9o18xrugl6-1"  # Speech ID for replay

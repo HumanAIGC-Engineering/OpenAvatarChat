@@ -24,6 +24,10 @@
 ## 📢 最新动态
 
 ### 更新日志
+
+- [2025.06.12] ⭐️⭐️⭐️ 版本 0.4.1发布:
+  - 增加对[MuseTalk](https://github.com/TMElyralab/MuseTalk)数字人的支持，支持自定义形象（底版视频自定义）
+  - 50个LiteAvatar新形象发布，丰富各种职业角色，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
 - [2025.04.18] ⭐️⭐️⭐️ 版本 0.3.0发布:
   - 🎉🎉🎉 热烈祝贺[LAM](https://github.com/aigc3d/LAM)论文被SIGGRAPH 2025接收！🎉🎉🎉
   - 增加对[LAM](https://github.com/aigc3d/LAM)数字人 (能够单图秒级打造超写实3D数字人的开源项目) 的支持
@@ -32,7 +36,7 @@
   - 现在使用uv进行python的包管理，依赖可以按照配置中所激活的handler进行安装
   - CSS响应式布局更新
 - [2025.04.14] ⭐️⭐️⭐️ 版本 0.2.2发布：
-  - 100个新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
+  - 100个LiteAvatar新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
   - 默认使用GPU后端运行数字人[lite-avata](https://github.com/HumanAIGC/lite-avatar)
 - [2025.04.07] ⭐️⭐️⭐️ 版本 0.2.1发布： 
   - 增加历史记录支持 
@@ -125,6 +129,7 @@ HuggingFace
   - [LiteAvatar数字人Handler](#liteavatar数字人handler)
   - [LAM数字人驱动Handler](#lam数字人驱动handler)
     - [依赖模型](#依赖模型-1)
+  - [MuseTalk数字人Handler](#musetalk数字人handler)
 - [相关部署需求](#相关部署需求)
   - [准备ssl证书](#准备ssl证书)
   - [TURN Server](#turn-server)
@@ -147,8 +152,8 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 </p>
 
 ### 系统需求
-* Python版本 >=3.10, <3.12
-* 支持CUDA的GPU, NVIDIA驱动程序支持的CUDA版本需要>=12.4
+* Python版本 >=3.11.7, <3.12
+* 支持CUDA的GPU
 * 未量化的多模态语言模型MiniCPM-o需要20GB以上的显存。
 * 数字人部分可以使用GPU/CPU进行推理，测试设备CPU为i9-13980HX，CPU推理下可以达到30FPS.
 
@@ -174,6 +179,9 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 | TTS      | FunAudioLLM/CosyVoice               |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
 |Avatar|aigc3d/LAM_Audio2Expression|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/aigc3d/LAM_Audio2Expression)|[🤗](https://huggingface.co/3DAIGC/LAM_audio2exp)|
 ||facebook/wav2vec2-base-960h||[🤗](https://huggingface.co/facebook/wav2vec2-base-960h)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/AI-ModelScope/wav2vec2-base-960h)|
+|Avatar|TMElyralab/MuseTalk|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/TMElyralab/MuseTalk)||
+|||||
+
 
 ### 预置模式
 
@@ -182,8 +190,10 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 | chat_with_gs.yaml                                  |SenseVoice|    API    |API| LAM        |
 | chat_with_minicpm.yaml                             |MiniCPM-o| MiniCPM-o | MiniCPM-o | lite-avatar |
 | chat_with_openai_compatible.yaml                   |SenseVoice|API|CosyVoice| lite-avatar |
-| chat_with_openai_compatible_bailian_cosyvoice.yaml |SenseVoice|API|API| lite-avatar |
 | chat_with_openai_compatible_edge_tts.yaml          |SenseVoice|API|edgetts| lite-avatar |
+| chat_with_openai_compatible_bailian_cosyvoice.yaml |SenseVoice|API|API| lite-avatar |
+| chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml |SenseVoice|API|API| MuseTalk |
+||||||
 
 
 ## 🚀安装部署
@@ -230,6 +240,21 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 |Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
 ||||
 
+
+
+#### chat_with_openai_compatible_edge_tts.yaml
+该配置使用edge tts，效果稍差，但不需要百炼的API Key。
+#### 使用的Handler
+|类别|Handler|安装说明|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|ASR|asr/sensevoice/asr_handler_sensevoice||
+|LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI兼容API的语言模型Handler](#openai兼容api的语言模型handler)
+|TTS|tts/edgetts/tts_handler_edgetts|[Edge TTS Handler](#edge-tts-handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
+||||
+
 #### chat_with_openai_compatible_bailian_cosyvoice.yaml
 语言模型与TTS都使用云端API，2D数字人下对设备要求较低的配置。
 #### 使用的Handler
@@ -243,8 +268,8 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 |Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
 ||||
 
-#### chat_with_openai_compatible_edge_tts.yaml
-该配置使用edge tts，效果稍差，但不需要百炼的API Key。
+#### chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+语言模型与TTS都使用云端API，2D数字人使用MuseTalk进行推理，默认是用GPU进行推理，暂不支持CPU推理。
 #### 使用的Handler
 |类别|Handler|安装说明|
 |---|---|---|
@@ -252,8 +277,8 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 |VAD|vad/silerovad/vad_handler/silero||
 |ASR|asr/sensevoice/asr_handler_sensevoice||
 |LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI兼容API的语言模型Handler](#openai兼容api的语言模型handler)
-|TTS|tts/edgetts/tts_handler_edgetts|[Edge TTS Handler](#edge-tts-handler)|
-|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
+|TTS|tts/bailian_tts/tts_handler_cosyvoice_bailian|[百炼 CosyVoice Handler](#百炼-cosyvoice-handler)|
+|Avatar|avatar/musetalk/avatar_handler_musetalk|[MuseTalk数字人Handler](#musetalk数字人handler)|
 ||||
 
 
@@ -470,6 +495,47 @@ LiteAvatar:
   wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
   tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
   ```
+
+### MuseTalk数字人Handler
+项目目前集成了最新的MuseTalk 1.5，之前的版本未做测试，当前版本支持自定义形象，可以通过修改avatar_video_path进行选择。
+
+#### 依赖模型
+* MuseTalk源码中包含模型下载脚本，但是为了保持目录结构一致，对下载脚本做了修改，修改后的脚本在scripts目录下，可在linux环境下使用。MuseTalk原始代码中使用了相对路径进行加载，虽然进行了适配和修改，但是部分代码无法以输入参数进行设置，所以不要修改模型的下载位置，并在项目根目录下运行脚本：
+```
+scripts/download_musetalk_weights.sh
+```
+* MuseTalk源码中第一次启动默认会下载一个模型s3fd-619a316812.pth，该模型并不在下载脚本中，初次下载可能会比较慢。
+
+#### 配置与使用
+* 形象选择：MuseTalk源码中包括两个默认的形象，可以通过修改avatar_video_path参数来选择，系统第一次加载会做数据准备，第二次进入时会直接加载，也可以通过修改force_create_avatar参数来强制每次加载重新生成，avatar_model_dir参数可以指定保存avatar数据的目录，默认在models/musetalk/avatar_model，如无特殊需求无需修改。
+* 帧率：虽然按照MuseTalk的文档中的说明可以在V100下做到30fps，但是本项目参考realtime_inference.py中进行适配还未能达到预期，建议fps设为20，实际测试也可以根据GPU性能进行调整。如果测试log中发现warning：“[IDLE_FRAME] Inserted idle during speaking”，说明实际推理时帧率低于设定的fps，也可通过增加batch_size来提高推理的效率，但是batch_size过大会影响系统的首帧响应速度。
+```yaml
+Avatar_MuseTalk:
+  module: avatar/musetalk/avatar_handler_musetalk
+  fps: 20  # Video frame rate
+  batch_size: 2  # Batch processing frame count
+  avatar_video_path: "src/handlers/avatar/musetalk/MuseTalk/data/video/sun.mp4"  # Initialization video path
+  avatar_model_dir: "models/musetalk/avatar_model"  # Default avatar model directory
+  force_create_avatar: false  # Whether to force regenerate digital human data
+  debug: false  # Whether to enable debug mode
+  ... # 其他参数可参考 AvatarMuseTalkConfig 源码
+```
+* 启动命令：
+
+安装依赖可以使用：
+```bash
+uv run install.py --uv --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+```
+需要注意的是，uv默认安装的mmcv在实际运行时可能会报错“No module named ‘mmcv._ext’”参考[MMCV-FAQ](https://mmcv.readthedocs.io/en/latest/faq.html)，解决方法是：
+```bash
+uv pip uninstall mmcv
+uv pip install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html
+```
+启动程序可以使用：
+```bash
+uv run src/demo.py --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+```
+
 
 ## 相关部署需求
 ### 准备ssl证书

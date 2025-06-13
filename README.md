@@ -20,6 +20,10 @@
 ## 📢 News
 
 ### Changelog
+
+- [2025.06.12] ⭐️⭐️⭐️ Version 0.4.1 Released:
+  - Added support for [MuseTalk](https://github.com/TMElyralab/MuseTalk), including customizable videos for personalized avatars.
+  - Released 50 new LiteAvatar styles featuring a variety of professional roles. Please refer to [LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery).
 - [2025.04.18] ⭐️⭐️⭐️ Version 0.3.0 Released:
   - 🎉🎉🎉 Congratulations to the [LAM](https://github.com/aigc3d/LAM) team on their paper being accepted to SIGGRAPH 2025! 🎉🎉🎉
   - Added support for [LAM](https://github.com/aigc3d/LAM) in digital humans, enabling concurrent configuration when LAM is selected. TTS now supports edge_tts and BaiLian CosyVoice.
@@ -123,6 +127,7 @@ HuggingFace
   - [LiteAvatar Avatar Handler](#liteavatar-avatar-handler)
   - [LAM Avatar Driver Handler](#lam-avatar-driver-handler)
     - [Models used](#models-used-1)
+  - [MuseTalk Avatar Handler](#musetalk-avatar-handler)
 - [Optional Deployment](#optional-deployment)
   - [Prepare ssl certificates](#prepare-ssl-certificates)
   - [TURN Server](#turn-server)
@@ -170,6 +175,8 @@ In our tests, using a PC equipped with an i9-13900KF processor and Nvidia RTX 40
 | TTS      | FunAudioLLM/CosyVoice               |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/FunAudioLLM/CosyVoice)||
 |Avatar|aigc3d/LAM_Audio2Expression|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/aigc3d/LAM_Audio2Expression)|[🤗](https://huggingface.co/3DAIGC/LAM_audio2exp)|
 ||facebook/wav2vec2-base-960h||[🤗](https://huggingface.co/facebook/wav2vec2-base-960h)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/AI-ModelScope/wav2vec2-base-960h)|
+|Avatar|TMElyralab/MuseTalk|[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/TMElyralab/MuseTalk)|||
+|||||
 
 ### Pre-set Modes
 
@@ -178,8 +185,11 @@ In our tests, using a PC equipped with an i9-13900KF processor and Nvidia RTX 40
 | chat_with_gs.yaml                                    | SenseVoice |    API    |   API     | LAM          |
 | chat_with_minicpm.yaml                               | MiniCPM-o  | MiniCPM-o | MiniCPM-o | lite-avatar  |
 | chat_with_openai_compatible.yaml                     | SenseVoice |    API    | CosyVoice | lite-avatar  |
-| chat_with_openai_compatible_bailian_cosyvoice.yaml   | SenseVoice |    API    |   API     | lite-avatar  |
 | chat_with_openai_compatible_edge_tts.yaml            | SenseVoice |    API    | edgetts   | lite-avatar  |
+| chat_with_openai_compatible_bailian_cosyvoice.yaml   | SenseVoice |    API    |   API     | lite-avatar  |
+| chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml | SenseVoice |    API    |   API     | MuseTalk  |
+||||||
+
 
 
 ## 🚀 Get Started
@@ -228,6 +238,18 @@ This config use openai-compatible api as llm provider and CosyVoice as local tts
 |TTS|tts/cosyvoice/tts_handler_cosyvoice|[CosyVoice Local Inference Handler](#cosyvoice-local-inference-handler)|
 |Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
 
+#### chat_with_openai_compatible_edge_tts.yaml
+This config use Edge TTS, it does not need an API Key of Bailian.
+|Type|Handler|Install Notes|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|ASR|asr/sensevoice/asr_handler_sensevoice||
+|LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI Compatible LLM Handler](#openai-compatible-llm-handler)
+|TTS|tts/edgetts/tts_handler_edgetts|[Edge TTS Handler](#edge-tts-handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
+||||
+
 #### chat_with_openai_compatible_bailian_cosyvoice.yaml
 Both LLM and TTS are provided by API, it is the lightest config for LiteAvatar.
 
@@ -242,17 +264,20 @@ Both LLM and TTS are provided by API, it is the lightest config for LiteAvatar.
 |Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
 ||||
 
-#### chat_with_openai_compatible_edge_tts.yaml
-This config use Edge TTS, it does not need an API Key of Bailian.
+#### chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+Both LLM and TTS are provided by API, while the 2D digital human uses MuseTalk for inference. By default, it uses GPU for inference and CPU inference is not currently supported.
+#### Used Handlers
 |Type|Handler|Install Notes|
 |---|---|---|
 |Client|client/rtc_client/client_handler_rtc|[Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)|
 |VAD|vad/silerovad/vad_handler/silero||
 |ASR|asr/sensevoice/asr_handler_sensevoice||
 |LLM|llm/openai_compatible/llm_handler/llm_handler_openai_compatible|[OpenAI Compatible LLM Handler](#openai-compatible-llm-handler)
-|TTS|tts/edgetts/tts_handler_edgetts|[Edge TTS Handler](#edge-tts-handler)|
-|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
+|TTS|tts/bailian_tts/tts_handler_cosyvoice_bailian|[Bailian CosyVoice Handler](#bailian-cosyvoice-handler)|
+|Avatar|avatar/musetalk/avatar_handler_musetalk|[MuseTalk Avatar Handler](#musetalk-avatar-handler)
 ||||
+
+
 
 ### Local Execution
 
@@ -458,6 +483,53 @@ LiteAvatar:
   tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
   ```
 
+### MuseTalk Avatar Handler
+
+The project currently integrates the latest MuseTalk 1.5 (previous versions are not tested). This version supports custom avatars, which can be selected by modifying the `avatar_video_path` parameter.
+
+#### Model Dependencies
+
+* MuseTalk source code includes a model download script. To keep the directory structure consistent, a modified script is provided in the `scripts` directory for Linux environments. The original MuseTalk code uses relative paths for loading; although adaptations have been made, some code cannot be configured via input parameters. **Do not change the model download location.** Run the script from the project root:
+  ```bash
+  scripts/download_musetalk_weights.sh
+  ```
+* The MuseTalk source code will download a model s3fd-619a316812.pth on first startup, which is not included in the download script. The initial download might be slow.
+
+#### Configuration & Usage
+
+* **Avatar selection:** MuseTalk source includes two default avatars. You can select by modifying the `avatar_video_path` parameter. The system will prepare data on first load and cache it for subsequent runs. You can force regeneration by setting `force_create_avatar: true`. The `avatar_model_dir` parameter specifies where to save avatar data (default: `models/musetalk/avatar_model`).
+* **Frame rate:** Although MuseTalk documentation claims 30fps on V100, our adaptation (referencing `realtime_inference.py`) does not reach this in practice. We recommend `fps: 20`, but you can adjust based on your GPU. If you see the warning `[IDLE_FRAME] Inserted idle during speaking` in logs, it means actual inference fps is lower than set fps. Increasing `batch_size` can improve throughput, but too large a batch may slow first-frame response.
+
+**Sample config:**
+```yaml
+Avatar_MuseTalk:
+  module: avatar/musetalk/avatar_handler_musetalk
+  fps: 20  # Video frame rate
+  batch_size: 2  # Batch processing frame count
+  avatar_video_path: "src/handlers/avatar/musetalk/MuseTalk/data/video/sun.mp4"  # Initialization video path
+  avatar_model_dir: "models/musetalk/avatar_model"  # Default avatar model directory
+  force_create_avatar: false  # Whether to force regenerate digital human data
+  debug: false  # Whether to enable debug mode
+  ... # See AvatarMuseTalkConfig for more parameters
+```
+
+* **Installation and Startup:**
+
+For installing dependencies:
+```bash
+uv run install.py --uv --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+```
+Note: The mmcv installed by uv by default may report an error "No module named 'mmcv._ext'" during actual runtime. Refer to [MMCV-FAQ](https://mmcv.readthedocs.io/en/latest/faq.html). The solution is:
+```bash
+uv pip uninstall mmcv
+uv pip install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html
+```
+To start the program:
+```bash
+uv run src/demo.py --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+```
+
+
 ## Optional Deployment
 
 ### Prepare ssl certificates
@@ -583,6 +655,7 @@ Frequently asked questions encountered during the course of the project can be f
 - Thanks to community member "titan909" for posting the [deployment tutorial video](https://www.bilibili.com/video/BV1FNZ8YNEA8) on Bilibili.
 - Thanks to another community member, “十字鱼”, for sharing a video on Bilibili featuring a one-click installation package, along with the download link. (The extraction code is included in the video description—take a close look!) [One-click package](https://www.bilibili.com/video/BV1V1oLYmEu3/?vd_source=29463f5b63a3510553325ba70f325293)
 - Thanks to another student "W&H" for the Quark one-click package [windows version: extract code a79V](https://pan.quark.cn/s/237177126010) and [linux version: extract code: 7HW3](https://pan.quark.cn/s/83e569dbef18)
+
 
 ## Star History
 ![](https://api.star-history.com/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)

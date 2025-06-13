@@ -159,7 +159,8 @@ class CosyvoiceCallBack(ResultCallback):
 
     def on_event(self, message) -> None:
         # 实现接收合成结果的逻辑
-        logger.info(message)
+        # logger.info(message)
+        pass
     
     def on_data(self, data: bytes) -> None:
         self.temp_bytes += data
