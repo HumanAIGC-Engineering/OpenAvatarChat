@@ -5,11 +5,11 @@ ARG CONFIG_FILE=config/chat_with_minicpm.yaml
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 替换为清华大学的APT源
+# Use Tsinghua University APT mirrors
 RUN sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
     sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
 
-# 更新包列表并安装必要的依赖
+# Update package list and install required dependencies
 RUN apt-get update && \
     apt-get install -y software-properties-common && \
     add-apt-repository ppa:deadsnakes/ppa && \
@@ -23,7 +23,7 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 ARG WORK_DIR=/root/open-avatar-chat
 WORKDIR $WORK_DIR
 
-#安装核心依赖
+# Install core dependencies
 COPY ./install.py $WORK_DIR/install.py
 COPY ./pyproject.toml $WORK_DIR/pyproject.toml
 COPY ./src/third_party $WORK_DIR/src/third_party
@@ -33,22 +33,22 @@ RUN pip install uv && \
 
 ADD ./src $WORK_DIR/src
 
-# 复制脚本文件（需要在安装config依赖前就复制，以便使用）
+# Copy script files (must be copied before installing config dependencies)
 ADD ./scripts $WORK_DIR/scripts
 
-#安装config依赖前的脚本执行
+# Execute pre-config installation script
 RUN echo "Using config file: ${CONFIG_FILE}"
 COPY $CONFIG_FILE /tmp/build_config.yaml
 RUN chmod +x $WORK_DIR/scripts/pre_config_install.sh && \
     $WORK_DIR/scripts/pre_config_install.sh --config /tmp/build_config.yaml
 
-#安装config依赖
+# Install config dependencies
 RUN uv run install.py \
     --config /tmp/build_config.yaml \
     --uv \
     --skip-core
 
-#安装config依赖后的脚本执行
+# Execute post-config installation script
 RUN chmod +x $WORK_DIR/scripts/post_config_install.sh && \
     $WORK_DIR/scripts/post_config_install.sh --config /tmp/build_config.yaml && \
     rm /tmp/build_config.yaml
