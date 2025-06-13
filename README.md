@@ -20,6 +20,9 @@
 ## 📢 News
 
 ### Changelog
+- [2025.06.12] ⭐️⭐️⭐️ Version 0.4.0 Released:
+  - Added support for [MuseTalk](https://github.com/TMElyralab/MuseTalk) in digital humans.
+  - 50+ new avatar with with professionally themed outfits released in [LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery/file/view/master/20250612%2Favatar.md?status=1).
 - [2025.04.18] ⭐️⭐️⭐️ Version 0.3.0 Released:
   - 🎉🎉🎉 Congratulations to the [LAM](https://github.com/aigc3d/LAM) team on their paper being accepted to SIGGRAPH 2025! 🎉🎉🎉
   - Added support for [LAM](https://github.com/aigc3d/LAM) in digital humans, enabling concurrent configuration when LAM is selected. TTS now supports edge_tts and BaiLian CosyVoice.
