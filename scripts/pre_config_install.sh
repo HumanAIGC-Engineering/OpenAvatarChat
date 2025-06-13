@@ -1,48 +1,48 @@
 #!/usr/bin/env bash
 
-# 初始化变量
+# Initialize variables
 CONFIG_FILE=""
 
-# 解析参数的循环
+# Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --config )
             CONFIG_FILE="$2"
-            shift 2 # 跳过当前参数及后一个参数
+            shift 2 # Skip current and next argument
             ;;
         * )
-            shift # 跳过未知参数
+            shift # Skip unknown arguments
             ;;
     esac
 done
 
 if [[ -z "$CONFIG_FILE" ]]; then
-    echo "错误：未指定配置文件。请使用 --config 参数指定配置文件路径。"
+    echo "Error: No config file specified. Please use --config parameter to specify the config file path."
     exit 1
 fi
 
 if [[ ! -f "$CONFIG_FILE" ]]; then
-    echo "错误：配置文件 $CONFIG_FILE 不存在。"
+    echo "Error: Config file $CONFIG_FILE does not exist."
     exit 1
 fi
 
-echo "解析配置文件: $CONFIG_FILE"
+echo "Parsing config file: $CONFIG_FILE"
 
-# 使用 grep 检查配置文件中是否包含 AvatarMusetalk 配置
+# Check if config file contains AvatarMusetalk configuration
 if grep -q "AvatarMusetalk:" "$CONFIG_FILE"; then
-    echo "检测到 AvatarMusetalk 配置，开始安装相关依赖..."
+    echo "AvatarMusetalk configuration detected, starting dependency installation..."
     
-    # 安装依赖
-    echo "安装 setuptools 和 pip..."
+    # Install dependencies
+    echo "Installing setuptools and pip..."
     uv pip install setuptools pip
     
-    echo "安装 chumpy==0.70..."
+    echo "Installing chumpy==0.70..."
     uv pip install chumpy==0.70 --no-build-isolation
     
-    echo "安装 mmcv==2.2.0..."
+    echo "Installing mmcv==2.2.0..."
     uv pip install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html
     
-    echo "AvatarMusetalk 依赖安装完成。"
+    echo "AvatarMusetalk dependencies installation completed."
 else
-    echo "配置文件中未发现 AvatarMusetalk 配置，跳过相关依赖安装。"
+    echo "No AvatarMusetalk configuration found in config file, skipping dependency installation."
 fi 
