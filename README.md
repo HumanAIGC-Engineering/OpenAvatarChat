@@ -320,7 +320,12 @@ uv sync --all-packages
 ##### Install dependencies for the required mode only
 ```bash
 uv run install.py --uv --config <absolute path to config file>.yaml
+
+./scripts/post_config_install.sh --config <absolute path to config file>.yaml
 ```
+> [!Note]
+> The `post_config_install.sh` script adds the NVIDIA CUDA library paths from the virtual environment to `ld.so.conf.d` and updates the `ldconfig` cache to ensure the system correctly loads these dynamic link libraries.
+
 
 #### Run
 ```bash
@@ -495,7 +500,7 @@ The project currently integrates the latest MuseTalk 1.5 (previous versions are 
   ```
 * The MuseTalk source code will download a model s3fd-619a316812.pth on first startup, which is not included in the download script. The initial download might be slow.
 
-#### Configuration & Usage
+#### Configuration
 
 * **Avatar selection:** MuseTalk source includes two default avatars. You can select by modifying the `avatar_video_path` parameter. The system will prepare data on first load and cache it for subsequent runs. You can force regeneration by setting `force_create_avatar: true`. The `avatar_model_dir` parameter specifies where to save avatar data (default: `models/musetalk/avatar_model`).
 * **Frame rate:** Although MuseTalk documentation claims 30fps on V100, our adaptation (referencing `realtime_inference.py`) does not reach this in practice. We recommend `fps: 20`, but you can adjust based on your GPU. If you see the warning `[IDLE_FRAME] Inserted idle during speaking` in logs, it means actual inference fps is lower than set fps. Increasing `batch_size` can improve throughput, but too large a batch may slow first-frame response.
@@ -513,17 +518,43 @@ Avatar_MuseTalk:
   ... # See AvatarMuseTalkConfig for more parameters
 ```
 
-* **Installation and Startup:**
+#### Run
 
-For installing dependencies:
+* Docker
+
 ```bash
-uv run install.py --uv --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+./build_and_run.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
+
+* Local deployment
+
+The order of commands for installing dependencies locally is as follows:
+
+```bash
+uv venv --python 3.11.11Add commentMore actions
+
+./scripts/pre_config_install.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+
+uv run install.py --uv --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+
+./scripts/post_config_install.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+```
+
+
 Note: The mmcv installed by uv by default may report an error "No module named 'mmcv._ext'" during actual runtime. Refer to [MMCV-FAQ](https://mmcv.readthedocs.io/en/latest/faq.html). The solution is:
 ```bash
 uv pip uninstall mmcv
 uv pip install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html
 ```
+
+When running the MuseTalk source code for the first time, it will automatically download a model called s3fd-619a316812.pth. This model is now integrated into the download script. It has already been mapped when starting with Docker. However, when running locally, you need to manually perform the mapping again.
+
+```bash
+# linux
+ln -s $(pwd)/models/musetalk/s3fd-619a316812/* ~/.cache/torch/hub/checkpoints/
+```
+
+
 To start the program:
 ```bash
 uv run src/demo.py --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
