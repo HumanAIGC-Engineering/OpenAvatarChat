@@ -513,7 +513,7 @@ scripts/download_musetalk_weights.sh
 
 #### 配置参数
 * 形象选择：MuseTalk源码中包括两个默认的形象，可以通过修改avatar_video_path参数来选择，系统第一次加载会做数据准备，第二次进入时会直接加载，也可以通过修改force_create_avatar参数来强制每次加载重新生成，avatar_model_dir参数可以指定保存avatar数据的目录，默认在models/musetalk/avatar_model，如无特殊需求无需修改。
-* 帧率：虽然按照MuseTalk的文档中的说明可以在V100下做到30fps，但是本项目参考realtime_inference.py中进行适配还未能达到预期，建议fps设为20，实际测试也可以根据GPU性能进uv run 行调整。如果测试log中发现warning：“[IDLE_FRAME] Inserted idle during speaking”，说明实际推理时帧率低于设定的fps，也可通过增加batch_size来提高推理的效率，但是batch_size过大会影响系统的首帧响应速度。
+* 帧率：虽然按照MuseTalk的文档中的说明可以在V100下做到30fps，但是本项目参考realtime_inference.py中进行适配还未能达到预期，建议fps设为20，实际测试也可以根据GPU性能进行调整。如果测试log中发现warning：“[IDLE_FRAME] Inserted idle during speaking”，说明实际推理时帧率低于设定的fps，也可通过增加batch_size来提高推理的效率，但是batch_size过大会影响系统的首帧响应速度。
 ```yaml
 Avatar_MuseTalk:
   module: avatar/musetalk/avatar_handler_musetalk
