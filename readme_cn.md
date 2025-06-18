@@ -329,8 +329,14 @@ uv sync --all-packages
 
 ##### 仅安装所需模式的依赖
 ```bash
-uv run install.py --uv --config <配置文件的绝对路径>.yaml 
+uv run install.py --uv --config <配置文件的绝对路径>.yaml
+
+./scripts/post_config_install.sh --config <配置文件的绝对路径>.yaml
 ```
+
+> [!Note]
+> `post_config_install.sh` 脚本会将虚拟环境中的NVIDIA CUDA库路径添加到 `ld.so.conf.d` 并更新 `ldconfig` 缓存，以确保系统能正确加载这些动态链接库
+
 
 #### 运行
 ```bash
@@ -504,11 +510,10 @@ LiteAvatar:
 ```
 scripts/download_musetalk_weights.sh
 ```
-* MuseTalk源码中第一次启动默认会下载一个模型s3fd-619a316812.pth，该模型并不在下载脚本中，初次下载可能会比较慢。
 
-#### 配置与使用
+#### 配置参数
 * 形象选择：MuseTalk源码中包括两个默认的形象，可以通过修改avatar_video_path参数来选择，系统第一次加载会做数据准备，第二次进入时会直接加载，也可以通过修改force_create_avatar参数来强制每次加载重新生成，avatar_model_dir参数可以指定保存avatar数据的目录，默认在models/musetalk/avatar_model，如无特殊需求无需修改。
-* 帧率：虽然按照MuseTalk的文档中的说明可以在V100下做到30fps，但是本项目参考realtime_inference.py中进行适配还未能达到预期，建议fps设为20，实际测试也可以根据GPU性能进行调整。如果测试log中发现warning：“[IDLE_FRAME] Inserted idle during speaking”，说明实际推理时帧率低于设定的fps，也可通过增加batch_size来提高推理的效率，但是batch_size过大会影响系统的首帧响应速度。
+* 帧率：虽然按照MuseTalk的文档中的说明可以在V100下做到30fps，但是本项目参考realtime_inference.py中进行适配还未能达到预期，建议fps设为20，实际测试也可以根据GPU性能进uv run 行调整。如果测试log中发现warning：“[IDLE_FRAME] Inserted idle during speaking”，说明实际推理时帧率低于设定的fps，也可通过增加batch_size来提高推理的效率，但是batch_size过大会影响系统的首帧响应速度。
 ```yaml
 Avatar_MuseTalk:
   module: avatar/musetalk/avatar_handler_musetalk
@@ -520,17 +525,42 @@ Avatar_MuseTalk:
   debug: false  # Whether to enable debug mode
   ... # 其他参数可参考 AvatarMuseTalkConfig 源码
 ```
-* 启动命令：
 
-安装依赖可以使用：
-```bash
-uv run install.py --uv --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+#### 运行
+
+* Docker
+
 ```
+./build_and_run.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+```
+
+* 本地运行
+
+本地安装依赖的命令顺序如下：
+```bash
+uv venv --python 3.11.11
+
+./scripts/pre_config_install.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+
+uv run install.py --uv --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+
+./scripts/post_config_install.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+```
+
 需要注意的是，uv默认安装的mmcv在实际运行时可能会报错“No module named ‘mmcv._ext’”参考[MMCV-FAQ](https://mmcv.readthedocs.io/en/latest/faq.html)，解决方法是：
 ```bash
 uv pip uninstall mmcv
 uv pip install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html
 ```
+
+MuseTalk源码中第一次启动默认会下载一个模型s3fd-619a316812.pth，该模型目前已集成在下载脚本中。在Docker启动时已经做了映射处理。但在本地运行时，需要再手动进行一次映射。
+
+```
+# linux
+ln -s $(pwd)/models/musetalk/s3fd-619a316812/* ~/.cache/torch/hub/checkpoints/
+```
+
+
 启动程序可以使用：
 ```bash
 uv run src/demo.py --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
