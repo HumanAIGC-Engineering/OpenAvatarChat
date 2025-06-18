@@ -44,7 +44,7 @@ huggingface-cli download ByteDance/LatentSync --local-dir "$MUSETALK_ROOT_DIR/sy
 echo "Downloading Face Parse Bisent weights to $MODEL_DIR/face-parse-bisent..."
 huggingface-cli download ManyOtherFunctions/face-parse-bisent --local-dir "$MODEL_DIR/face-parse-bisent" --local-dir-use-symlinks False --include "79999_iter.pth" "resnet18-5c106cde.pth"
 
-echo "Downloading MiniCPM-o-2_6-int4 weights to $MUSETALK_ROOT_DIR/s3fd-619a316812..."
+echo "Downloading s3fd-619a316812 weights to $MUSETALK_ROOT_DIR/s3fd-619a316812..."
 git clone https://www.modelscope.cn/HaveAnApplePie/s3fd-619a316812.git $MUSETALK_ROOT_DIR/s3fd-619a316812
 
 echo "All download commands have been executed, but the model files may not be downloaded. Please check the following directories and files exist:"
