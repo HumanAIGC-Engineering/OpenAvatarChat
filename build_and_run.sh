@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
-# 初始化变量
 CONFIG_PATH=""
 
-# 解析参数的循环
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -config | --config )
             CONFIG_PATH="$2"
-            shift 2 # 跳过当前参数及后一个参数
+            shift 2
             ;;
     esac
 done
@@ -23,6 +21,7 @@ docker run --rm --gpus all -it --name open-avatar-chat \
     -v `pwd`/models:/root/open-avatar-chat/models \
     -v `pwd`/ssl_certs:/root/open-avatar-chat/ssl_certs \
     -v `pwd`/config:/root/open-avatar-chat/config \
+    -v `pwd`/models/musetalk/s3fd-619a316812/:/root/.cache/torch/hub/checkpoints/ \
     -p 8282:8282 \
     open-avatar-chat:0.0.1 \
     --config ${CONFIG_PATH}
