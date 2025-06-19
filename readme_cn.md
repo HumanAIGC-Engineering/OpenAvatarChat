@@ -329,6 +329,10 @@ uv sync --all-packages
 
 ##### 仅安装所需模式的依赖
 ```bash
+uv venv --python 3.11.11
+
+uv pip install setuptools pip
+
 uv run install.py --uv --config <配置文件的绝对路径>.yaml
 
 ./scripts/post_config_install.sh --config <配置文件的绝对路径>.yaml
