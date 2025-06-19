@@ -319,6 +319,10 @@ uv sync --all-packages
 ```
 ##### Install dependencies for the required mode only
 ```bash
+uv venv --python 3.11.11
+
+uv pip install setuptools pip
+
 uv run install.py --uv --config <absolute path to config file>.yaml
 
 ./scripts/post_config_install.sh --config <absolute path to config file>.yaml
