@@ -364,6 +364,7 @@ class MuseAvatarV15:
             if self.version == "v15":
                 y2 = y2 + self.extra_margin  # Add extra chin area
                 y2 = min(y2, frame.shape[0])  # Ensure not out of image boundary
+                y1 = max(y1, 0) # Ensure not out of image boundary
                 coord_list[idx] = [x1, y1, x2, y2]  # Update bbox in coord_list
                 
             # Crop face region and resize to 256x256
