@@ -122,7 +122,7 @@ class SpeechAudioProcessor:
         target_length = int(2 * sample_rate * duration)
         padding_length = target_length - len(audio_data)
         if padding_length < 0:
-            return audio_data
+            return audio_data, 0
         if padding_front:
             audio_data = bytes(padding_length) + audio_data
         else:
