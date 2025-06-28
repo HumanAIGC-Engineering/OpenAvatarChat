@@ -4,4 +4,4 @@ pushd $LITE_AVATAR_DIR
 
 bash download_model.sh
 
-popd $LITE_AVATAR_DIR
+popd
