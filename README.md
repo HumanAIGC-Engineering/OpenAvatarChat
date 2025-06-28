@@ -459,7 +459,16 @@ Edge_TTS:
 
 ### LiteAvatar Avatar Handler
 LiteAvatar is integarted to provide 2D avatar feature. Currenty, 100 avatar assets are provided on modelscope project [LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery), please refer to this project for detail.
+
+#### Model Dependencies
+**Model weights have to be downloaded before you use LiteAvatar**, LiteAvatar source code includes a model download script. For convenience, a script for Linux enviroments also provided in the `scripts` directory of this repo. You can call this script under **project root**:
+```bash
+bash scripts/download_liteavatar_weights.sh
+```
+
+#### Configuration
 LiteAvatar can be run on CPU as well as GPU. If other GPU heavy handlers are used, let liteavatar run on cpu may be a good choice.
+
 Sample handler config looks like:
 ```yaml
 LiteAvatar:
