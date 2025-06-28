@@ -473,6 +473,15 @@ Edge_TTS:
 
 ### LiteAvatar数字人Handler
 集成LiteAvatar算法生产2D数字人对话，目前在modelscope的项目LiteAvatarGallery中提供了100个数字人形象可供使用，详情见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)。
+
+#### 依赖模型
+**使用LiveAvatar之前需要先下载模型参数**, LiteAvatar源码中包含模型下载脚本，为了方便使用，在本项目的`scripts`目录中提供了用于Linux环境的模型下载脚本. 可以在**当前项目的根目录中**调用该脚本:
+```bash
+bash scripts/download_liteavatar_weights.sh
+```
+
+#### 配置参数
+
 LiteAvatar可以运行在CPU或GPU上，如果其他handler都没有对GPU的大开销，建议使用GPU进行推理。
 参考配置如下：
 ```yaml
