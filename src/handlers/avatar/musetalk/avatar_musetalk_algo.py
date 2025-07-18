@@ -512,7 +512,7 @@ class MuseAvatarV15:
         # Blend the generated facial expression with the original frame
         # combine_frame = get_image_blending(ori_frame, res_frame, bbox, mask, mask_crop_box)
         combine_frame = self.acc_get_image_blending(ori_frame, res_frame, bbox, mask, mask_crop_box)
-        logger.info(f'----- unet inference waste: {(time.time() - t3) * 1000} ms -----')
+        logger.info(f'----- res2combined time: {(time.time() - t3) * 1000} ms')
         t4 = time.time()
         if self.debug:
             logger.info(
@@ -668,7 +668,7 @@ class MuseAvatarV15:
                 self.timesteps,
                 encoder_hidden_states=audio_feature
             ).sample
-        logger.info(f'----- unet inference time: {(time.time() - time1) * 1000} ms -----')
+        logger.info(f'----- unet inference time: {(time.time() - time1) * 1000} ms')
         # # Force set pred_latents to all nan for debugging： unet get nan value
         # pred_latents[:] = float('nan')
         t5 = time.time()
@@ -679,7 +679,7 @@ class MuseAvatarV15:
             recon = self.acc_decode_latents(pred_latents)
         else:
             recon = self.vae.decode_latents(pred_latents)
-        logger.info(f'----- vae.decode inference time: {(time.time() - time1) * 1000} ms -----')
+        logger.info(f'----- vae.decode inference time: {(time.time() - time1) * 1000} ms')
         t6 = time.time()
         avg_time = (t6 - t0) / B if B > 0 else 0.0
         if self.debug:

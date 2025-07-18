@@ -289,7 +289,7 @@ class AvatarMuseTalkProcessor:
             if os.getenv("INFER_ACCELERATION") == "yes":
                 t0 = time.time()
                 self._avatar.compile_models()
-                logger.info(f'----- compiling models time: {(time.time() - t0) * 1000} ms -----')
+                logger.info(f'----- compiling models time: {(time.time() - t0) * 1000} ms')
         while not self._stop_event.is_set():
             # Control speaking frame buffer, queue full waits
             while self._frame_queue.qsize() > max_speaking_buffer and not self._stop_event.is_set():
