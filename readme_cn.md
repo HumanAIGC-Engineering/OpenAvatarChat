@@ -587,7 +587,7 @@ export INFER_ACCELERATION=yes
 cp .venv/lib/python3.11/site-packages/diffusers/utils/accelerate_utils.py .venv/lib/python3.11/site-packages/diffusers/utits/accelerate_utils.py.backup
 sed -i '17i\import torch' .venv/lib/python3.11/site-packages/diffusers/utils/accelerate_utils.py
 ```
-注意：推理加速，首次编译优化耗时较长~2min，第二次会直接加载编译好的cache，但首次推理预热任然耗时较长约为30~50s。   
+注意：推理加速，首次编译优化耗时较长2分钟左右，第二次会直接加载编译好的cache，但首次推理预热任然耗时较长约为30s+。   
 
 
 ## 相关部署需求
