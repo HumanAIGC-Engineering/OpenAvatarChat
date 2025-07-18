@@ -578,6 +578,16 @@ ln -s $(pwd)/models/musetalk/s3fd-619a316812/* ~/.cache/torch/hub/checkpoints/
 ```bash
 uv run src/demo.py --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
+如果需要开启推理加速，请添加环境变量：
+```bash
+export INFER_ACCELERATION=yes
+```
+注意：uv环境下，开启推理加速，diffusers易报错：NameError: name 'torch' is not defined，需要进行给相应py代码加入"import torch"：
+```bash
+cp .venv/lib/python3.11/site-packages/diffusers/utils/accelerate_utils.py .venv/lib/python3.11/site-packages/diffusers/utits/accelerate_utils.py.backup
+sed -i '17i\import torch' .venv/lib/python3.11/site-packages/diffusers/utils/accelerate_utils.py
+```
+注意：推理加速，首次编译优化耗时较长~2min，第二次会直接加载编译好的cache，但首次推理预热任然耗时较长约为30~50s。
 
 
 ## 相关部署需求
