@@ -88,6 +88,9 @@ HuggingFace
 
 <img alt="community_wechat.png" height="200" src="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/blob/main/assets/images/community_wechat.png" width="200"/>
 
+## 🚨 常见问题
+项目过程中遇到的常见问题，可参考[链接](./docs/FAQ.md)
+
 ## 📖目录 <!-- omit in toc -->
 
 - [🔥核心亮点](#核心亮点)
@@ -98,6 +101,7 @@ HuggingFace
   - [在线体验](#在线体验)
   - [视频](#视频)
 - [社区](#社区)
+- [🚨 常见问题](#-常见问题)
 - [概览](#概览)
   - [简介](#简介)
   - [系统需求](#系统需求)
@@ -141,7 +145,6 @@ HuggingFace
   - [准备ssl证书](#准备ssl证书)
   - [TURN Server](#turn-server)
   - [配置说明](#配置说明)
-- [常见问题](#常见问题)
 - [社区感谢](#社区感谢)
 - [Star历史](#star历史)
 - [引用](#引用)
@@ -691,9 +694,6 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
 
 > [!IMPORTANT]
 > 所有配置中的路径参数都可以使用绝对路径，或者相对于项目根目录的相对路径。
-
-## 常见问题
-项目过程中遇到的常见问题，可参考[链接](./docs/FAQ.md)
 
 ## 社区感谢
 
