@@ -1,7 +1,7 @@
 <h1 style='text-align: center; margin-bottom: 1rem'> Open Avatar Chat </h1>
 
 <p align="center">
-<strong>English | <a href="readme_cn.md">中文</a></strong>
+<strong><a href="README.md">中文</a> | English</strong>
 </p>
 
 <p align="center">
@@ -77,7 +77,11 @@ HuggingFace
   </tr>
 </table>
 
+## Community
 
+* Wechat Group
+
+<img alt="community_wechat.png" height="200" src="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/blob/main/assets/images/community_wechat.png" width="200"/>
 
 
 
@@ -90,6 +94,7 @@ HuggingFace
 - [Demo](#demo)
   - [Try it Online](#try-it-online)
   - [Demo Video](#demo-video)
+- [Community](#community)
 - [Overview](#overview)
   - [Introduction](#introduction)
   - [Requirements](#requirements)
