@@ -83,7 +83,8 @@ HuggingFace
 
 <img alt="community_wechat.png" height="200" src="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/blob/main/assets/images/community_wechat.png" width="200"/>
 
-
+## 🚨 FAQ
+Frequently asked questions encountered during the course of the project can be found at [link](./docs/FAQ.md)
 
 ## 📖 Contents <!-- omit in toc -->
 
@@ -95,6 +96,7 @@ HuggingFace
   - [Try it Online](#try-it-online)
   - [Demo Video](#demo-video)
 - [Community](#community)
+- [🚨 FAQ](#-faq)
 - [Overview](#overview)
   - [Introduction](#introduction)
   - [Requirements](#requirements)
@@ -137,7 +139,6 @@ HuggingFace
   - [Prepare ssl certificates](#prepare-ssl-certificates)
   - [TURN Server](#turn-server)
 - [Configuration](#configuration)
-- [FAQ](#faq)
 - [Community Thanks](#community-thanks)
 - [Star History](#star-history)
 - [Citation](#citation)
@@ -695,9 +696,6 @@ Current implemented handler provide following configs:
 > [!IMPORTANT]
 > All path parameters in the configuration can use either absolute paths or paths relative to the project root directory.
 
-
-## FAQ
-Frequently asked questions encountered during the course of the project can be found at [link](./docs/FAQ.md)
 
 ## Community Thanks
 
