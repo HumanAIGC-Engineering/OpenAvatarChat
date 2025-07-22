@@ -286,10 +286,6 @@ class AvatarMuseTalkProcessor:
             torch.cuda.synchronize()
             t1 = time.time()
             logger.info(f"[THREAD_WARMUP] _frame_generator_worker thread id: {threading.get_ident()} self-warmup done, time: {(t1-t0)*1000:.1f} ms")
-            if os.getenv("INFER_ACCELERATION") == "yes":
-                t0 = time.time()
-                self._avatar.compile_models()
-                logger.info(f'----- compiling models time: {(time.time() - t0) * 1000} ms')
         while not self._stop_event.is_set():
             # Control speaking frame buffer, queue full waits
             while self._frame_queue.qsize() > max_speaking_buffer and not self._stop_event.is_set():
