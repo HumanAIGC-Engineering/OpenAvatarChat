@@ -701,7 +701,7 @@ Current implemented handler provide following configs:
 
 - Thanks to another community member, “十字鱼”, for sharing a video on Bilibili featuring a one-click installation package, along with the download link. (The extraction code is included in the video description—take a close look!) [One-click package](https://www.bilibili.com/video/BV1V1oLYmEu3/?vd_source=29463f5b63a3510553325ba70f325293)
 - Thanks to another student "W&H" for the Quark one-click package [windows version: extract code a79V](https://pan.quark.cn/s/237177126010) and [linux version: extract code: E8Kq](https://pan.quark.cn/s/b7fcdc157586)
-
+- Thanks to student "W&H" for the source code zip[Quark:extract code 9iNy](https://pan.quark.cn/s/9e6156cafacd) and [BaiDu:extract code xrxr](https://pan.baidu.com/s/16-0OBtSD5cBz2gJDJORW7w)
 
 ## Star History
 ![](https://api.star-history.com/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)

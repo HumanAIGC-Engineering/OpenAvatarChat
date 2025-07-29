@@ -57,12 +57,6 @@ It can only run smoothly with config/chat_with_gs.yaml, but the lite-avatar self
 #按照readme 按照依赖，并运行即可
 
 ```
-
-
-```
-#https://pytorch.org/get-started/locally/
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-```
 ---
 
 **Q: How to resolve pynini installation issues? / pynini 安装出现问题怎么办？**  
