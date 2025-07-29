@@ -88,6 +88,11 @@ HuggingFace
 
 <img alt="community_wechat.png" height="200" src="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/blob/main/assets/images/community_wechat.png" width="200"/>
 
+* 官方视频教程
+
+我们制作了该项目的一系列介绍视频，欢迎在[Bilibili](https://www.bilibili.com/video/BV1sv8QzLEC2)上观看。
+[![点击观看项目演示视频](./assets/images/bilibili_video.jpg)](https://www.bilibili.com/video/BV1sv8QzLEC2)
+
 ## 🚨 常见问题
 项目过程中遇到的常见问题，可参考[链接](./docs/FAQ.md)
 
