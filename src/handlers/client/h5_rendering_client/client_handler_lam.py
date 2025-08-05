@@ -163,13 +163,18 @@ class ClientHandlerLam(ClientHandlerRtc):
             logger.info(f"Return lam asset file: {file_path}")
             response = FileResponse(file_path)
             return response
+        
+        avatar_config = {
+            "avatar_type": 'lam',
+            "avatar_ws_route": motion_data_route,
+            "avatar_assets_path": f"{asset_route}/{self.asset_name}",
+        }
 
         self.setup_rtc_ui(
             ui=ui,
             parent_block=parent_block,
-            avatar_type="gs",
-            avatar_ws_route=motion_data_route,
-            avatar_assets_path=f"{asset_route}/{self.asset_name}",
+            fastapi=app,
+            avatar_config
         )
 
     def create_context(self, session_context: SessionContext,

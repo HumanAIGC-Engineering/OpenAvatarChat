@@ -37,10 +37,10 @@ def setup_demo():
 
     @app.get("/")
     def get_root():
-        return RedirectResponse(url="/ui")
+        return RedirectResponse(url="/ui/index.html")
 
-    @app.get("/ui/static/fonts/system-ui/system-ui-Regular.woff2")
-    @app.get("/ui/static/fonts/ui-sans-serif/ui-sans-serif-Regular.woff2")
+    @app.get("/gradio/static/fonts/system-ui/system-ui-Regular.woff2")
+    @app.get("/gradio/static/fonts/ui-sans-serif/ui-sans-serif-Regular.woff2")
     @app.get("/favicon.ico")
     def get_font():
         # remove confusing error
@@ -57,12 +57,15 @@ def setup_demo():
     footer {
         display: none !important;
     }
+    .html-container {
+        display: none !important;
+    }
     """
     with gr.Blocks(css=css) as gradio_block:
         with gr.Column():
             with gr.Group() as rtc_container:
                 pass
-    gradio.mount_gradio_app(app, gradio_block, "/ui")
+    gradio.mount_gradio_app(app, gradio_block, "/gradio")
     return app, gradio_block, rtc_container
 
 def main():

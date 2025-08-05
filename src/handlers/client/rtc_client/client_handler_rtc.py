@@ -1,12 +1,16 @@
 import asyncio
+from pathlib import Path
 from typing import Dict, Optional, cast, Union, Tuple
 from uuid import uuid4
 
+from engine_utils.directory_info import DirectoryInfo
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import gradio
 import numpy as np
 from fastapi import FastAPI
 # noinspection PyPackageRequirements
-from fastrtc import WebRTC
+from fastrtc import Stream
 
 from pydantic import BaseModel, Field
 
@@ -170,7 +174,7 @@ class ClientHandlerRtc(ClientHandlerBase):
         self.handler_config = cast(ClientRtcConfigModel, handler_config)
         self.prepare_rtc_definitions()
 
-    def setup_rtc_ui(self, ui, parent_block, **extra_rtc_params):
+    def setup_rtc_ui(self, ui, parent_block, fastapi, avatar_config):
         turn_entity = RTCProvider().prepare_rtc_configuration(self.handler_config.turn_config)
         if turn_entity is None:
             turn_entity = RTCProvider().prepare_rtc_configuration(self.engine_config.turn_config)
@@ -178,27 +182,28 @@ class ClientHandlerRtc(ClientHandlerBase):
             parent_block = ui
         with ui:
             with parent_block:
-                webrtc = WebRTC(
-                    label="Avatar Chat",
+                webrtc = Stream(
                     modality="audio-video",
                     mode="send-receive",
-                    elem_id="video-source",
                     rtc_configuration=turn_entity.rtc_configuration if turn_entity is not None else None,
-                    pulse_color="rgb(35, 157, 225)",
-                    icon_button_color="rgb(35, 157, 225)",
-                    **extra_rtc_params
+                    handler=self.rtc_streamer_factory,
+                    concurrency_limit=self.handler_config.concurrent_limit,
                 )
-            webrtc.stream(
-                self.rtc_streamer_factory,
-                inputs=[webrtc],
-                outputs=[webrtc],
-                time_limit=self.handler_config.connection_ttl,
-                concurrency_limit=self.handler_config.concurrent_limit,
-            )
+                webrtc.mount(fastapi)
 
+                @fastapi.get('/openavatarchat/init')
+                async def init_config():
+                    config = {
+                        "avatar_config": avatar_config,
+                    }
+                    return JSONResponse(status_code=200, content=config)
+                
+                frontend_path = Path(DirectoryInfo.get_src_dir() + '/handlers/client/rtc_client/frontend/dist')
+                fastapi.mount('/ui', StaticFiles(directory=frontend_path), name="static")
 
     def on_setup_app(self, app: FastAPI, ui: gradio.blocks.Block, parent_block: Optional[gradio.blocks.Block] = None):
-        self.setup_rtc_ui(ui, parent_block)
+        avatar_config = {}
+        self.setup_rtc_ui(ui, parent_block, app, avatar_config)
 
     def create_context(self, session_context: SessionContext,
                        handler_config: Optional[HandlerBaseConfigModel] = None) -> HandlerContext:

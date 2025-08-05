@@ -54,7 +54,6 @@ class ChatHistory:
                 },
             ] + (list(map(lambda x: {"type": "image_url", "image_url": {"url": ImageUtils.format_image(x)}}, images)))
         })
-        self.add_message(HistoryMessage(role="human", content=chat_text))
         return messages        
     
 

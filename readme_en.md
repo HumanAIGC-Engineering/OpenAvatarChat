@@ -105,15 +105,17 @@ Frequently asked questions encountered during the course of the project can be f
   - [Pre-set Modes](#pre-set-modes)
 - [🚀 Get Started](#-get-started)
   - [Select a config](#select-a-config)
-    - [chat\_with\_gs.yaml](#chat_with_gsyaml)
+    - [chat\_with\_lam.yaml](#chat_with_lamyaml)
       - [Used Handlers](#used-handlers)
     - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
       - [Used Handlers](#used-handlers-1)
     - [chat\_with\_openai\_compatible.yaml](#chat_with_openai_compatibleyaml)
       - [Used Handlers](#used-handlers-2)
+    - [chat\_with\_openai\_compatible\_edge\_tts.yaml](#chat_with_openai_compatible_edge_ttsyaml)
     - [chat\_with\_openai\_compatible\_bailian\_cosyvoice.yaml](#chat_with_openai_compatible_bailian_cosyvoiceyaml)
       - [Used Handlers](#used-handlers-3)
-    - [chat\_with\_openai\_compatible\_edge\_tts.yaml](#chat_with_openai_compatible_edge_ttsyaml)
+    - [chat\_with\_openai\_compatible\_bailian\_cosyvoice\_musetalk.yaml](#chat_with_openai_compatible_bailian_cosyvoice_musetalkyaml)
+    - [Used Handlers](#used-handlers-4)
   - [Local Execution](#local-execution)
     - [UV Installation](#uv-installation)
     - [Dependency Installation](#dependency-installation)
@@ -132,13 +134,18 @@ Frequently asked questions encountered during the course of the project can be f
   - [CosyVoice Local Inference Handler](#cosyvoice-local-inference-handler)
   - [Edge TTS Handler](#edge-tts-handler)
   - [LiteAvatar Avatar Handler](#liteavatar-avatar-handler)
+    - [Model Dependencies](#model-dependencies)
+    - [Configuration](#configuration)
   - [LAM Avatar Driver Handler](#lam-avatar-driver-handler)
     - [Models used](#models-used-1)
   - [MuseTalk Avatar Handler](#musetalk-avatar-handler)
+    - [Model Dependencies](#model-dependencies-1)
+    - [Configuration](#configuration-1)
+    - [Run](#run-1)
 - [Optional Deployment](#optional-deployment)
   - [Prepare ssl certificates](#prepare-ssl-certificates)
   - [TURN Server](#turn-server)
-- [Configuration](#configuration)
+- [Configuration](#configuration-2)
 - [Community Thanks](#community-thanks)
 - [Star History](#star-history)
 - [Citation](#citation)
@@ -188,7 +195,7 @@ In our tests, using a PC equipped with an i9-13900KF processor and Nvidia RTX 40
 
 | CONFIG Name                                          | ASR        |    LLM    |    TTS    | AVATAR       |
 |------------------------------------------------------|------------|:---------:|:---------:|--------------|
-| chat_with_gs.yaml                                    | SenseVoice |    API    |   API     | LAM          |
+| chat_with_lam.yaml                                   | SenseVoice |    API    |   API     | LAM          |
 | chat_with_minicpm.yaml                               | MiniCPM-o  | MiniCPM-o | MiniCPM-o | lite-avatar  |
 | chat_with_openai_compatible.yaml                     | SenseVoice |    API    | CosyVoice | lite-avatar  |
 | chat_with_openai_compatible_edge_tts.yaml            | SenseVoice |    API    | edgetts   | lite-avatar  |
@@ -205,7 +212,7 @@ Before installing and deploying the corresponding mode, please refer to the **in
 ### Select a config
 The functionalities of OpenAvatarChat will follow the config specified during startup. We provided several sample config files under the config folder.
 
-#### chat_with_gs.yaml
+#### chat_with_lam.yaml
 This config uses [LAM](https://github.com/aigc3d/LAM) generated gaussion splatting asset as client-side rendered avatar. With api based openai compatible llm and tts from Bailian platform, only vad and asr handlers are run locally, so this is the lightest config choice, which supports multiple connection on single service.
 
 ##### Used Handlers
@@ -366,9 +373,9 @@ LamClient:
 
 ### OpenAI Compatible LLM Handler
 Local llm handler has relatively high startup requirements. If you already have an available LLM api_key, you can start it this way to experience interactive digital humans.
-Modify the corresponding config, such as the LLM_Bailian configuration in config/chat_with_openai_compatible.yaml. The invocation method in the code uses the standard OpenAI approach, which should theoretically be compatible with similar setups.
+Modify the corresponding config, such as the LLMOpenaiCompatible configuration in config/chat_with_openai_compatible.yaml. The invocation method in the code uses the standard OpenAI approach, which should theoretically be compatible with similar setups.
 ```yaml
-LLM_Bailian: 
+LLMOpenaiCompatible: 
   model_name: "qwen-plus"
   system_prompt: "You are an AI digital human. Respond to my questions briefly and insert punctuation where appropriate."
   api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
@@ -663,10 +670,10 @@ Current implemented handler provide following configs:
 
 | Parameter                  | Default Value | Description                                                                 |
 |----------------------------|---------------|-----------------------------------------------------------------------------|
-| LLM_Bailian.model_name     | qwen-plus     | The API for Bailian's testing environment. Free quotas can be obtained from [Bailian](https://bailian.console.aliyun.com/#/home). |
-| LLM_Bailian.system_prompt  |               | Default system prompt                                                       |
-| LLM_Bailian.api_url        |               | API URL for the model                                                      |
-| LLM_Bailian.api_key        |               | API key for the model                                                      |
+| LLMOpenaiCompatible.model_name     | qwen-plus     | The API for Bailian's testing environment. Free quotas can be obtained from [Bailian](https://bailian.console.aliyun.com/#/home). |
+| LLMOpenaiCompatible.system_prompt  |               | Default system prompt                                                       |
+| LLMOpenaiCompatible.api_url        |               | API URL for the model                                                      |
+| LLMOpenaiCompatible.api_key        |               | API key for the model                                                      |
 
 ---
 

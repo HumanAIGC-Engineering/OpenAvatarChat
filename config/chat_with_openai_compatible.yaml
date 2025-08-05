@@ -34,7 +34,7 @@ default:
         # ref_audio_text: "希望你以后能够做的比我还好呦。"
         sample_rate: 24000
         process_num: 2
-      LLM_Bailian:
+      LLMOpenaiCompatible:
         enabled: True
         module: llm/openai_compatible/llm_handler_openai_compatible
         model_name: "qwen-plus"
