@@ -161,7 +161,7 @@ class HandlerTTS(HandlerBase, ABC):
                     context.submit_data(output)
             context.input_text = ''
             output = DataBundle(output_definition)
-            output.set_main_data(np.zeros(shape=(1, self.sample_rate), dtype=np.float32))
+            output.set_main_data(np.zeros(shape=(1, self.sample_rate/100), dtype=np.float32))
             output.add_meta("avatar_speech_end", True)
             output.add_meta("speech_id", speech_id)
             context.submit_data(output)
