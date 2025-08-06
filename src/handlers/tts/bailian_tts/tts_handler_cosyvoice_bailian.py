@@ -187,7 +187,7 @@ class CosyvoiceCallBack(ResultCallback):
             self.context.submit_data(output)
             self.temp_bytes = b''
         output = DataBundle(self.output_definition)
-        output.set_main_data(np.zeros(shape=(1, 24000), dtype=np.float32))
+        output.set_main_data(np.zeros(shape=(1, 240), dtype=np.float32))
         output.add_meta("avatar_speech_end", True)
         output.add_meta("speech_id", self.speech_id)
         self.context.submit_data(output)
