@@ -16,7 +16,10 @@ from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.data_models.chat_signal import ChatSignal
 from chat_engine.data_models.chat_signal_type import ChatSignalType, ChatSignalSourceType
 from engine_utils.interval_counter import IntervalCounter
-
+from aiortc.codecs import vpx
+vpx.DEFAULT_BITRATE = 5000000
+vpx.MIN_BITRATE = 1000000
+vpx.MAX_BITRATE = 10000000
 
 class RtcStream(AsyncAudioVideoStreamHandler):
     def __init__(self,
