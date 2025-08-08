@@ -424,10 +424,11 @@ class MuseAvatarV15:
         with open(self.masks_path, 'wb') as f:
             pickle.dump(self.mask_list_cycle, f)
 
+
     def acc_get_image_blending(self, image, face, face_box, mask_array, crop_box):
         # 1. BGR2RGB
-        body_cpy = image[:, :, ::-1].copy()
-        face_cpy = face[:, :, ::-1].copy()
+        body_cpy = image#[:, :, ::-1]
+        face_cpy = face#[:, :, ::-1]
         x, y, x1, y1 = face_box
         x_s, y_s, x_e, y_e = crop_box
     
@@ -435,7 +436,9 @@ class MuseAvatarV15:
         face_large1 = body_cpy[y_s:y_e, x_s:x_e].copy()
     
         # 3. mask
-        mask_f = (mask_array / 255.0).astype(np.float32)
+        # mask_array: numpy.ndarray, uint8
+        scale = 1.0 / 255.0
+        mask_f = mask_array.astype(np.float32) * scale
         mask3 = np.stack([mask_f]*3, axis=2)
     
         # 4. past face into face_large
@@ -448,8 +451,7 @@ class MuseAvatarV15:
         # 6. past back
         out = body_cpy.copy()
         out[y_s:y_e, x_s:x_e] = blended
-        out = out[:,:,::-1]
-    
+        
         # 7.return[H, W, 3],RGB
         return out
 
@@ -487,12 +489,18 @@ class MuseAvatarV15:
         # combine_frame = get_image_blending(ori_frame, res_frame, bbox, mask, mask_crop_box)
         combine_frame = self.acc_get_image_blending(ori_frame, res_frame, bbox, mask, mask_crop_box)
         t4 = time.time()
+        # logger.info(f'--- res2combined - acc_get_image_blending time: {(t4 - t3)*1000:.4f} ms, total: {(t4 - t0)*1000:.4f} ms')
+        total_time = t4 - t0
+        fps = 1.0 / total_time if total_time > 0 else 0
+        if fps < self.fps:
+            logger.warning(f"[PROFILE] res2combined fps is not enough, fps={fps:.2f}, self.fps={self.fps}")
         if self.debug:
             logger.info(
-                f"[PROFILE] res2combined: idx={idx}, ori_copy={t1-t0:.4f}s, resize={t2-t1:.4f}s, mask_fetch={t3-t2:.4f}s, blend={t4-t3:.4f}s, total={t4-t0:.4f}s"
+                f"[PROFILE] res2combined: idx={idx}, ori_copy={t1-t0:.4f}s, resize={t2-t1:.4f}s, mask_fetch={t3-t2:.4f}s, blend={t4-t3:.4f}s, total={total_time:.4f}s, fps={fps:.2f}"
             )
         return combine_frame
     
+    @torch.no_grad()
     def extract_whisper_feature(self, segment: np.ndarray, sampling_rate: int) -> torch.Tensor:
         """
         Extract whisper features for a single audio segment
@@ -639,14 +647,110 @@ class MuseAvatarV15:
         recon = self.vae.decode_latents(pred_latents)
         t6 = time.time()
         avg_time = (t6 - t0) / B if B > 0 else 0.0
+        fps = 1.0 / avg_time if avg_time > 0 else 0.0
         if self.debug:
             logger.info(
                 f"[PROFILE] generate_frames: start_idx={start_idx}, batch_size={batch_size}, "
                 f"prep_whisper={t1-t0:.4f}s, prep_latent={t2-t1:.4f}s, pe={t3-t2:.4f}s, "
-                f"latent_to={t4-t3:.4f}s, unet={t5-t4:.4f}s, vae={t6-t5:.4f}s, total={t6-t0:.4f}s, total_per_frame={avg_time:.4f}s"
+                f"latent_to={t4-t3:.4f}s, unet={t5-t4:.4f}s, vae={t6-t5:.4f}s, total={t6-t0:.4f}s, total_per_frame={avg_time:.4f}s, fps={fps:.2f}"
             )
             # debug for nan value
             logger.info(f"latent_batch stats: min={latent_batch.min().item()}, max={latent_batch.max().item()}, mean={latent_batch.mean().item()}, nan_count={(torch.isnan(latent_batch).sum().item() if torch.isnan(latent_batch).any() else 0)}")
+            logger.info(f"pred_latents stats: min={pred_latents.min().item()}, max={pred_latents.max().item()}, mean={pred_latents.mean().item()}, nan_count={(torch.isnan(pred_latents).sum().item() if torch.isnan(pred_latents).any() else 0)}")
+            if isinstance(recon, np.ndarray):
+                logger.info(f"recon stats: min={recon.min()}, max={recon.max()}, mean={recon.mean()}, nan_count={np.isnan(recon).sum()}")
+            elif isinstance(recon, torch.Tensor):
+                logger.info(f"recon stats: min={recon.min().item()}, max={recon.max().item()}, mean={recon.mean().item()}, nan_count={(torch.isnan(recon).sum().item() if torch.isnan(recon).is_floating_point() else 0)}")
+            else:
+                logger.info(f"recon type: {type(recon)}")
+        return [(recon[i], idx_list[i]) for i in range(B)]
+
+    @torch.no_grad()
+    def generate_frames_unet(self, whisper_chunks: torch.Tensor, start_idx: int, batch_size: int) -> list:
+        """
+        Batch generate multiple frames based on whisper features and frame index
+        whisper_chunks: [B, 50, 384]
+        start_idx: start frame index
+        batch_size: batch size
+        Return: [pred_latents, idx_list]
+        """
+        t0 = time.time()
+        # Ensure whisper_chunks shape is (B, 50, 384)
+        if whisper_chunks.ndim == 2:
+            whisper_chunks = whisper_chunks.unsqueeze(0)
+        elif whisper_chunks.ndim == 3 and whisper_chunks.shape[0] == 1:
+            pass
+        B = whisper_chunks.shape[0]
+        assert B == batch_size, f"whisper_chunks.shape[0] ({B}) != batch_size ({batch_size})"
+        idx_list = [start_idx + i for i in range(batch_size)]
+        latent_list = []
+        t1 = time.time()
+        for idx in idx_list:
+            latent = self.input_latent_list_cycle[idx % len(self.input_latent_list_cycle)]
+            if latent.dim() == 3:
+                latent = latent.unsqueeze(0)
+            latent_list.append(latent)
+        latent_batch = torch.cat(latent_list, dim=0)  # [B, ...]
+        t2 = time.time()
+        audio_feature = self.pe(whisper_chunks.to(self.device))
+        t3 = time.time()
+        latent_batch = latent_batch.to(device=self.device, dtype=self.unet.model.dtype)
+        t4 = time.time()
+        # self.unet.model: UNet2DConditionModel
+        # -> input: latent_batch: torch.Size([B, 8, 32, 32],torch.float32
+        # -> input: timesteps: torch.Size([1],torch.int64
+        # -> input: audio_feature: torch.Size([B, 50, 384],torch.float32
+        # <- output: pred_latents: torch.Size([B, 4, 32, 32],torch.float32
+        pred_latents = self.unet.model(
+            latent_batch,
+            self.timesteps,
+            encoder_hidden_states=audio_feature
+        ).sample
+        # # Force set pred_latents to all nan for debugging： unet get nan value
+        # pred_latents[:] = float('nan')
+        # torch.cuda.synchronize()
+        t5 = time.time()
+        avg_time = (t5 - t0) / B if B > 0 else 0.0
+        # logger.info(f'--- unet inference time: {(t5 - t4)*1000:.4f} ms, total: {(t5 - t0)*1000:.4f} ms')
+        if self.debug:
+            logger.info(
+                f"[PROFILE] generate_frames_unet: start_idx={start_idx}, batch_size={batch_size}, "
+                f"prep_whisper={t1-t0:.4f}s, prep_latent={t2-t1:.4f}s, pe={t3-t2:.4f}s, "
+                f"latent_to={t4-t3:.4f}s, unet={t5-t4:.4f}s, total={t5-t0:.4f}s, total_per_frame={avg_time:.4f}s"
+            )
+            # debug for nan value
+            logger.info(f"latent_batch stats: min={latent_batch.min().item()}, max={latent_batch.max().item()}, mean={latent_batch.mean().item()}, nan_count={(torch.isnan(latent_batch).sum().item() if torch.isnan(latent_batch).any() else 0)}")
+            logger.info(f"pred_latents stats: min={pred_latents.min().item()}, max={pred_latents.max().item()}, mean={pred_latents.mean().item()}, nan_count={(torch.isnan(pred_latents).sum().item() if torch.isnan(pred_latents).any() else 0)}")
+        return [pred_latents, idx_list]
+
+    @torch.no_grad()
+    def generate_frames_vae(self, pred_latents: torch.Tensor, idx_list: list, batch_size: int) -> list:
+        """
+        Batch generate multiple frames based on whisper features and frame index
+        pred_latents: [B, 4, 32, 32]
+        idx_list: frame index list
+        batch_size: batch size
+        Return: List of (recon, idx) tuples, length is batch_size
+        """
+        t0 = time.time()
+        B = pred_latents.shape[0]
+        assert B == batch_size, f"pred_latents.shape[0] ({B}) != batch_size ({batch_size})"
+        # idx_list = [start_idx + i for i in range(batch_size)]
+        pred_latents = pred_latents.to(device=self.device, dtype=self.vae.vae.dtype)
+        # ----- self.vae.decode_latents: AutoencoderKL -----
+        # -> input: pred_latents: torch.Size([B, 4, 32, 32],torch.float32
+        # <- output: recon: numpy.ndarray: (B, 256, 256, 3),np.float32
+        recon = self.vae.decode_latents(pred_latents)
+        # torch.cuda.synchronize()
+        t1 = time.time()
+        # logger.info(f'--- vae inference time: {(t1 - t0)*1000:.4f} ms')
+        avg_time = (t1 - t0) / B if B > 0 else 0.0
+        if self.debug:
+            logger.info(
+                f"[PROFILE] generate_frames: start_idx={idx_list[0]}, batch_size={batch_size}, "
+                f"vae={t1-t0:.4f}s, total={t1-t0:.4f}s, total_per_frame={avg_time:.4f}s"
+            )
+            # debug for nan value
             logger.info(f"pred_latents stats: min={pred_latents.min().item()}, max={pred_latents.max().item()}, mean={pred_latents.mean().item()}, nan_count={(torch.isnan(pred_latents).sum().item() if torch.isnan(pred_latents).any() else 0)}")
             if isinstance(recon, np.ndarray):
                 logger.info(f"recon stats: min={recon.min()}, max={recon.max()}, mean={recon.mean()}, nan_count={np.isnan(recon).sum()}")

@@ -541,12 +541,14 @@ scripts/download_musetalk_weights.sh
 
 #### 配置参数
 * 形象选择：MuseTalk源码中包括两个默认的形象，可以通过修改avatar_video_path参数来选择，系统第一次加载会做数据准备，第二次进入时会直接加载，也可以通过修改force_create_avatar参数来强制每次加载重新生成，avatar_model_dir参数可以指定保存avatar数据的目录，默认在models/musetalk/avatar_model，如无特殊需求无需修改。
-* 帧率：虽然按照MuseTalk的文档中的说明可以在V100下做到30fps，但是本项目参考realtime_inference.py中进行适配还未能达到预期，建议fps设为20，实际测试也可以根据GPU性能进行调整。如果测试log中发现warning：“[IDLE_FRAME] Inserted idle during speaking”，说明实际推理时帧率低于设定的fps，也可通过增加batch_size来提高推理的效率，但是batch_size过大会影响系统的首帧响应速度。
+* 帧率：虽然按照MuseTalk的文档中的说明可以在V100下做到30fps，但是本项目参考realtime_inference.py中进行适配还未能达到预期，建议fps设为20，实际测试也可以根据GPU性能进行调整。如果测试log中发现warning：“[IDLE_FRAME] Inserted idle during speaking”，说明实际推理时帧率低于设定的fps。
+* batch_size：可通过增加batch_size来提高推理的效率，但是batch_size过大会影响系统的首帧响应速度。 batch_size最小为2，如果设置1，log中会出现Error：`[IDLE_FRAME]1 validation error for AvatarMuseTalkConfig，batch_size - Input should be greater than or equal to 2 [type=greater_than_equal, input_value=1, input_type=int]` 
+
 ```yaml
 Avatar_MuseTalk:
   module: avatar/musetalk/avatar_handler_musetalk
   fps: 20  # Video frame rate
-  batch_size: 2  # Batch processing frame count
+  batch_size: 2  # Batch processing frame count, must be greater than 2
   avatar_video_path: "src/handlers/avatar/musetalk/MuseTalk/data/video/sun.mp4"  # Initialization video path
   avatar_model_dir: "models/musetalk/avatar_model"  # Default avatar model directory
   force_create_avatar: false  # Whether to force regenerate digital human data
@@ -593,7 +595,6 @@ ln -s $(pwd)/models/musetalk/s3fd-619a316812/* ~/.cache/torch/hub/checkpoints/
 ```bash
 uv run src/demo.py --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
-
 
 ## 相关部署需求
 ### 准备ssl证书
