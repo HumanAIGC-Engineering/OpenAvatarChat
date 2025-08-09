@@ -43,5 +43,10 @@ default:
         # api_url: 'http://127.0.0.1:11434/v1' # ollama
         # api_url: 'https://generativelanguage.googleapis.com/v1beta/openai/'
         # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
+      # Dify:
+      #   enabled: True
+      #   module: llm/dify/llm_handler_dify
+      #   api_key: app-J3LiQRqh4MrOOvS6vpyrgIOW
+      #   api_url: 'http://localhost/v1'
       LAM_Driver:
         module: avatar/lam/avatar_handler_lam_audio2expression
