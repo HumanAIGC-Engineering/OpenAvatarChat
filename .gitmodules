@@ -19,3 +19,6 @@
 [submodule "src/handlers/avatar/musetalk/MuseTalk"]
 	path = src/handlers/avatar/musetalk/MuseTalk
 	url = https://github.com/TMElyralab/MuseTalk.git
+[submodule "src/handlers/client/rtc_client/frontend"]
+	path = src/handlers/client/rtc_client/frontend
+	url = https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI.git
