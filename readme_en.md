@@ -529,14 +529,15 @@ The project currently integrates the latest MuseTalk 1.5 (previous versions are 
 #### Configuration
 
 * **Avatar selection:** MuseTalk source includes two default avatars. You can select by modifying the `avatar_video_path` parameter. The system will prepare data on first load and cache it for subsequent runs. You can force regeneration by setting `force_create_avatar: true`. The `avatar_model_dir` parameter specifies where to save avatar data (default: `models/musetalk/avatar_model`).
-* **Frame rate:** Although MuseTalk documentation claims 30fps on V100, our adaptation (referencing `realtime_inference.py`) does not reach this in practice. We recommend `fps: 20`, but you can adjust based on your GPU. If you see the warning `[IDLE_FRAME] Inserted idle during speaking` in logs, it means actual inference fps is lower than set fps. Increasing `batch_size` can improve throughput, but too large a batch may slow first-frame response.
+* **Frame rate:** Although MuseTalk documentation claims 30fps on V100, our adaptation (referencing `realtime_inference.py`) does not reach this in practice. We recommend `fps: 20`, but you can adjust based on your GPU. If you see the warning `[IDLE_FRAME] Inserted idle during speaking` in logs, it means actual inference fps is lower than set fps. 
+* **Batch size:** Increasing `batch_size` can improve throughput, but too large a batch may slow first-frame response. The minimum batch_size for inference is 2. If you set it to 1, an error will appear in the log`[IDLE_FRAME] 1 validation error for AvatarMuseTalkConfig，batch_size - Input should be greater than or equal to 2 [type=greater_than_equal, input_value=1, input_type=int]`  
 
 **Sample config:**
 ```yaml
 Avatar_MuseTalk:
   module: avatar/musetalk/avatar_handler_musetalk
   fps: 20  # Video frame rate
-  batch_size: 2  # Batch processing frame count
+  batch_size: 2  # Batch processing frame count, must be greater than 2
   avatar_video_path: "src/handlers/avatar/musetalk/MuseTalk/data/video/sun.mp4"  # Initialization video path
   avatar_model_dir: "models/musetalk/avatar_model"  # Default avatar model directory
   force_create_avatar: false  # Whether to force regenerate digital human data

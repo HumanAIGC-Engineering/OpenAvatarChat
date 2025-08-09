@@ -45,10 +45,11 @@ default:
       AvatarMusetalk:
         module: avatar/musetalk/avatar_handler_musetalk
         fps: 20  # Video frame rate
-        batch_size: 2  # Batch processing frame count
+        batch_size: 2  # Batch processing frame count, must be greater than 2
         avatar_video_path: "src/handlers/avatar/musetalk/MuseTalk/data/video/yongen.mp4"  # Initialization video path
         avatar_model_dir: "models/musetalk/avatar_model"  # Default avatar model directory
         force_create_avatar: false  # Whether to force regenerate digital human data
         debug: false  # Whether to enable debug mode
+        multi_thread_inference: true  # true: use 2 threads to inference (unet, vae), false: use single-thread to inference
         # debug_save_handler_audio: true  # Whether to save audio frames
         # debug_replay_speech_id: "speech-d9o18xrugl6-1"  # Speech ID for replay

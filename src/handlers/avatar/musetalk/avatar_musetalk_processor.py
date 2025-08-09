@@ -33,6 +33,7 @@ class AvatarMuseTalkProcessor:
         # Internal queues
         self._audio_queue = Queue()  # Input audio queue
         self._whisper_queue = Queue()  # Whisper feature queue
+        self._unet_queue = Queue()  # Unet output queue
         self._frame_queue = Queue()  # Video frame queue
         self._frame_id_queue = Queue()  # Frame ID allocation queue
         self._compose_queue = Queue()  # Frame composition queue
@@ -41,6 +42,8 @@ class AvatarMuseTalkProcessor:
         self._stop_event = threading.Event()
         self._feature_thread: Optional[Thread] = None
         self._frame_gen_thread: Optional[Thread] = None
+        self._frame_gen_unet_thread: Optional[Thread] = None
+        self._frame_gen_vae_thread: Optional[Thread] = None
         self._frame_collect_thread: Optional[Thread] = None
         self._compose_thread: Optional[Thread] = None
         self._session_running = False
@@ -63,11 +66,19 @@ class AvatarMuseTalkProcessor:
         self._stop_event.clear()
         try:
             self._feature_thread = threading.Thread(target=self._feature_extractor_worker)
-            self._frame_gen_thread = threading.Thread(target=self._frame_generator_worker)
+            if self._config.multi_thread_inference:
+                self._frame_gen_unet_thread = threading.Thread(target=self._frame_generator_unet_worker)
+                self._frame_gen_vae_thread = threading.Thread(target=self._frame_generator_vae_worker)
+            else:
+                self._frame_gen_thread = threading.Thread(target=self._frame_generator_worker)
             self._frame_collect_thread = threading.Thread(target=self._frame_collector_worker)
             self._compose_thread = threading.Thread(target=self._compose_worker)
             self._feature_thread.start()
-            self._frame_gen_thread.start()
+            if self._config.multi_thread_inference:
+                self._frame_gen_unet_thread.start()
+                self._frame_gen_vae_thread.start()
+            else:
+                self._frame_gen_thread.start()
             self._frame_collect_thread.start()
             self._compose_thread.start()
             logger.info(f"MuseProcessor started.")
@@ -90,6 +101,14 @@ class AvatarMuseTalkProcessor:
                 self._frame_gen_thread.join(timeout=5)
                 if self._frame_gen_thread.is_alive():
                     logger.warning("Frame generator thread did not exit in time.")
+            if  self._frame_gen_unet_thread:
+                self._frame_gen_unet_thread.join(timeout=5)
+                if self._frame_gen_unet_thread.is_alive():
+                    logger.warning("Frame generator unet thread did not exit in time.")
+            if self._frame_gen_vae_thread:
+                self._frame_gen_vae_thread.join(timeout=5)
+                if self._frame_gen_vae_thread.is_alive():
+                    logger.warning("Frame generator vae thread did not exit in time.")
             if self._frame_collect_thread:
                 self._frame_collect_thread.join(timeout=5)
                 if self._frame_collect_thread.is_alive():
@@ -210,12 +229,33 @@ class AvatarMuseTalkProcessor:
                 else:
                     audio_data = audio_data[:target_audio_len]
                 padded_audio_data_len = len(audio_data)
-                self._whisper_queue.put({
-                    'whisper_chunks': whisper_chunks,
-                    'speech_id': speech_id,
-                    'end_of_speech': end_of_speech,
-                    'audio_data': audio_data,
-                }, timeout=1)
+                
+                # Put each whisper chunk individually into whisper_queue
+                num_chunks = len(whisper_chunks)
+                
+                for i in range(num_chunks):
+                    # Extract single whisper chunk
+                    whisper_chunk = whisper_chunks[i:i+1]  # Keep as 2D tensor [1, 50, 384]
+                    
+                    # Extract corresponding audio segment for this chunk
+                    start_sample = i * orig_samples_per_frame
+                    end_sample = start_sample + orig_samples_per_frame
+                    audio_segment = audio_data[start_sample:end_sample]
+                    
+                    # Pad audio if necessary
+                    if len(audio_segment) < orig_samples_per_frame:
+                        audio_segment = np.pad(audio_segment, (0, orig_samples_per_frame - len(audio_segment)), mode='constant')
+                    
+                    # Determine if this is the last chunk for this speech
+                    is_last_chunk = (i == num_chunks - 1)
+                    
+                    self._whisper_queue.put({
+                        'whisper_chunks': whisper_chunk,  # Single chunk as [1, 50, 384]
+                        'speech_id': speech_id,
+                        'end_of_speech': end_of_speech and is_last_chunk,
+                        'audio_data': audio_segment,  # Single frame's audio
+                    }, timeout=1)
+                
                 t_end = time.time()
                 if self._config.debug:
                     logger.info(f"[FEATURE_WORKER] speech_id={speech_id}, total_time={(t_end-t_start)*1000:.1f}ms, whisper_chunks_frames={whisper_chunks.shape[0]}, audio_data_original_length={orig_audio_data_len}, audio_data_padded_length={padded_audio_data_len}, end_of_speech={end_of_speech}")
@@ -225,6 +265,175 @@ class AvatarMuseTalkProcessor:
                 logger.opt(exception=True).error(f"Exception in _feature_extractor_worker: {e}")
                 continue
 
+
+    def _frame_generator_unet_worker(self):
+        """
+        Generate speaking frames only, with rate control when queue buffer is full.
+        Uses global frame_id allocation to ensure unique and continuous frame numbering for speaking frames.
+        """
+        fps = self._config.fps
+        orig_samples_per_frame = int(self._output_audio_sample_rate / fps)
+        batch_size = self._config.batch_size  # Can be adjusted based on actual needs
+        max_speaking_buffer = batch_size * 5  # Maximum length of speaking frame buffer
+        # Thread self-warmup, ensure CUDA context and memory allocation
+        if torch.cuda.is_available():
+            t0 = time.time()
+            # Regular batch_size warmup
+            dummy_whisper = torch.zeros(batch_size, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype)
+            self._avatar.generate_frames_unet(dummy_whisper, 0, batch_size)
+            # Remainder batch_size warmup (only when there's a remainder)
+            # remain = fps % batch_size
+            # if remain > 0:
+            #     dummy_whisper_remain = torch.zeros(remain, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype)
+            #     self._avatar.generate_frames_unet(dummy_whisper_remain, 0, remain)
+            torch.cuda.synchronize()
+            t1 = time.time()
+            logger.info(f"[THREAD_WARMUP] _frame_generator_unet_worker thread id: {threading.get_ident()} self-warmup done, time: {(t1-t0)*1000:.1f} ms")
+        batch_chunks = []
+        batch_audio = []
+        batch_speech_id = []
+        batch_end_of_speech = []
+        while not self._stop_event.is_set():
+            # Control speaking frame buffer, queue full waits
+            while self._frame_queue.qsize() > max_speaking_buffer and not self._stop_event.is_set():
+                if self._config.debug:
+                    logger.info(f"[FRAME_GEN] speaking frame buffer full, waiting... frame_queue_size={self._frame_queue.qsize()}, max_speaking_buffer={max_speaking_buffer}")
+                time.sleep(0.01)
+                continue
+            try:
+                item = self._whisper_queue.get(timeout=1)
+                batch_chunks.append(item['whisper_chunks'])
+                batch_audio.append(item['audio_data'])
+                batch_speech_id.append(item['speech_id'])
+                batch_end_of_speech.append(item['end_of_speech'])
+                if len(batch_chunks) == batch_size or item['end_of_speech']:
+                    valid_num = len(batch_chunks)
+                    if valid_num < batch_size:
+                        logger.warning(f"[FRAME_GEN] batch_size < valid_num, batch_size={batch_size}, valid_num={valid_num}")
+                        pad_num = batch_size - valid_num
+                        pad_shape = list(batch_chunks[0].shape)
+                        if isinstance(batch_chunks[0], torch.Tensor):
+                            pad_chunks = [torch.zeros(pad_shape, dtype=batch_chunks[0].dtype, device=batch_chunks[0].device) for _ in range(pad_num)]
+                        else:
+                            pad_chunks = [np.zeros(pad_shape, dtype=batch_chunks[0].dtype) for _ in range(pad_num)]
+                        pad_audio = [np.zeros(orig_samples_per_frame, dtype=np.float32) for _ in range(pad_num)]
+                        pad_speech_id = [batch_speech_id[-1]] * pad_num
+                        pad_end_of_speech = [False] * pad_num
+                        batch_chunks.extend(pad_chunks)
+                        batch_audio.extend(pad_audio)
+                        batch_speech_id.extend(pad_speech_id)
+                        batch_end_of_speech.extend(pad_end_of_speech)
+                    if isinstance(batch_chunks[0], torch.Tensor):
+                        whisper_batch = torch.cat(batch_chunks, dim=0)
+                    else:
+                        whisper_batch = np.concatenate(batch_chunks, axis=0)
+                    batch_start_time = time.time()
+                    frame_ids = [self._frame_id_queue.get() for _ in range(batch_size)]
+                    try:
+                        pred_latents,idx_list = self._avatar.generate_frames_unet(whisper_batch, frame_ids[0], batch_size)
+                    except Exception as e:
+                        logger.opt(exception=True).error(f"[GEN_FRAME_ERROR] frame_id={frame_ids[0]}, speech_id={batch_speech_id[0]}, error: {e}")
+                        pred_latents,idx_list = [torch.zeros((batch_size, 4, 32, 32), dtype=self._avatar.unet.model.dtype, device=self._avatar.device), [(frame_ids[0] + i) for i in range(batch_size)]]
+                    batch_end_time = time.time()
+                    if self._config.debug:
+                        logger.info(f"[FRAME_GEN] Generated speaking frame batch: speech_id={batch_speech_id[0]}, batch_size={batch_size}, batch_time={(batch_end_time - batch_start_time)*1000:.1f}ms")
+                    unet_item = {
+                            'pred_latents': pred_latents, # torch.Tensor: [B, 4, 32, 32]
+                            'speech_id': batch_speech_id,
+                            'avatar_status': AvatarStatus.SPEAKING,
+                            'end_of_speech': batch_end_of_speech,
+                            'audio_data': batch_audio,
+                            'valid_num': valid_num,
+                            'idx_list': idx_list,
+                            'timestamp': time.time()
+                        }
+                    self._unet_queue.put(unet_item)
+                    batch_chunks = []
+                    batch_audio = []
+                    batch_speech_id = []
+                    batch_end_of_speech = []
+            except queue.Empty:
+                time.sleep(0.01)
+                continue
+            
+
+    def _frame_generator_vae_worker(self):
+        """
+        Generate speaking frames only, with rate control when queue buffer is full.
+        Uses global frame_id allocation to ensure unique and continuous frame numbering for speaking frames.
+        """
+        fps = self._config.fps
+        orig_samples_per_frame = int(self._output_audio_sample_rate / fps)
+        batch_size = self._config.batch_size  # Can be adjusted based on actual needs
+        max_speaking_buffer = batch_size * 5  # Maximum length of speaking frame buffer
+        # Thread self-warmup, ensure CUDA context and memory allocation
+        if torch.cuda.is_available():
+            t0 = time.time()
+            # Regular batch_size warmup
+            dummy_latents = torch.zeros(batch_size, 4, 32, 32, device=self._avatar.device, dtype=self._avatar.weight_dtype)
+            idx_list = [0 + i for i in range(batch_size)]
+            self._avatar.generate_frames_vae(dummy_latents, idx_list, batch_size)
+            # Remainder batch_size warmup (only when there's a remainder)
+            # remain = fps % batch_size
+            # if remain > 0:
+            #     dummy_latents_remain = torch.zeros(remain, 4, 32, 32, device=self._avatar.device, dtype=self._avatar.weight_dtype)
+            #     idx_list = [0 + i for i in range(remain)]
+            #     self._avatar.generate_frames_vae(dummy_latents_remain, idx_list, remain)
+            torch.cuda.synchronize()
+            t1 = time.time()
+            logger.info(f"[THREAD_WARMUP] _frame_generator_vae_worker thread id: {threading.get_ident()} self-warmup done, time: {(t1-t0)*1000:.1f} ms")
+        while not self._stop_event.is_set():
+            # Control speaking frame buffer, queue full waits
+            while self._frame_queue.qsize() > max_speaking_buffer and not self._stop_event.is_set():
+                if self._config.debug:
+                    logger.info(f"[FRAME_GEN] speaking frame buffer full, waiting... frame_queue_size={self._frame_queue.qsize()}, max_speaking_buffer={max_speaking_buffer}")
+                time.sleep(0.01)
+                continue
+            while self._unet_queue.qsize() <= 0 and not self._stop_event.is_set():
+                time.sleep(0.01)
+                continue
+            # Batch vae inference for speaking frames
+            try:
+                item = self._unet_queue.get_nowait()
+                pred_latents = item['pred_latents']
+                idx_list = item['idx_list']
+                batch_audio = item['audio_data']
+                valid_num = item['valid_num']
+                batch_speech_id = item['speech_id']
+                batch_end_of_speech = item['end_of_speech']
+                cur_batch = pred_latents.shape[0]
+                recon_idx_list = []
+                batch_start_time = time.time()
+                try:
+                    recon_idx_list = self._avatar.generate_frames_vae(pred_latents, idx_list, cur_batch)
+                except Exception as e:
+                    logger.opt(exception=True).error(f"[GEN_FRAME_ERROR] frame_id={idx_list[0]}, speech_id={batch_end_of_speech[0]}, error: {e}")
+                    recon_idx_list = [(np.zeros((256, 256, 3), dtype=np.uint8), idx_list[0] + i) for i in range(cur_batch)]
+                batch_end_time = time.time()
+                 
+                if self._config.debug:
+                    logger.info(f"[FRAME_GEN] Generated speaking frame batch: speech_id={batch_end_of_speech[0]}, batch_size={batch_size}, batch_time={(batch_end_time - batch_start_time)*1000:.1f}ms")
+                # just process valid frames
+                for i in range(valid_num):
+                    recon, idx = recon_idx_list[i]
+                    audio = batch_audio[i]
+                    eos = batch_end_of_speech[i]
+                    compose_item = {
+                        'recon': recon,
+                        'idx': idx,
+                        'speech_id': batch_speech_id[i],
+                        'avatar_status': AvatarStatus.SPEAKING,
+                        'end_of_speech': eos,
+                        'audio_segment': audio,
+                        'frame_id': idx,
+                        'timestamp': time.time()
+                    }
+                    self._compose_queue.put(compose_item)
+            except queue.Empty:
+                time.sleep(0.01)
+                continue
+            
+            
     def _queue_frame(self, frame, speech_id, status, eos, audio_segment, frame_count):
         try:
             self._frame_queue.put({
@@ -264,10 +473,6 @@ class AvatarMuseTalkProcessor:
         Generate speaking frames only, with rate control when queue buffer is full.
         Uses global frame_id allocation to ensure unique and continuous frame numbering for speaking frames.
         """
-        from collections import namedtuple
-        CurrentSpeechItem = namedtuple('CurrentSpeechItem', ['whisper_chunks', 'audio_data', 'speech_id', 'end_of_speech', 'num_chunks'])
-        current_item = None
-        chunk_idx = 0
         fps = self._config.fps
         orig_samples_per_frame = int(self._output_audio_sample_rate / fps)
         batch_size = self._config.batch_size  # Can be adjusted based on actual needs
@@ -279,13 +484,17 @@ class AvatarMuseTalkProcessor:
             dummy_whisper = torch.zeros(batch_size, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype)
             self._avatar.generate_frames(dummy_whisper, 0, batch_size)
             # Remainder batch_size warmup (only when there's a remainder)
-            remain = fps % batch_size
-            if remain > 0:
-                dummy_whisper_remain = torch.zeros(remain, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype)
-                self._avatar.generate_frames(dummy_whisper_remain, 0, remain)
+            # remain = fps % batch_size
+            # if remain > 0:
+            #     dummy_whisper_remain = torch.zeros(remain, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype)
+            #     self._avatar.generate_frames(dummy_whisper_remain, 0, remain)
             torch.cuda.synchronize()
             t1 = time.time()
             logger.info(f"[THREAD_WARMUP] _frame_generator_worker thread id: {threading.get_ident()} self-warmup done, time: {(t1-t0)*1000:.1f} ms")
+        batch_chunks = []
+        batch_audio = []
+        batch_speech_id = []
+        batch_end_of_speech = []
         while not self._stop_event.is_set():
             # Control speaking frame buffer, queue full waits
             while self._frame_queue.qsize() > max_speaking_buffer and not self._stop_event.is_set():
@@ -293,63 +502,65 @@ class AvatarMuseTalkProcessor:
                     logger.info(f"[FRAME_GEN] speaking frame buffer full, waiting... frame_queue_size={self._frame_queue.qsize()}, max_speaking_buffer={max_speaking_buffer}")
                 time.sleep(0.01)
                 continue
-            if current_item is None:
-                try:
-                    item = self._whisper_queue.get_nowait()
-                    fetched_chunks = item['whisper_chunks']
-                    num_fetched_chunks = fetched_chunks.shape[0] if isinstance(fetched_chunks, torch.Tensor) and fetched_chunks.ndim > 0 else 0
-                    if num_fetched_chunks > 0:
-                        current_item = CurrentSpeechItem(
-                            whisper_chunks=fetched_chunks,
-                            audio_data=item['audio_data'],
-                            speech_id=item['speech_id'],
-                            end_of_speech=item['end_of_speech'],
-                            num_chunks=num_fetched_chunks
-                        )
-                        chunk_idx = 0
-                except queue.Empty:
-                    time.sleep(0.01)
-                    continue
-            # Batch inference for speaking frames
-            if current_item is not None and chunk_idx < current_item.num_chunks:
-                remain = current_item.num_chunks - chunk_idx
-                cur_batch = min(batch_size, remain)
-                batch_start_time = time.time()
-                # Get frame_id from frame_id queue
-                frame_ids = [self._frame_id_queue.get() for _ in range(cur_batch)]
-                whisper_batch = current_item.whisper_chunks[chunk_idx:chunk_idx+cur_batch]
-                try:
-                    recon_idx_list = self._avatar.generate_frames(whisper_batch, frame_ids[0], cur_batch)
-                except Exception as e:
-                    logger.opt(exception=True).error(f"[GEN_FRAME_ERROR] frame_id={frame_ids[0]}, speech_id={current_item.speech_id}, error: {e}")
-                    recon_idx_list = [(np.zeros((256, 256, 3), dtype=np.uint8), frame_ids[0] + i) for i in range(cur_batch)]
-                batch_end_time = time.time()
-                if self._config.debug:
-                    logger.info(f"[FRAME_GEN] Generated speaking frame: speech_id={current_item.speech_id}, chunk_idx={chunk_idx}, cur_batch={cur_batch}, batch_time={(batch_end_time - batch_start_time)*1000:.1f}ms")
-                for i in range(cur_batch):
-                    recon, idx = recon_idx_list[i]
-                    audio = self._get_audio_for_frame(
-                        current_item.audio_data, chunk_idx + i, current_item.num_chunks, orig_samples_per_frame
-                    )
-                    is_last = (chunk_idx + i == current_item.num_chunks - 1)
-                    eos = current_item.end_of_speech and is_last
-                    # Directly put into compose queue, no longer controlled by fps
-                    compose_item = {
-                        'recon': recon,
-                        'idx': idx,
-                        'speech_id': current_item.speech_id,
-                        'avatar_status': AvatarStatus.SPEAKING,
-                        'end_of_speech': eos,
-                        'audio_segment': audio,
-                        'frame_id': idx,
-                        'timestamp': time.time()
-                    }
-                    self._compose_queue.put(compose_item)
-                if chunk_idx + cur_batch >= current_item.num_chunks:
-                    current_item = None
-                    chunk_idx = 0
-                else:
-                    chunk_idx += cur_batch
+            try:
+                item = self._whisper_queue.get(timeout=1)
+                batch_chunks.append(item['whisper_chunks'])
+                batch_audio.append(item['audio_data'])
+                batch_speech_id.append(item['speech_id'])
+                batch_end_of_speech.append(item['end_of_speech'])
+                if len(batch_chunks) == batch_size or item['end_of_speech']:
+                    valid_num = len(batch_chunks)
+                    if valid_num < batch_size:
+                        logger.warning(f"[FRAME_GEN] batch_size < valid_num, batch_size={batch_size}, valid_num={valid_num}")
+                        pad_num = batch_size - valid_num
+                        pad_shape = list(batch_chunks[0].shape)
+                        if isinstance(batch_chunks[0], torch.Tensor):
+                            pad_chunks = [torch.zeros(pad_shape, dtype=batch_chunks[0].dtype, device=batch_chunks[0].device) for _ in range(pad_num)]
+                        else:
+                            pad_chunks = [np.zeros(pad_shape, dtype=batch_chunks[0].dtype) for _ in range(pad_num)]
+                        pad_audio = [np.zeros(orig_samples_per_frame, dtype=np.float32) for _ in range(pad_num)]
+                        pad_speech_id = [batch_speech_id[-1]] * pad_num
+                        pad_end_of_speech = [False] * pad_num
+                        batch_chunks.extend(pad_chunks)
+                        batch_audio.extend(pad_audio)
+                        batch_speech_id.extend(pad_speech_id)
+                        batch_end_of_speech.extend(pad_end_of_speech)
+                    if isinstance(batch_chunks[0], torch.Tensor):
+                        whisper_batch = torch.cat(batch_chunks, dim=0)
+                    else:
+                        whisper_batch = np.concatenate(batch_chunks, axis=0)
+                    batch_start_time = time.time()
+                    frame_ids = [self._frame_id_queue.get() for _ in range(batch_size)]
+                    try:
+                        recon_idx_list = self._avatar.generate_frames(whisper_batch, frame_ids[0], batch_size)
+                    except Exception as e:
+                        logger.opt(exception=True).error(f"[GEN_FRAME_ERROR] frame_id={frame_ids[0]}, speech_id={batch_speech_id[0]}, error: {e}")
+                        recon_idx_list = [(np.zeros((256, 256, 3), dtype=np.uint8), frame_ids[0] + i) for i in range(batch_size)]
+                    batch_end_time = time.time()
+                    if self._config.debug:
+                        logger.info(f"[FRAME_GEN] Generated speaking frame batch: speech_id={batch_speech_id[0]}, batch_size={batch_size}, batch_time={(batch_end_time - batch_start_time)*1000:.1f}ms")
+                    # 只处理有效帧
+                    for i in range(valid_num):
+                        recon, idx = recon_idx_list[i]
+                        audio = batch_audio[i]
+                        eos = batch_end_of_speech[i]
+                        compose_item = {
+                            'recon': recon,
+                            'idx': idx,
+                            'speech_id': batch_speech_id[i],
+                            'avatar_status': AvatarStatus.SPEAKING,
+                            'end_of_speech': eos,
+                            'audio_segment': audio,
+                            'frame_id': idx,
+                            'timestamp': time.time()
+                        }
+                        self._compose_queue.put(compose_item)
+                    batch_chunks = []
+                    batch_audio = []
+                    batch_speech_id = []
+                    batch_end_of_speech = []
+            except queue.Empty:
+                time.sleep(0.01)
                 continue
 
     def _compose_worker(self):
@@ -529,10 +740,10 @@ class AvatarMuseTalkProcessor:
 
     def _clear_queues(self):
         with self._frame_id_lock:
-            for q in [self._audio_queue, self._whisper_queue, self._frame_queue, self._frame_id_queue, self._compose_queue, self._output_queue]:
+            for q in [self._audio_queue, self._whisper_queue, self._unet_queue, self._frame_queue, self._frame_id_queue, self._compose_queue, self._output_queue]:
                 while not q.empty():
                     try:
                         q.get_nowait()
                     except Exception as e:
                         logger.opt(exception=True).warning(f"Exception in _clear_queues: {e}")
-                        pass 
+                        pass
