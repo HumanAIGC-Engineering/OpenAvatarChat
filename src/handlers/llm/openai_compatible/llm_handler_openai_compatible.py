@@ -158,8 +158,9 @@ class HandlerLLM(HandlerBase, ABC):
         except Exception as e:
             logger.error(e)
             if (isinstance(e, APIStatusError)):
-                response = e.body 
-                response = f"{response['type']}:{response['message']}"
+                response = e.body
+                if isinstance(response, dict) and "message" in response:
+                    response = f"{response['message']}"
             output_text = response 
             output = DataBundle(output_definition)
             output.set_main_data(output_text)

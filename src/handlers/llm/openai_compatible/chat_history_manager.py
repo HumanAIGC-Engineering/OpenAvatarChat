@@ -45,15 +45,21 @@ class ChatHistory:
             }
         history = self.message_history
         messages = list(map(history_to_message, history))
-        messages.append({
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": filter_text(chat_text),
-                },
-            ] + (list(map(lambda x: {"type": "image_url", "image_url": {"url": ImageUtils.format_image(x)}}, images)))
-        })
+        if images and len(images) > 0:
+            messages.append({
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": filter_text(chat_text),
+                    },
+                ] + (list(map(lambda x: {"type": "image_url", "image_url": {"url": ImageUtils.format_image(x)}}, images)))
+            })
+        else: 
+            messages.append({
+                "role": "user",
+                "content": filter_text(chat_text),
+            })
         return messages        
     
 
