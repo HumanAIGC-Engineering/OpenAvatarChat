@@ -17,4 +17,5 @@ dependencies = [
     "pyworld==0.3.4",
     "wetextprocessing~=1.0.3",
     "wget==3.2",
+    "wetext",
 ]
