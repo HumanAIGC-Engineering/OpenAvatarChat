@@ -168,7 +168,6 @@ class ClientHandlerRtc(ClientHandlerBase):
         text_output_definition.lockdown()
         self.output_bundle_definitions[EngineChannelType.TEXT] = text_output_definition
 
-
     def load(self, engine_config: ChatEngineConfigModel, handler_config: Optional[HandlerBaseConfigModel] = None):
         self.engine_config = engine_config
         self.handler_config = cast(ClientRtcConfigModel, handler_config)
@@ -178,28 +177,37 @@ class ClientHandlerRtc(ClientHandlerBase):
         turn_entity = RTCProvider().prepare_rtc_configuration(self.handler_config.turn_config)
         if turn_entity is None:
             turn_entity = RTCProvider().prepare_rtc_configuration(self.engine_config.turn_config)
+
+        webrtc = Stream(
+            modality="audio-video",
+            mode="send-receive",
+            rtc_configuration=turn_entity.rtc_configuration if turn_entity is not None else None,
+            handler=self.rtc_streamer_factory,
+            concurrency_limit=self.handler_config.concurrent_limit,
+        )
+        webrtc.mount(fastapi)
+
+        @fastapi.get('/openavatarchat/init')
+        async def init_config():
+            config = {
+                "avatar_config": avatar_config,
+            }
+            return JSONResponse(status_code=200, content=config)
+
+        frontend_path = Path(DirectoryInfo.get_src_dir() + '/handlers/client/rtc_client/frontend/dist')
+        fastapi.mount('/ui', StaticFiles(directory=frontend_path), name="static")
+        
         if parent_block is None:
             parent_block = ui
         with ui:
             with parent_block:
-                webrtc = Stream(
-                    modality="audio-video",
-                    mode="send-receive",
-                    rtc_configuration=turn_entity.rtc_configuration if turn_entity is not None else None,
-                    handler=self.rtc_streamer_factory,
-                    concurrency_limit=self.handler_config.concurrent_limit,
+                gradio.components.HTML(
+                    """
+                    <div id="openavatarchat">
+                    </div>
+                    """,
+                    visible=True
                 )
-                webrtc.mount(fastapi)
-
-                @fastapi.get('/openavatarchat/init')
-                async def init_config():
-                    config = {
-                        "avatar_config": avatar_config,
-                    }
-                    return JSONResponse(status_code=200, content=config)
-                
-                frontend_path = Path(DirectoryInfo.get_src_dir() + '/handlers/client/rtc_client/frontend/dist')
-                fastapi.mount('/ui', StaticFiles(directory=frontend_path), name="static")
 
     def on_setup_app(self, app: FastAPI, ui: gradio.blocks.Block, parent_block: Optional[gradio.blocks.Block] = None):
         avatar_config = {}

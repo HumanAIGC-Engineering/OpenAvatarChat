@@ -174,7 +174,7 @@ class ClientHandlerLam(ClientHandlerRtc):
             ui=ui,
             parent_block=parent_block,
             fastapi=app,
-            avatar_config
+            avatar_config=avatar_config,
         )
 
     def create_context(self, session_context: SessionContext,

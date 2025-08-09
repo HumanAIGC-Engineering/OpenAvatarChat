@@ -95,8 +95,8 @@ class RtcStream(AsyncAudioVideoStreamHandler):
 
     async def emit(self) -> AudioEmitType:
         try:
-            if not self.args_set.is_set():
-                await self.wait_for_args()
+            # if not self.args_set.is_set():
+            # await self.wait_for_args()
 
             if not self.first_audio_emitted:
                 self.client_session_delegate.clear_data()
@@ -160,7 +160,7 @@ class RtcStream(AsyncAudioVideoStreamHandler):
             self.fps,
         )
 
-        def set_channel(self, channel):
+    def set_channel(self, channel):
             super().set_channel(channel)
             self.chat_channel = channel
             
