@@ -3,6 +3,8 @@
 import os
 import re
 import json
+import PIL
+import numpy as np
 import requests
 from typing import Dict, Optional, cast
 from loguru import logger
@@ -15,13 +17,11 @@ from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBundleDefinition, DataBundleEntry
-from handlers.llm.openai_compatible.chat_history_manager import ChatHistory, HistoryMessage
 
 
 class DifyConfig(HandlerBaseConfigModel, BaseModel):
     api_key: str = Field(default=os.getenv("DIFY_API_KEY"))
     api_url: str = Field(default="https://api.dify.ai/v1")
-    system_prompt: str = Field(default="请你扮演一个 AI 助手，用简短的对话来回答用户的问题，并在对话内容中加入合适的标点符号，不需要加入标点符号相关的内容")
     enable_video_input: bool = Field(default=False)
     response_mode: str = Field(default="streaming")  # streaming or blocking
     timeout: int = Field(default=30)
@@ -33,7 +33,6 @@ class DifyContext(HandlerContext):
         self.config = None
         self.api_key = None
         self.api_url = None
-        self.system_prompt = None
         self.response_mode = None
         self.timeout = None
         self.input_texts = ""
@@ -87,14 +86,42 @@ class HandlerDify(HandlerBase, ABC):
         context = DifyContext(session_context.session_info.session_id)
         context.api_key = handler_config.api_key
         context.api_url = handler_config.api_url
-        context.system_prompt = handler_config.system_prompt
         context.response_mode = handler_config.response_mode
         context.timeout = handler_config.timeout
         context.enable_video_input = handler_config.enable_video_input
         return context
-    
+
     def start_context(self, session_context, handler_context):
         pass
+
+    def _upload_image_to_dify(self, context: DifyContext, image_data):
+        """
+        上传图像到 Dify 并返回文件信息
+        """
+        upload_url = f"{context.api_url}/files/upload"
+        headers = {
+            "Authorization": f"Bearer {context.api_key}"
+        }
+
+        # 假设 image_data 是 PIL 图像或 numpy 数组，需先保存为临时文件
+        from io import BytesIO
+        buffered = BytesIO()
+
+        image = PIL.Image.fromarray(np.squeeze(image_data)[..., ::-1])
+        image.save(buffered, format="JPEG")  # 可根据需要调整格式
+        img_bytes = buffered.getvalue()
+
+        files = {
+            'file': ('image.jpg', img_bytes, 'image/jpeg')
+        }
+
+        response = requests.post(upload_url, headers=headers, files=files)
+        if response.status_code == 200:
+            result = response.json()
+            return result.get("id")  # 返回文件 ID
+        else:
+            logger.error(f"Failed to upload image: {response.text}")
+            return None
 
     def _send_dify_request(self, context: DifyContext, chat_text: str, images=None):
         """
@@ -105,16 +132,28 @@ class HandlerDify(HandlerBase, ABC):
             "Authorization": f"Bearer {context.api_key}",
             "Content-Type": "application/json"
         }
-        
+
         # 构建消息内容
         query = chat_text
         inputs = {"query": query}
-        
+
         # 如果有图片，需要特殊处理
+        files = [{
+            "type": "image",
+            "transfer_method": "remote_url",
+            "url": 'https://cdn.pixabay.com/photo/2023/07/07/18/45/flowers-8113229_1280.jpg'
+        }]
         if images and len(images) > 0:
-            # 这里简化处理，实际可能需要将图片转换为base64或其他格式
-            logger.warning("Dify image input not fully implemented in this example")
-        
+            for img in images:
+                if img is not None:
+                    file_id = self._upload_image_to_dify(context, img)
+                    if file_id:
+                        files.append({
+                            "type": "image",
+                            "transfer_method": "local_file",  
+                            "upload_file_id": file_id  # 使用上传后的文件 ID
+                        })
+
         payload = {
             "inputs": inputs,
             "query": query,
@@ -122,10 +161,12 @@ class HandlerDify(HandlerBase, ABC):
             "conversation_id": context.conversation_id,
             "user": context.session_id
         }
-        
-        if context.system_prompt:
-            payload["system_prompt"] = context.system_prompt
-            
+
+        if files and len(files) > 0:
+            payload["files"] = files
+            # payload["inputs"]['files'] = files
+
+        logger.info(f"payload: {payload}")
         try:
             if context.response_mode == "streaming":
                 with requests.post(url, headers=headers, json=payload, stream=True, timeout=context.timeout) as response:
@@ -134,7 +175,7 @@ class HandlerDify(HandlerBase, ABC):
                         logger.error(f"Dify API error: {response.status_code} - {error_text}")
                         yield f"Error: {response.status_code} - {error_text}"
                         return
-                        
+
                     for line in response.iter_lines():
                         if line:
                             line_str = line.decode('utf-8')
@@ -157,13 +198,13 @@ class HandlerDify(HandlerBase, ABC):
                     logger.error(f"Dify API error: {response.status_code} - {error_text}")
                     yield f"Error: {response.status_code} - {error_text}"
                     return
-                    
+
                 json_data = response.json()
                 if "answer" in json_data:
                     yield json_data["answer"]
                 if "conversation_id" in json_data and json_data["conversation_id"]:
                     context.conversation_id = json_data["conversation_id"]
-                    
+
         except requests.exceptions.Timeout:
             logger.error("Dify API timeout")
             yield "Error: Request to Dify API timed out"
@@ -179,7 +220,6 @@ class HandlerDify(HandlerBase, ABC):
         output_definition = output_definitions.get(ChatDataType.AVATAR_TEXT).definition
         context = cast(DifyContext, context)
         text = None
-        
         if inputs.type == ChatDataType.CAMERA_VIDEO and context.enable_video_input:
             context.current_image = inputs.data.get_main_data()
             return
@@ -187,7 +227,7 @@ class HandlerDify(HandlerBase, ABC):
             text = inputs.data.get_main_data()
         else:
             return
-            
+
         speech_id = inputs.data.get_meta("speech_id")
         if (speech_id is None):
             speech_id = context.session_id
@@ -203,13 +243,13 @@ class HandlerDify(HandlerBase, ABC):
         chat_text = re.sub(r"<\|.*?\|>", "", chat_text)
         if len(chat_text) < 1:
             return
-            
+
         logger.info(f'Dify input: {chat_text}')
-        
+
         try:
             context.output_texts = ''
-            for output_text in self._send_dify_request(context, chat_text, 
-                                                     [context.current_image] if context.current_image is not None else []):
+            for output_text in self._send_dify_request(context, chat_text,
+                                                       [context.current_image] if context.current_image is not None else []):
                 if output_text:
                     context.output_texts += output_text
                     logger.info(output_text)
