@@ -25,6 +25,9 @@
 
 ### 更新日志
 
+- [2025.08.12] ⭐️⭐️⭐️ 版本 0.5.0发布:
+  - 修改为前后端分离版本，前端仓库添加[OpenAvatarChat-WebUI](https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI),方便自定义前端界面，拓展交互
+  - 增加了对 dify 的基础调用方式的支持，目前仅支持了chatflow版本
 - [2025.06.12] ⭐️⭐️⭐️ 版本 0.4.1发布:
   - 增加对[MuseTalk](https://github.com/TMElyralab/MuseTalk)数字人的支持，支持自定义形象（底版视频自定义）
   - 50个LiteAvatar新形象发布，丰富各种职业角色，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
@@ -153,6 +156,7 @@ HuggingFace
     - [依赖模型](#依赖模型-3)
     - [配置参数](#配置参数-1)
     - [运行](#运行-1)
+  - [Dify Chatflow Handler](#dify-chatflow-handler)
 - [相关部署需求](#相关部署需求)
   - [准备ssl证书](#准备ssl证书)
   - [TURN Server](#turn-server)
@@ -194,6 +198,7 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 | 类型       | 开源项目                                |Github地址|模型地址|
 |----------|-------------------------------------|---|---|
 | RTC      | HumanAIGC-Engineering/gradio-webrtc |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC-Engineering/gradio-webrtc)||
+| WebUI      | HumanAIGC-Engineering/OpenAvatarChat-WebUI |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI)||
 | VAD      | snakers4/silero-vad                 |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/snakers4/silero-vad)||
 | LLM      | OpenBMB/MiniCPM-o                   |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)| [🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6) |
 | LLM-int4 | OpenBMB/MiniCPM-o                   |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)|[🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)|
@@ -601,6 +606,19 @@ ln -s $(pwd)/models/musetalk/s3fd-619a316812/* ~/.cache/torch/hub/checkpoints/
 启动程序可以使用：
 ```bash
 uv run src/demo.py --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+```
+
+
+### Dify Chatflow Handler 
+项目目前集成了Dify的Chatflow，用户可以在Dify中创建一个Chatflow，将生成的Chatflow应用的 api_url 以及 api_key 填入后，即可使用Dify的Chatflow进行对话。
+```yaml
+ Dify:
+      enabled: True
+      module: llm/dify/llm_handler_dify
+      enable_video_input: False # 是否允许摄像头输入，确保应用支持视觉，并接受 files 输入
+      api_key: '' #your dify api key
+      api_url: 'http://localhost/v1' # your dify api url
+ 
 ```
 
 ## 相关部署需求

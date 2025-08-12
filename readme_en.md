@@ -20,7 +20,9 @@
 ## 📢 News
 
 ### Changelog
-
+- [2025.08.12] ⭐️⭐️⭐️ 版本 0.5.0发布:
+  - Modified to a separated frontend and backend version. The frontend repository[OpenAvatarChat-WebUI](https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI)has been added to facilitate custom frontend interfaces and expand interactions.
+  - Added basic support for calling dify, currently only supporting the chatflow version.
 - [2025.06.12] ⭐️⭐️⭐️ Version 0.4.1 Released:
   - Added support for [MuseTalk](https://github.com/TMElyralab/MuseTalk), including customizable videos for personalized avatars.
   - Released 50 new LiteAvatar styles featuring a variety of professional roles. Please refer to [LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery).
@@ -135,6 +137,7 @@ Frequently asked questions encountered during the course of the project can be f
   - [Edge TTS Handler](#edge-tts-handler)
   - [LiteAvatar Avatar Handler](#liteavatar-avatar-handler)
     - [Model Dependencies](#model-dependencies)
+  - [Dify Chatflow Handler](#dify-chatflow-handler)
     - [Configuration](#configuration)
   - [LAM Avatar Driver Handler](#lam-avatar-driver-handler)
     - [Models used](#models-used-1)
@@ -181,6 +184,7 @@ In our tests, using a PC equipped with an i9-13900KF processor and Nvidia RTX 40
 | Type | Open Source Project | GitHub Link | Model Link |
 |----------|-------------------------------------|---|---|
 | RTC      | HumanAIGC-Engineering/gradio-webrtc |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC-Engineering/gradio-webrtc)||
+| WebUI      | HumanAIGC-Engineering/OpenAvatarChat-WebUI |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI)||
 | VAD      | snakers4/silero-vad                 |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/snakers4/silero-vad)||
 | LLM      | OpenBMB/MiniCPM-o                   |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)| [🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6) |
 | LLM-int4 | OpenBMB/MiniCPM-o                   |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)|[🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)|
@@ -477,6 +481,18 @@ LiteAvatar is integarted to provide 2D avatar feature. Currenty, 100 avatar asse
 **Model weights have to be downloaded before you use LiteAvatar**, LiteAvatar source code includes a model download script. For convenience, a script for Linux enviroments also provided in the `scripts` directory of this repo. You can call this script under **project root**:
 ```bash
 bash scripts/download_liteavatar_weights.sh
+```
+
+### Dify Chatflow Handler 
+The project currently integrates Dify's Chatflow. Users can create a Chatflow in Dify, and after filling in the generated Chatflow application's api_url and api_key, they can use Dify's Chatflow for conversation.
+```yaml
+ Dify:
+      enabled: True
+      module: llm/dify/llm_handler_dify
+      enable_video_input: False # Allow camera input, ensure application supports vision and accepts file inputs
+      api_key: '' #your dify api key
+      api_url: 'http://localhost/v1' # your dify api url
+ 
 ```
 
 #### Configuration
