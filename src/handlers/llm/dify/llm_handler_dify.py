@@ -18,7 +18,7 @@ from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBundleDefinition, DataBundleEntry
 
-
+# only support chatflow
 class DifyConfig(HandlerBaseConfigModel, BaseModel):
     api_key: str = Field(default=os.getenv("DIFY_API_KEY"))
     api_url: str = Field(default="https://api.dify.ai/v1")
@@ -112,15 +112,15 @@ class HandlerDify(HandlerBase, ABC):
         img_bytes = buffered.getvalue()
 
         files = {
-            'file': ('image.jpg', img_bytes, 'image/jpeg')
+            'file': ('image.jpg', img_bytes, 'image/jpeg'),
         }
 
-        response = requests.post(upload_url, headers=headers, files=files)
-        if response.status_code == 200:
+        response = requests.post(upload_url, headers=headers, files=files, data={'user': context.session_id})
+        if response.status_code < 400:
             result = response.json()
             return result.get("id")  # 返回文件 ID
         else:
-            logger.error(f"Failed to upload image: {response.text}")
+            logger.error(f"Failed to upload image:{response.status_code} {response.text}")
             return None
 
     def _send_dify_request(self, context: DifyContext, chat_text: str, images=None):
@@ -138,11 +138,7 @@ class HandlerDify(HandlerBase, ABC):
         inputs = {"query": query}
 
         # 如果有图片，需要特殊处理
-        files = [{
-            "type": "image",
-            "transfer_method": "remote_url",
-            "url": 'https://cdn.pixabay.com/photo/2023/07/07/18/45/flowers-8113229_1280.jpg'
-        }]
+        files = []
         if images and len(images) > 0:
             for img in images:
                 if img is not None:
