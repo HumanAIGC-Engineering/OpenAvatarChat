@@ -446,6 +446,14 @@ class MuseAvatarV15:
     
         # 5.merge face_large with body_crop
         body_crop = body_cpy[y_s:y_e, x_s:x_e].copy()
+
+        # make sure the shape are equal
+        if face_large1.shape != mask3.shape:
+            min_height = min(face_large1.shape[0], mask3.shape[0])
+            min_width = min(face_large1.shape[1], mask3.shape[1])
+            face_large1 = face_large1[:min_height, :min_width]
+            body_crop = body_crop[:min_height, :min_width]
+            mask3 = mask3[:min_height, :min_width]
         blended = (face_large1 * mask3 + body_crop * (1 - mask3)).astype(np.uint8)
     
         # 6. past back
