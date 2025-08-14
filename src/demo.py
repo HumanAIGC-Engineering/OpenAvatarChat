@@ -4,6 +4,7 @@ import gradio
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from loguru import logger
 
 from engine_utils.directory_info import DirectoryInfo
 from service.service_utils.logger_utils import config_loggers
@@ -30,6 +31,18 @@ def parse_args():
     parser.add_argument("--config", type=str, default="config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml", help="config file to use")
     parser.add_argument("--env", type=str, default="default", help="environment to use in config file")
     return parser.parse_args()
+
+
+class OpenAvatarChatWebServer(uvicorn.Server):
+
+    def __init__(self, chat_engine: ChatEngine, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.chat_engine = chat_engine
+    
+    async def shutdown(self, sockets=None):
+        logger.info("Start normal shutdown process")
+        self.chat_engine.shutdown()
+        await super().shutdown(sockets)
 
 
 def setup_demo():
@@ -82,7 +95,12 @@ def main():
     chat_engine.initialize(engine_config, app=demo_app, ui=ui, parent_block=parent_block)
 
     ssl_context = create_ssl_context(args, service_config)
-    uvicorn.run(demo_app, host=service_config.host, port=service_config.port, **ssl_context)
+
+    uvicorn_config = uvicorn.Config(demo_app, host=service_config.host, port=service_config.port, **ssl_context)
+    server = OpenAvatarChatWebServer(chat_engine, uvicorn_config)
+    server.run()
+
+    # uvicorn.run(demo_app, host=service_config.host, port=service_config.port, **ssl_context)
 
 
 if __name__ == "__main__":

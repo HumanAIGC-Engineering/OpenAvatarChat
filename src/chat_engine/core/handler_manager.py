@@ -34,12 +34,13 @@ class HandlerManager:
         self.handler_registries: Dict[str, HandlerRegistry] = {}
         # [handler_name, handler_config]
         self.handler_configs: Dict[str, Dict] = {}
-
+        self.concurrent_limit = 1
         self.search_path = []
 
         self.engine_ref = weakref.ref(engine)
 
     def initialize(self, engine_config: ChatEngineConfigModel):
+        self.concurrent_limit = engine_config.concurrent_limit
         for search_path in engine_config.handler_search_path:
             self.add_search_path(search_path)
         for handler_name, handler_config in engine_config.handler_configs.items():
@@ -122,6 +123,7 @@ class HandlerManager:
                 logger.error(f"Handler {name} provides invalid config model {base_info.config_model}")
                 raise ValueError(f"Handler {name} provides invalid config model {base_info.config_model}")
             config: HandlerBaseConfigModel = base_info.config_model.model_validate(raw_config)
+            config.concurrent_limit = self.concurrent_limit
             registry.base_info = base_info
             registry.handler = handler
             registry.handler_config = config
@@ -169,3 +171,13 @@ class HandlerManager:
                 continue
             if isinstance(registry.handler, ClientHandlerBase) and registry.handler is handler:
                 return registry
+
+    def destroy(self):
+        for handler_name, registry in self.handler_registries.items():
+            if registry.handler is None or registry.handler_config is None:
+                continue
+            if not registry.handler_config.enabled:
+                continue
+            logger.info(f"Destroying handler {handler_name}")
+            registry.handler.destroy()
+            logger.info(f"Handler {handler_name} destroyed")

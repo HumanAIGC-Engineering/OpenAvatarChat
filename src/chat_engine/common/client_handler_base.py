@@ -6,6 +6,7 @@ from typing import Union, Tuple, Optional
 import gradio
 import numpy as np
 from fastapi import FastAPI
+from loguru import logger
 
 from chat_engine.common.engine_channel_type import EngineChannelType
 from chat_engine.common.handler_base import HandlerBase
@@ -48,6 +49,7 @@ class ClientHandlerDelegate:
         self.session_delegates = {}
 
     def start_session(self, session_id: str, **kwargs) -> ClientSessionDelegate:
+        logger.info(f"Starting session {session_id}")
         engine = self.engine_ref()
         handler = self.client_handler_ref()
         assert engine is not None

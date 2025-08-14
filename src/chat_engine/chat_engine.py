@@ -79,3 +79,7 @@ class ChatEngine(object):
             logger.error(f"Session {session_id} is not found.")
             return
         session.stop()
+    
+    def shutdown(self):
+        logger.info("Shutting down chat engine...")
+        self.handler_manager.destroy()

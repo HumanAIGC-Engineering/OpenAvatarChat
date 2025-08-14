@@ -84,3 +84,6 @@ class HandlerBase(ABC):
     @abstractmethod
     def destroy_context(self, context: HandlerContext):
         pass
+
+    def destroy(self):
+        pass

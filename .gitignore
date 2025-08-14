@@ -38,3 +38,4 @@ dump_avatar_audio.pcm
 exp/
 uv.lock
 logs/
+.lock
