@@ -103,7 +103,7 @@ class RtcClientSessionDelegate(ClientSessionDelegate):
 
 
 class ClientRtcConfigModel(HandlerBaseConfigModel, BaseModel):
-    connection_ttl: int = Field(default=900)
+    connection_ttl: int = Field(default=None)
     concurrent_limit: int = Field(default=1)
     turn_config: Optional[Dict] = Field(default=None)
 
@@ -181,6 +181,7 @@ class ClientHandlerRtc(ClientHandlerBase):
         webrtc = Stream(
             modality="audio-video",
             mode="send-receive",
+            time_limit=self.handler_config.connection_ttl,
             rtc_configuration=turn_entity.rtc_configuration if turn_entity is not None else None,
             handler=self.rtc_streamer_factory,
             concurrency_limit=self.handler_config.concurrent_limit,
