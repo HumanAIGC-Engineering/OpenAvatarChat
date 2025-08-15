@@ -31,7 +31,7 @@ default:
         voice: "longxiaochun"
         model_name: "cosyvoice-v1"
         # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
-      LLM_Bailian:
+      LLMOpenaiCompatible:
         enabled: True
         module: llm/openai_compatible/llm_handler_openai_compatible
         model_name: "qwen-vl-plus"

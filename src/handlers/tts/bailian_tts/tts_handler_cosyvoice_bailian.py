@@ -19,6 +19,7 @@ from engine_utils.directory_info import DirectoryInfo
 from dashscope.audio.tts_v2 import SpeechSynthesizer, ResultCallback, AudioFormat
 import dashscope
 
+
 class TTSConfig(HandlerBaseConfigModel, BaseModel):
     ref_audio_path: str = Field(default=None)
     ref_audio_text: str = Field(default=None)
@@ -50,7 +51,6 @@ class HandlerTTS(HandlerBase, ABC):
         self.sample_rate = None
         self.model_name = None
         self.api_key = None
-      
 
     def get_handler_info(self) -> HandlerBaseInfo:
         return HandlerBaseInfo(
@@ -77,18 +77,17 @@ class HandlerTTS(HandlerBase, ABC):
         )
 
     def load(self, engine_config: ChatEngineConfigModel, handler_config: Optional[BaseModel] = None):
-       config = cast(TTSConfig, handler_config)
-       self.voice = config.voice
-       self.sample_rate = config.sample_rate
-       self.ref_audio_path = config.ref_audio_path
-       self.ref_audio_text = config.ref_audio_text
-       self.model_name = config.model_name
-       if 'DASHSCOPE_API_KEY' in os.environ:
-            dashscope.api_key = os.environ['DASHSCOPE_API_KEY']  # load API-key from environment variable DASHSCOPE_API_KEY
-       else:
+        config = cast(TTSConfig, handler_config)
+        self.voice = config.voice
+        self.sample_rate = config.sample_rate
+        self.ref_audio_path = config.ref_audio_path
+        self.ref_audio_text = config.ref_audio_text
+        self.model_name = config.model_name
+        if 'DASHSCOPE_API_KEY' in os.environ:
+            # load API-key from environment variable DASHSCOPE_API_KEY
+            dashscope.api_key = os.environ['DASHSCOPE_API_KEY']
+        else:
             dashscope.api_key = config.api_key  # set API-key manually
-
-
 
     def create_context(self, session_context, handler_config=None):
         if not isinstance(handler_config, TTSConfig):
@@ -97,13 +96,12 @@ class HandlerTTS(HandlerBase, ABC):
         context.input_text = ''
         if context.dump_audio:
             dump_file_path = os.path.join(DirectoryInfo.get_project_dir(), 'temp',
-                                            f"dump_avatar_audio_{context.session_id}_{time.localtime().tm_hour}_{time.localtime().tm_min}.pcm")
+                                          f"dump_avatar_audio_{context.session_id}_{time.localtime().tm_hour}_{time.localtime().tm_min}.pcm")
             context.audio_dump_file = open(dump_file_path, "wb")
         return context
-    
+
     def start_context(self, session_context, context: HandlerContext):
         context = cast(TTSContext, context)
-        
 
     def filter_text(self, text):
         pattern = r"[^a-zA-Z0-9\u4e00-\u9fff,.\~!?，。！？ ]"  # 匹配不在范围内的字符
@@ -124,22 +122,26 @@ class HandlerTTS(HandlerBase, ABC):
 
         if text is not None:
             text = re.sub(r"<\|.*?\|>", "", text)
-            
 
         text_end = inputs.data.get_meta("avatar_text_end", False)
-        if not text_end:
-            if context.synthesizer is None:
-                callback = CosyvoiceCallBack(context=context, output_definition=output_definition, speech_id=speech_id)
-                context.synthesizer = SpeechSynthesizer(model=self.model_name, voice=self.voice, callback=callback, format=AudioFormat.PCM_24000HZ_MONO_16BIT)
-            logger.info(f'streaming_call {text}')
-            context.synthesizer.streaming_call(text)
-        else:
-            logger.info(f'streaming_call last {text}')
-            context.synthesizer.streaming_call(text)
-            context.synthesizer.streaming_complete()
+        try:
+            if not text_end:
+                if context.synthesizer is None:
+                    callback = CosyvoiceCallBack(
+                        context=context, output_definition=output_definition, speech_id=speech_id)
+                    context.synthesizer = SpeechSynthesizer(
+                        model=self.model_name, voice=self.voice, callback=callback, format=AudioFormat.PCM_24000HZ_MONO_16BIT)
+                logger.info(f'streaming_call {text}')
+                context.synthesizer.streaming_call(text)
+            else:
+                logger.info(f'streaming_call last {text}')
+                context.synthesizer.streaming_call(text)
+                context.synthesizer.streaming_complete()
+                context.synthesizer = None
+                context.input_text = ''
+        except Exception as e:
+            logger.error(e)
             context.synthesizer = None
-            context.input_text = ''
-           
 
     def destroy_context(self, context: HandlerContext):
         context = cast(TTSContext, context)
@@ -153,7 +155,7 @@ class CosyvoiceCallBack(ResultCallback):
         self.output_definition = output_definition
         self.speech_id = speech_id
         self.temp_bytes = b''
-    
+
     def on_open(self) -> None:
         logger.info('连接成功')
 
@@ -161,12 +163,13 @@ class CosyvoiceCallBack(ResultCallback):
         # 实现接收合成结果的逻辑
         # logger.info(message)
         pass
-    
+
     def on_data(self, data: bytes) -> None:
         self.temp_bytes += data
         if len(self.temp_bytes) > 24000:
             # 实现接收合成二进制音频结果的逻辑
-            output_audio = np.array(np.frombuffer(self.temp_bytes, dtype=np.int16)).astype(np.float32)/32767# librosa.load(io.BytesIO(self.temp_bytes), sr=None)[0]
+            output_audio = np.array(np.frombuffer(self.temp_bytes, dtype=np.int16)).astype(
+                np.float32)/32767  # librosa.load(io.BytesIO(self.temp_bytes), sr=None)[0]
             output_audio = output_audio[np.newaxis, ...]
             output = DataBundle(self.output_definition)
             output.set_main_data(output_audio)
@@ -174,7 +177,6 @@ class CosyvoiceCallBack(ResultCallback):
             output.add_meta("speech_id", self.speech_id)
             self.context.submit_data(output)
             self.temp_bytes = b''
-            
 
     def on_complete(self) -> None:
         if len(self.temp_bytes) > 0:
@@ -195,7 +197,13 @@ class CosyvoiceCallBack(ResultCallback):
         logger.info('合成完成')
 
     def on_error(self, message) -> None:
-        logger.info('出现异常：', message)
+        logger.error(f'bailian tts 服务出现异常,请确保参数正确：${message}')
+        output = DataBundle(self.output_definition)
+        output.set_main_data(np.zeros(shape=(1, 240), dtype=np.float32))
+        output.add_meta("avatar_speech_end", True)
+        output.add_meta("speech_id", self.speech_id)
+        self.context.submit_data(output)
+        logger.info(f"speech end")
 
     def on_close(self) -> None:
         logger.info('连接关闭')

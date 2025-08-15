@@ -25,6 +25,9 @@
 
 ### 更新日志
 
+- [2025.08.12] ⭐️⭐️⭐️ 版本 0.5.0发布:
+  - 修改为前后端分离版本，前端仓库添加[OpenAvatarChat-WebUI](https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI),方便自定义前端界面，拓展交互
+  - 增加了对 dify 的基础调用方式的支持，目前仅支持了chatflow版本
 - [2025.06.12] ⭐️⭐️⭐️ 版本 0.4.1发布:
   - 增加对[MuseTalk](https://github.com/TMElyralab/MuseTalk)数字人的支持，支持自定义形象（底版视频自定义）
   - 50个LiteAvatar新形象发布，丰富各种职业角色，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
@@ -115,16 +118,18 @@ HuggingFace
   - [预置模式](#预置模式)
 - [🚀安装部署](#安装部署)
   - [选择配置](#选择配置)
-    - [chat\_with\_gs.yaml](#chat_with_gsyaml)
+    - [chat\_with\_lam.yaml](#chat_with_lamyaml)
       - [使用的Handler](#使用的handler)
     - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
       - [使用的Handler](#使用的handler-1)
     - [chat\_with\_openai\_compatible.yaml](#chat_with_openai_compatibleyaml)
     - [使用的Handler](#使用的handler-2)
-    - [chat\_with\_openai\_compatible\_bailian\_cosyvoice.yaml](#chat_with_openai_compatible_bailian_cosyvoiceyaml)
-    - [使用的Handler](#使用的handler-3)
     - [chat\_with\_openai\_compatible\_edge\_tts.yaml](#chat_with_openai_compatible_edge_ttsyaml)
+    - [使用的Handler](#使用的handler-3)
+    - [chat\_with\_openai\_compatible\_bailian\_cosyvoice.yaml](#chat_with_openai_compatible_bailian_cosyvoiceyaml)
     - [使用的Handler](#使用的handler-4)
+    - [chat\_with\_openai\_compatible\_bailian\_cosyvoice\_musetalk.yaml](#chat_with_openai_compatible_bailian_cosyvoice_musetalkyaml)
+    - [使用的Handler](#使用的handler-5)
   - [本地运行](#本地运行)
     - [uv安装](#uv安装)
     - [依赖安装](#依赖安装)
@@ -143,14 +148,20 @@ HuggingFace
   - [CosyVoice本地推理Handler](#cosyvoice本地推理handler)
   - [Edge TTS Handler](#edge-tts-handler)
   - [LiteAvatar数字人Handler](#liteavatar数字人handler)
-  - [LAM数字人驱动Handler](#lam数字人驱动handler)
     - [依赖模型](#依赖模型-1)
+    - [配置参数](#配置参数)
+  - [LAM数字人驱动Handler](#lam数字人驱动handler)
+    - [依赖模型](#依赖模型-2)
   - [MuseTalk数字人Handler](#musetalk数字人handler)
+    - [依赖模型](#依赖模型-3)
+    - [配置参数](#配置参数-1)
+    - [运行](#运行-1)
+  - [Dify Chatflow Handler](#dify-chatflow-handler)
 - [相关部署需求](#相关部署需求)
   - [准备ssl证书](#准备ssl证书)
   - [TURN Server](#turn-server)
   - [配置说明](#配置说明)
-- [社区感谢](#社区感谢)
+- [社区贡献-感谢](#社区贡献-感谢)
 - [Star历史](#star历史)
 - [引用](#引用)
   
@@ -187,6 +198,7 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 | 类型       | 开源项目                                |Github地址|模型地址|
 |----------|-------------------------------------|---|---|
 | RTC      | HumanAIGC-Engineering/gradio-webrtc |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC-Engineering/gradio-webrtc)||
+| WebUI      | HumanAIGC-Engineering/OpenAvatarChat-WebUI |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI)||
 | VAD      | snakers4/silero-vad                 |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/snakers4/silero-vad)||
 | LLM      | OpenBMB/MiniCPM-o                   |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)| [🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6) |
 | LLM-int4 | OpenBMB/MiniCPM-o                   |[<img src="https://img.shields.io/badge/github-white?logo=github&logoColor=black"/>](https://github.com/OpenBMB/MiniCPM-o)|[🤗](https://huggingface.co/openbmb/MiniCPM-o-2_6-int4)&nbsp;&nbsp;[<img src="./assets/images/modelscope_logo.png" width="20px"></img>](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6-int4)|
@@ -202,7 +214,7 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 
 | CONFIG名称                                           | ASR |    LLM    |    TTS    | AVATAR|
 |----------------------------------------------------|-----|:---------:|:---------:|------------|
-| chat_with_gs.yaml                                  |SenseVoice|    API    |API| LAM        |
+| chat_with_lam.yaml                                 |SenseVoice|    API    |API| LAM        |
 | chat_with_minicpm.yaml                             |MiniCPM-o| MiniCPM-o | MiniCPM-o | lite-avatar |
 | chat_with_openai_compatible.yaml                   |SenseVoice|API|CosyVoice| lite-avatar |
 | chat_with_openai_compatible_edge_tts.yaml          |SenseVoice|API|edgetts| lite-avatar |
@@ -218,7 +230,7 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 ### 选择配置
 OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择的配置现在依赖的模型以及需要准备的ApiKey。项目在config目录下，提供以下预置的配置文件供参考：
 
-#### chat_with_gs.yaml
+#### chat_with_lam.yaml
 使用[LAM](https://github.com/aigc3d/LAM)项目生成的gaussion splatting资产进行端侧渲染，语音使用百炼上的Cosyvoice，只有vad和asr运行在本地gpu，对机器性能依赖很轻，可以支持一机多路。
 ##### 使用的Handler
 |类别|Handler|安装说明|
@@ -388,7 +400,7 @@ LamClient:
 本地推理的语言模型要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人。
 可以通过配置文件选择所使用模型、系统prompt、API和API Key。参考配置如下，其中apikey可以被环境变量覆盖。
 ```yaml
-LLM_Bailian: 
+LLMOpenaiCompatible: 
   moedl_name: "qwen-plus"
   system_prompt: "你是个AI对话数字人，你要用简短的对话来回答我的问题，并在合理的地方插入标点符号"
   api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
@@ -596,6 +608,19 @@ ln -s $(pwd)/models/musetalk/s3fd-619a316812/* ~/.cache/torch/hub/checkpoints/
 uv run src/demo.py --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
 
+
+### Dify Chatflow Handler 
+项目目前集成了Dify的Chatflow，用户可以在Dify中创建一个Chatflow，将生成的Chatflow应用的 api_url 以及 api_key 填入后，即可使用Dify的Chatflow进行对话。
+```yaml
+ Dify:
+      enabled: True
+      module: llm/dify/llm_handler_dify
+      enable_video_input: False # 是否允许摄像头输入，确保应用支持视觉，并接受 files 输入
+      api_key: '' #your dify api key
+      api_url: 'http://localhost/v1' # your dify api url
+ 
+```
+
 ## 相关部署需求
 ### 准备ssl证书
 由于本项目使用rtc作为视音频传输的通道，用户如果需要从localhost以外的地方连接服务的话，需要准备ssl证书以开启https，默认配置会读取ssl_certs目录下的localhost.crt和localhost.key，用户可以相应修改配置来使用自己的证书。我们也在scripts目录下提供了生成自签名证书的脚本。需要在项目根目录下运行脚本以使生成的证书被放到默认位置。
@@ -673,10 +698,10 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
 
 |参数|默认值|说明|
 |---|---|---|
-|LLM_Bailian.model_name|qwen-plus|测试环境使用的百炼api,免费额度可以从[百炼](https://bailian.console.aliyun.com/#/home)获取|
-|LLM_Bailian.system_prompt||默认系统prompt|
-|LLM_Bailian.api_url||模型api_url|
-|LLM_Bailian.api_key||模型api_key|
+|LLMOpenaiCompatible.model_name|qwen-plus|测试环境使用的百炼api,免费额度可以从[百炼](https://bailian.console.aliyun.com/#/home)获取|
+|LLMOpenaiCompatible.system_prompt||默认系统prompt|
+|LLMOpenaiCompatible.api_url||模型api_url|
+|LLMOpenaiCompatible.api_key||模型api_key|
 
 * TTS CosyVoice模型
 
