@@ -25,6 +25,8 @@
 
 ### 更新日志
 
+- [2025.08.19] ⭐️⭐️⭐️ 版本 0.4.2发布:
+  - LiteAvatar支持单机多session，详见下文LiteAvatar配置部分
 - [2025.06.12] ⭐️⭐️⭐️ 版本 0.4.1发布:
   - 增加对[MuseTalk](https://github.com/TMElyralab/MuseTalk)数字人的支持，支持自定义形象（底版视频自定义）
   - 50个LiteAvatar新形象发布，丰富各种职业角色，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
@@ -37,7 +39,7 @@
   - CSS响应式布局更新
 - [2025.04.14] ⭐️⭐️⭐️ 版本 0.2.2发布：
   - 100个LiteAvatar新形象发布，请见[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)
-  - 默认使用GPU后端运行数字人[lite-avata](https://github.com/HumanAIGC/lite-avatar)
+  - 默认使用GPU后端运行数字人[lite-avatar](https://github.com/HumanAIGC/lite-avatar)
 - [2025.04.07] ⭐️⭐️⭐️ 版本 0.2.1发布： 
   - 增加历史记录支持 
   - 支持文本输入 
@@ -506,6 +508,11 @@ LiteAvatar:
   fps: 25
   use_gpu: true
 ```
+
+#### 多session支持
+LiteAvatar支持单机多session，如果要开启，请参考`config/chat_with_openai_compatible_bailian_cosyvoice.yaml`，设置`default.chan_engine.concurrent_limit`即可，通过该参数，在启动时事先声明当前支持的最大并发路数。
+
+需要注意的是，多session对机器的性能要求成倍增加，当LiteAvatar在GPU上运行时，每一路并发大约占用3G显存，如果`concurrent_limit`设置过大，**可能导致显存溢出**，请根据运行机器的配置自行调整并发数量。
 
 ### LAM数字人驱动Handler
 #### 依赖模型

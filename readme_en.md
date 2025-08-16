@@ -21,6 +21,8 @@
 
 ### Changelog
 
+- [2025.08.19] ⭐️⭐️⭐️ Version 0.4.2 Released:
+  - LiteAvatar support multi-session. Please refer to LiteAvatar configuration part below.
 - [2025.06.12] ⭐️⭐️⭐️ Version 0.4.1 Released:
   - Added support for [MuseTalk](https://github.com/TMElyralab/MuseTalk), including customizable videos for personalized avatars.
   - Released 50 new LiteAvatar styles featuring a variety of professional roles. Please refer to [LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery).
@@ -483,6 +485,12 @@ LiteAvatar:
   fps: 25
   use_gpu: true
 ```
+
+#### Multi-Session Support
+LiteAvatar supports multiple sessions on a single machine. To enable this feature, refer to `config/chat_with_openai_compatible_bailian_cosyvoice.yaml` and set the `default.chan_engine.concurrent_limit` parameter. By configuring this parameter, you predefine the maximum number of concurrent sessions supported at startup.
+
+Please note that running multiple sessions significantly increases system resource demands. When LiteAvatar runs on a GPU, each concurrent session consumes approximately 3GB of GPU memory. Setting `concurrent_limit` too high may lead to **out-of-memory errors**. Please adjust the number of concurrent sessions according to your machine's hardware specifications.
+
 
 ### LAM Avatar Driver Handler
 #### Models used
