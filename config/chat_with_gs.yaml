@@ -13,6 +13,8 @@ default:
     handler_configs:
       LamClient:
         module: client/h5_rendering_client/client_handler_lam
+        # max time a session will last for
+        connection_ttl: 900
         asset_path: "lam_samples/barbara.zip"
         concurrent_limit: 5
       SileroVad:

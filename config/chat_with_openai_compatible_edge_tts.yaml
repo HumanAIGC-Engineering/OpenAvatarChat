@@ -13,6 +13,8 @@ default:
     handler_configs:
       RtcClient:
         module: client/rtc_client/client_handler_rtc
+        # max time a session will last for
+        connection_ttl: 900
         concurrent_limit: 1
       SileroVad:
         module: vad/silerovad/vad_handler_silero
