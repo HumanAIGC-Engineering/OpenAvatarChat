@@ -377,9 +377,9 @@ LamClient:
 
 ### OpenAI Compatible LLM Handler
 Local llm handler has relatively high startup requirements. If you already have an available LLM api_key, you can start it this way to experience interactive digital humans.
-Modify the corresponding config, such as the LLMOpenaiCompatible configuration in config/chat_with_openai_compatible.yaml. The invocation method in the code uses the standard OpenAI approach, which should theoretically be compatible with similar setups.
+Modify the corresponding config, such as the LLMOpenAICompatible configuration in config/chat_with_openai_compatible.yaml. The invocation method in the code uses the standard OpenAI approach, which should theoretically be compatible with similar setups.
 ```yaml
-LLMOpenaiCompatible: 
+LLMOpenAICompatible: 
   model_name: "qwen-plus"
   system_prompt: "You are an AI digital human. Respond to my questions briefly and insert punctuation where appropriate."
   api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
@@ -687,10 +687,10 @@ Current implemented handler provide following configs:
 
 | Parameter                  | Default Value | Description                                                                 |
 |----------------------------|---------------|-----------------------------------------------------------------------------|
-| LLMOpenaiCompatible.model_name     | qwen-plus     | The API for Bailian's testing environment. Free quotas can be obtained from [Bailian](https://bailian.console.aliyun.com/#/home). |
-| LLMOpenaiCompatible.system_prompt  |               | Default system prompt                                                       |
-| LLMOpenaiCompatible.api_url        |               | API URL for the model                                                      |
-| LLMOpenaiCompatible.api_key        |               | API key for the model                                                      |
+| LLMOpenAICompatible.model_name     | qwen-plus     | The API for Bailian's testing environment. Free quotas can be obtained from [Bailian](https://bailian.console.aliyun.com/#/home). |
+| LLMOpenAICompatible.system_prompt  |               | Default system prompt                                                       |
+| LLMOpenAICompatible.api_url        |               | API URL for the model                                                      |
+| LLMOpenAICompatible.api_key        |               | API key for the model                                                      |
 
 ---
 

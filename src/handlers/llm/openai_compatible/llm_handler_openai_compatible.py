@@ -23,6 +23,7 @@ class LLMConfig(HandlerBaseConfigModel, BaseModel):
     api_key: str = Field(default=os.getenv("DASHSCOPE_API_KEY"))
     api_url: str = Field(default=None)
     enable_video_input: bool = Field(default=False)
+    history_length: int = Field(default=20)
 
 
 class LLMContext(HandlerContext):
@@ -38,7 +39,7 @@ class LLMContext(HandlerContext):
         self.input_texts = ""
         self.output_texts = ""
         self.current_image = None
-        self.history = ChatHistory()
+        self.history = None
         self.enable_video_input = False
 
 
@@ -89,7 +90,7 @@ class HandlerLLM(HandlerBase, ABC):
         context.api_key = handler_config.api_key
         context.api_url = handler_config.api_url
         context.enable_video_input = handler_config.enable_video_input
-        
+        context.history = ChatHistory(history_length=handler_config.history_length)
         context.client = OpenAI(
             # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx",
             api_key=context.api_key,

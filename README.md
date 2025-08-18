@@ -400,7 +400,7 @@ LamClient:
 本地推理的语言模型要求相对较高，如果你已有一个可调用的 LLM api_key,可以用这种方式启动来体验对话数字人。
 可以通过配置文件选择所使用模型、系统prompt、API和API Key。参考配置如下，其中apikey可以被环境变量覆盖。
 ```yaml
-LLMOpenaiCompatible: 
+LLMOpenAICompatible: 
   moedl_name: "qwen-plus"
   system_prompt: "你是个AI对话数字人，你要用简短的对话来回答我的问题，并在合理的地方插入标点符号"
   api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
@@ -698,10 +698,10 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
 
 |参数|默认值|说明|
 |---|---|---|
-|LLMOpenaiCompatible.model_name|qwen-plus|测试环境使用的百炼api,免费额度可以从[百炼](https://bailian.console.aliyun.com/#/home)获取|
-|LLMOpenaiCompatible.system_prompt||默认系统prompt|
-|LLMOpenaiCompatible.api_url||模型api_url|
-|LLMOpenaiCompatible.api_key||模型api_key|
+|LLMOpenAICompatible.model_name|qwen-plus|测试环境使用的百炼api,免费额度可以从[百炼](https://bailian.console.aliyun.com/#/home)获取|
+|LLMOpenAICompatible.system_prompt||默认系统prompt|
+|LLMOpenAICompatible.api_url||模型api_url|
+|LLMOpenAICompatible.api_key||模型api_key|
 
 * TTS CosyVoice模型
 

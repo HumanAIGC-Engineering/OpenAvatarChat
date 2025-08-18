@@ -26,8 +26,8 @@ def filter_text(text):
 
 
 class ChatHistory:
-    def __init__(self):
-        self.max_history_length = 20
+    def __init__(self, history_length):
+        self.max_history_length = history_length
         self.message_history = []
 
     def add_message(self, message: HistoryMessage):

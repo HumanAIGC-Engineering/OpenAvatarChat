@@ -105,7 +105,7 @@ class RtcClientSessionDelegate(ClientSessionDelegate):
 
 
 class ClientRtcConfigModel(HandlerBaseConfigModel, BaseModel):
-    connection_ttl: int = Field(default=None)
+    connection_ttl: int = Field(default=900)
     concurrent_limit: int = Field(default=1)
     turn_config: Optional[Dict] = Field(default=None)
 
@@ -190,7 +190,7 @@ class ClientHandlerRtc(ClientHandlerBase):
         )
         webrtc.mount(fastapi)
 
-        @fastapi.get('/openavatarchat/init')
+        @fastapi.get('/openavatarchat/initconfig')
         async def init_config():
             config = {
                 "avatar_config": avatar_config,
