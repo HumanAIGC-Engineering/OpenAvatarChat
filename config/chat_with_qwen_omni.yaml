@@ -1,0 +1,58 @@
+default:
+  logger:
+    log_level: "INFO"
+  service:
+    host: "0.0.0.0"
+    port: 8282
+    cert_file: "ssl_certs/localhost.crt"
+    cert_key: "ssl_certs/localhost.key"
+  chat_engine:
+    model_root: "models"
+    handler_search_path:
+      - "src/handlers"
+    handler_configs:
+      RtcClient:
+        module: client/rtc_client/client_handler_rtc
+        connection_ttl: 36000
+      SileroVad:
+        module: vad/silerovad/vad_handler_silero
+        speaking_threshold: 0.5
+        start_delay: 2048
+        end_delay: 5000
+        buffer_look_back: 5000
+        speech_padding: 512
+      SenseVoice:
+        enabled: True
+        module: asr/sensevoice/asr_handler_sensevoice
+        model_name: "iic/SenseVoiceSmall"
+      QwenOmni:
+        enabled: true
+        module: llm/qwen_omni/llm_handler_qwen_omni
+        model_name: "qwen-omni-turbo-realtime"
+        # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY") api_key可以通过此处设置，或者通过环境变量，没设必挂
+        voice: "Serena" #"Chelsie", "Serena", "Ethan", "Cherry"
+        enable_video_input: true
+        video_frame_interval_ms: 1000 # 每1000ms发送一帧图片，防止拥塞，可按需调整，根据omni的文档，不要低于500ms
+        enable_text_output: true
+        input_audio_format: "PCM_16000HZ_MONO_16BIT"
+        output_audio_format: "PCM_24000HZ_MONO_16BIT"
+        enable_turn_detection: false # 目前暂未支持服务端vad模式，此处默认为false，不要修改
+        enable_input_transcription: false # 手动模式下，omni的输入的语音识别效果非常差，几乎不可用，默认关闭，直接使用正常asr的结果
+        transcription_model: "gummy-realtime-v1"
+      # Musetalk和LiteAvatar可以通过配置自由选，默认使用LiteAvatar了
+      AvatarMusetalk:
+        module: avatar/musetalk/avatar_handler_musetalk
+        fps: 20  # Video frame rate
+        batch_size: 2  # Batch processing frame count, must be greater than 2
+        avatar_video_path: "src/handlers/avatar/musetalk/MuseTalk/data/video/yongen.mp4"  # Initialization video path
+        avatar_model_dir: "models/musetalk/avatar_model"  # Default avatar model directory
+        force_create_avatar: false  # Whether to force regenerate digital human data
+        debug: false  # Whether to enable debug mode
+        multi_thread_inference: true  # true: use 2 threads to inference (unet, vae), false: use single-thread to inference
+      # LiteAvatar:
+      #   module: avatar/liteavatar/avatar_handler_liteavatar
+      #   avatar_name: 20250408/sample_data
+      #   fps: 25
+      #   debug: false
+      #   enable_fast_mode: false
+      #   use_gpu: true

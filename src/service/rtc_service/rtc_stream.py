@@ -173,7 +173,7 @@ class RtcStream(AsyncAudioVideoStreamHandler):
                     chat_data = await self.client_session_delegate.get_data(EngineChannelType.TEXT)
                     if chat_data is None or chat_data.data is None:
                         continue
-                    logger.info(f"Got chat data {str(chat_data)}")
+                    logger.debug(f"Got chat data {str(chat_data)}")
                     current_role = 'human' if chat_data.type == ChatDataType.HUMAN_TEXT else 'avatar'
                     chat_id = uuid.uuid4().hex if current_role != role else chat_id
                     role = current_role
