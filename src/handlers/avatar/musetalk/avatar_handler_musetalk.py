@@ -17,7 +17,7 @@ from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_engine_config_data import ChatEngineConfigModel
 from chat_engine.data_models.runtime_data.data_bundle import DataBundleDefinition, DataBundleEntry, DataBundle, VariableSize
 from handlers.avatar.liteavatar.model.audio_input import SpeechAudio
-from handlers.avatar.liteavatar.avatar_handler_liteavatar import Tts2FaceEvent
+from handlers.avatar.liteavatar.liteavatar_worker import Tts2FaceEvent
 from handlers.avatar.musetalk.avatar_musetalk_processor import AvatarMuseTalkProcessor
 from handlers.avatar.musetalk.avatar_musetalk_algo import MuseAvatarV15
 from handlers.avatar.musetalk.avatar_musetalk_config import AvatarMuseTalkConfig
