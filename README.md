@@ -378,7 +378,7 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
 ### Docker运行
 容器化运行：容器依赖nvidia的容器环境，在准备好支持GPU的docker环境后，运行以下命令即可完成镜像的构建与启动：
 ```bash
-./build_and_run.sh --config <配置文件的绝对路径>.yaml
+./build_and_run.sh --config <配置文件的相对路径>.yaml
 ```
 
 
