@@ -6,7 +6,7 @@ from typing import Dict, Optional, cast
 from loguru import logger
 from pydantic import BaseModel, Field
 from abc import ABC
-from openai import OpenAI
+from openai import APIStatusError, OpenAI
 from chat_engine.contexts.handler_context import HandlerContext
 from chat_engine.data_models.chat_engine_config_data import ChatEngineConfigModel, HandlerBaseConfigModel
 from chat_engine.common.handler_base import HandlerBase, HandlerBaseInfo, HandlerDataInfo, HandlerDetail
@@ -23,6 +23,7 @@ class LLMConfig(HandlerBaseConfigModel, BaseModel):
     api_key: str = Field(default=os.getenv("DASHSCOPE_API_KEY"))
     api_url: str = Field(default=None)
     enable_video_input: bool = Field(default=False)
+    history_length: int = Field(default=20)
 
 
 class LLMContext(HandlerContext):
@@ -38,7 +39,7 @@ class LLMContext(HandlerContext):
         self.input_texts = ""
         self.output_texts = ""
         self.current_image = None
-        self.history = ChatHistory()
+        self.history = None
         self.enable_video_input = False
 
 
@@ -89,7 +90,7 @@ class HandlerLLM(HandlerBase, ABC):
         context.api_key = handler_config.api_key
         context.api_url = handler_config.api_url
         context.enable_video_input = handler_config.enable_video_input
-        
+        context.history = ChatHistory(history_length=handler_config.history_length)
         context.client = OpenAI(
             # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx",
             api_key=context.api_key,
@@ -131,28 +132,43 @@ class HandlerLLM(HandlerBase, ABC):
         current_content = context.history.generate_next_messages(chat_text, 
                                                                  [context.current_image] if context.current_image is not None else [])
         logger.debug(f'llm input {context.model_name} {current_content} ')
-        completion = context.client.chat.completions.create(
-            model=context.model_name,  # 此处以qwen-plus为例，可按需更换模型名称。模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
-            messages=[
-                context.system_prompt,
-            ] + current_content,
-            stream=True,
-            stream_options={"include_usage": True}
-        )
-        context.current_image = None
+        try:
+            completion = context.client.chat.completions.create(
+                model=context.model_name,  # 此处以qwen-plus为例，可按需更换模型名称。模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
+                messages=[
+                    context.system_prompt,
+                ] + current_content,
+                stream=True,
+                stream_options={"include_usage": True}
+            )
+            context.current_image = None
+            context.input_texts = ''
+            context.output_texts = ''
+            for chunk in completion:
+                if (chunk and chunk.choices and chunk.choices[0] and chunk.choices[0].delta.content):
+                    output_text = chunk.choices[0].delta.content
+                    context.output_texts += output_text
+                    logger.info(output_text)
+                    output = DataBundle(output_definition)
+                    output.set_main_data(output_text)
+                    output.add_meta("avatar_text_end", False)
+                    output.add_meta("speech_id", speech_id)
+                    yield output
+            context.history.add_message(HistoryMessage(role="human", content=chat_text))
+            context.history.add_message(HistoryMessage(role="avatar", content=context.output_texts))
+        except Exception as e:
+            logger.error(e)
+            if (isinstance(e, APIStatusError)):
+                response = e.body
+                if isinstance(response, dict) and "message" in response:
+                    response = f"{response['message']}"
+            output_text = response 
+            output = DataBundle(output_definition)
+            output.set_main_data(output_text)
+            output.add_meta("avatar_text_end", False)
+            output.add_meta("speech_id", speech_id)
+            yield output
         context.input_texts = ''
-        context.output_texts = ''
-        for chunk in completion:
-            if (chunk and chunk.choices and chunk.choices[0] and chunk.choices[0].delta.content):
-                output_text = chunk.choices[0].delta.content
-                context.output_texts += output_text
-                logger.info(output_text)
-                output = DataBundle(output_definition)
-                output.set_main_data(output_text)
-                output.add_meta("avatar_text_end", False)
-                output.add_meta("speech_id", speech_id)
-                yield output
-        context.history.add_message(HistoryMessage(role="avatar", content=context.output_texts))
         context.output_texts = ''
         logger.info('avatar text end')
         end_output = DataBundle(output_definition)

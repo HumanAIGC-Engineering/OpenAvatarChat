@@ -32,16 +32,22 @@ default:
         voice: "longxiaocheng"
         model_name: "cosyvoice-v1"
         # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
-      LLM_Bailian:
+      LLMOpenAICompatible:
         enabled: True
         module: llm/openai_compatible/llm_handler_openai_compatible
         model_name: "qwen-plus"
-        enable_video_input: True # ensure your llm support video input
+        enable_video_input: False # ensure your llm support video input
+        history_length: 20
         # model_name: "gemini-2.0-flash"
         system_prompt: "请你扮演一个 AI 助手，用简短的两三句对话来回答用户的问题，并在对话内容中加入合适的标点符号，不需要讨论标点符号相关的内容"
         api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
         # api_url: 'http://127.0.0.1:11434/v1' # ollama
         # api_url: 'https://generativelanguage.googleapis.com/v1beta/openai/'
         # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
+      # Dify:
+      #   enabled: True
+      #   module: llm/dify/llm_handler_dify
+      #   api_key: app-J3LiQRqh4MrOOvS6vpyrgIOW
+      #   api_url: 'http://localhost/v1'
       LAM_Driver:
         module: avatar/lam/avatar_handler_lam_audio2expression

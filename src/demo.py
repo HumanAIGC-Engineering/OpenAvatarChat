@@ -1,3 +1,7 @@
+from chat_engine.chat_engine import ChatEngine
+import gradio as gr
+import os
+import argparse
 import sys
 
 import gradio
@@ -14,14 +18,6 @@ from service.service_utils.ssl_helpers import create_ssl_context
 project_dir = DirectoryInfo.get_project_dir()
 if project_dir not in sys.path:
     sys.path.insert(0, project_dir)
-
-
-import argparse
-import os
-
-import gradio as gr
-
-from chat_engine.chat_engine import ChatEngine
 
 
 def parse_args():
@@ -48,19 +44,7 @@ class OpenAvatarChatWebServer(uvicorn.Server):
 def setup_demo():
     app = FastAPI()
 
-    @app.get("/")
-    def get_root():
-        return RedirectResponse(url="/ui")
-
-    @app.get("/ui/static/fonts/system-ui/system-ui-Regular.woff2")
-    @app.get("/ui/static/fonts/ui-sans-serif/ui-sans-serif-Regular.woff2")
-    @app.get("/favicon.ico")
-    def get_font():
-        # remove confusing error
-        return {}
-
     css = """
-
 
     .app {
         @media screen and (max-width: 768px) {
@@ -75,13 +59,13 @@ def setup_demo():
         with gr.Column():
             with gr.Group() as rtc_container:
                 pass
-    gradio.mount_gradio_app(app, gradio_block, "/ui")
+    gradio.mount_gradio_app(app, gradio_block, "/gradio")
     return app, gradio_block, rtc_container
+
 
 def main():
     args = parse_args()
     logger_config, service_config, engine_config = load_configs(args)
-
 
     # 设置modelscope的默认下载地址
     if not os.path.isabs(engine_config.model_root):
