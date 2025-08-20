@@ -37,7 +37,7 @@ class Tts2FaceOutputHandler(AvatarOutputHandler):
                  event_out_queue):
         self.audio_output_queue = audio_output_queue
         self.video_output_queue = video_output_queue
-        self.evnet_out_queue = event_out_queue
+        self.event_out_queue = event_out_queue
         self._video_producer_counter = IntervalCounter("video_producer")
 
     def on_start(self, init_option: AvatarInitOption):
@@ -60,7 +60,7 @@ class Tts2FaceOutputHandler(AvatarOutputHandler):
     def on_avatar_status_change(self, speech_id, avatar_status: AvatarStatus):
         logger.info(f"Avatar status changed: {speech_id} {avatar_status}")
         if avatar_status.value == AvatarStatus.LISTENING.value:
-            self.evnet_out_queue.put_nowait(Tts2FaceEvent.SPEAKING_TO_LISTENING)
+            self.event_out_queue.put_nowait(Tts2FaceEvent.SPEAKING_TO_LISTENING)
  
 
 class WorkerStatus(Enum):

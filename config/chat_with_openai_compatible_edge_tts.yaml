@@ -8,12 +8,12 @@ default:
     cert_key: "ssl_certs/localhost.key"
   chat_engine:
     model_root: "models"
+    concurrent_limit: 1
     handler_search_path:
       - "src/handlers"
     handler_configs:
       RtcClient:
         module: client/rtc_client/client_handler_rtc
-        concurrent_limit: 1
       SileroVad:
         module: vad/silerovad/vad_handler_silero
         speaking_threshold: 0.5
