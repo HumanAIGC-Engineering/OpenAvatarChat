@@ -141,9 +141,9 @@ class TTSCosyVoiceProcessor(spawn_context.Process):
                 if self.model:
                     if self.ref_audio_buffer is not None:
                         response = self.model.inference_zero_shot(
-                            input_text, self.ref_audio_text, self.ref_audio_buffer, True)
+                            input_text, self.ref_audio_text, self.ref_audio_buffer, stream=True)
                     elif self.spk_id:
-                        response = self.model.inference_sft(input_text, self.spk_id, True)
+                        response = self.model.inference_sft(input_text, self.spk_id, stream=True)
                     else:
                         logger.error('cosyvoice need a ref_audio or spk_id')
                         return
