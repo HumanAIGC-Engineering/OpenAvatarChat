@@ -277,7 +277,7 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 |---|---|---|
 |Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
 |VAD|vad/silerovad/vad_handler/silero||
-|LLM|llm/minicpm/llm_handler_minicpm|[Qwen-Omni多模态语言模型Handler](#Qwen-Omni多模态语言模型Handler)|
+|LLM|llm/qwen_omni/llm_handler_qwen_omni|[Qwen-Omni多模态语言模型Handler](#Qwen-Omni多模态语言模型Handler)|
 |Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
 ||||
 
@@ -288,7 +288,7 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 |---|---|---|
 |Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
 |VAD|vad/silerovad/vad_handler/silero||
-|LLM|llm/qwen_omni/llm_handler_qwen_omni|[MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)|
+|LLM|llm/minicpm/llm_handler_minicpm|[MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)|
 |Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
 |||| 
 
