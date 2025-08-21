@@ -587,9 +587,32 @@ The project currently integrates the latest MuseTalk 1.5 (previous versions are 
 
 * MuseTalk source code includes a model download script. To keep the directory structure consistent, a modified script is provided in the `scripts` directory for Linux environments. The original MuseTalk code uses relative paths for loading; although adaptations have been made, some code cannot be configured via input parameters. **Do not change the model download location.** Run the script from the project root:
   ```bash
-  scripts/download_musetalk_weights.sh
+  bash scripts/download_musetalk_weights.sh
   ```
 * The MuseTalk source code will download a model s3fd-619a316812.pth on first startup, which is not included in the download script. The initial download might be slow.
+
+#### Digital Human Model Download Tool
+
+By setting `avatar_video_path`, you can customize the base video for the digital human. To facilitate users without digital human material, we provide a tool that allows MuseTalk users to use digital human materials provided by LiteAvatar. The script file is `scripts/download_avatar_model.py`, and the model list can be viewed at [LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery).
+
+**Usage Method:**
+
+```bash
+# 1. View help information
+python scripts/download_avatar_model.py --help
+
+# 2. Download the specified digital human model
+python scripts/download_avatar_model.py -m "20250612/P1rcvIW8H6kvcYWNkEnBWPfg"
+
+# 3. View the list of downloaded models
+python scripts/download_avatar_model.py -d
+
+# Output example:
+# Downloaded Models List:
+# avatar_name（for LiteAvatar config）    avatar_video_path（for Musetalk config）
+# --------------------------------------------------------------------------------
+# 20250612/P1rcvIW8H6kvcYWNkEnBWPfg       resource/avatar/liteavatar/20250612/P1rcvIW8H6kvcYWNkEnBWPfg/bg_video_silence.mp4
+```
 
 #### Configuration
 

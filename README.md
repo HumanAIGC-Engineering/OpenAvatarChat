@@ -595,7 +595,7 @@ LiteAvatar支持单机多session，如果要开启，请参考`config/chat_with_
 #### 依赖模型
 * MuseTalk源码中包含模型下载脚本，但是为了保持目录结构一致，对下载脚本做了修改，修改后的脚本在scripts目录下，可在linux环境下使用。MuseTalk原始代码中使用了相对路径进行加载，虽然进行了适配和修改，但是部分代码无法以输入参数进行设置，所以不要修改模型的下载位置，并在项目根目录下运行脚本：
 ```
-scripts/download_musetalk_weights.sh
+bash scripts/download_musetalk_weights.sh
 ```
 
 #### 配置参数
@@ -614,6 +614,30 @@ Avatar_MuseTalk:
   debug: false  # Whether to enable debug mode
   ... # 其他参数可参考 AvatarMuseTalkConfig 源码
 ```
+
+#### 数字人模型下载工具
+通过设置avatar_video_path可以自定义数字人的底版视频，为了方便没有数字人素材的用户进行尝试，我们提供了一个小工具来让Musetalk的用户可以使用Liteavatar中提供的数字人素材。 脚本文件为`scripts/download_avatar_model.py`，模型的列表需要在[LiteAvatarGallery](https://modelscope.cn/models/HumanAIGC-Engineering/LiteAvatarGallery)查看 。
+
+**使用方法：**
+
+```bash
+# 1. 查看帮助信息
+python scripts/download_avatar_model.py --help
+
+# 2. 下载指定的数字人模型
+python scripts/download_avatar_model.py -m "20250612/P1rcvIW8H6kvcYWNkEnBWPfg"
+
+# 3. 查看已下载的模型列表
+python scripts/download_avatar_model.py -d
+
+# 输出示例：
+# 已下载模型列表:
+# avatar_name（for LiteAvatar config）    avatar_video_path（for Musetalk config）
+# --------------------------------------------------------------------------------
+# 20250612/P1rcvIW8H6kvcYWNkEnBWPfg       resource/avatar/liteavatar/20250612/P1rcvIW8H6kvcYWNkEnBWPfg/bg_video_silence.mp4
+
+```
+
 
 #### 运行
 
