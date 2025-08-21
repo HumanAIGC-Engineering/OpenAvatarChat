@@ -733,7 +733,7 @@ class AvatarMuseTalkProcessor:
     def _notify_status_change(self, speech_id: str, status: AvatarStatus):
         if self.event_out_queue is not None and status == AvatarStatus.LISTENING:
             try:
-                from handlers.avatar.liteavatar.avatar_handler_liteavatar import Tts2FaceEvent
+                from handlers.avatar.liteavatar.liteavatar_worker import Tts2FaceEvent
                 self.event_out_queue.put_nowait(Tts2FaceEvent.SPEAKING_TO_LISTENING)
             except Exception as e:
                 logger.opt(exception=True).error(f"Exception in _notify_status_change: {e}")
