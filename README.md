@@ -6,7 +6,7 @@
 
 
 <p align="center">
-<strong>模块化的交互数字人对话实现，能够在单台PC上运行完整功能。</strong>
+<strong>模块化的交互数字人对话实现。</strong>
 </p>
 
 
@@ -16,7 +16,6 @@
 </p>
 
 ## 🔥核心亮点
-- **低延迟数字人实时对话：平均回答延迟在2.2秒左右。**
 - **多模态语言模型：支持多模态语言模型，包括文本、音频、视频等。**
 - **模块化设计：使用模块化的设计，可以灵活地替换组件，实现不同功能组合。**
 
@@ -27,7 +26,7 @@
 
 - [2025.08.19] ⭐️⭐️⭐️ 版本 0.5.1发布:
   - LiteAvatar支持单机多session，详见下文LiteAvatar配置部分
-  - 增加对 Qwen-Omni-Realtime 的调用支持
+  - 增加对 Qwen-Omni多模态模型的支持，使用百炼的Qwen-Omni-Realtime API服务，配置文件参考[配置](#chat_with_qwen_omni.yaml)
 - [2025.08.12] ⭐️⭐️⭐️ 版本 0.5.0发布:
   - 修改为前后端分离版本，前端仓库添加[OpenAvatarChat-WebUI](https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI),方便自定义前端界面，拓展交互
   - 增加了对 dify 的基础调用方式的支持，目前仅支持了chatflow版本
@@ -55,9 +54,9 @@
 
 ### 待办清单
 
-- [x] 预置的数字人模型达到100个
-- [x] 接入[LAM](https://github.com/aigc3d/LAM)：能够单图秒级打造超写实3D数字人的开源项目
-- [ ] 接入[Qwen2.5-Omni](https://github.com/QwenLM/Qwen2.5-Omni)
+- [ ] 完善文档以及视频教程
+- [ ] 接入Live2D数字人
+- [ ] 接入3D数字人
 
 ## Demo
 
@@ -123,16 +122,17 @@ HuggingFace
   - [选择配置](#选择配置)
     - [chat\_with\_lam.yaml](#chat_with_lamyaml)
       - [使用的Handler](#使用的handler)
+    - [chat\_with\_qwen-omni.yaml](#chat_with_qwen_omni.yaml)
     - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
       - [使用的Handler](#使用的handler-1)
     - [chat\_with\_openai\_compatible.yaml](#chat_with_openai_compatibleyaml)
-    - [使用的Handler](#使用的handler-2)
+     - [使用的Handler](#使用的handler-2)
     - [chat\_with\_openai\_compatible\_edge\_tts.yaml](#chat_with_openai_compatible_edge_ttsyaml)
-    - [使用的Handler](#使用的handler-3)
+     - [使用的Handler](#使用的handler-3)
     - [chat\_with\_openai\_compatible\_bailian\_cosyvoice.yaml](#chat_with_openai_compatible_bailian_cosyvoiceyaml)
-    - [使用的Handler](#使用的handler-4)
+     - [使用的Handler](#使用的handler-4)
     - [chat\_with\_openai\_compatible\_bailian\_cosyvoice\_musetalk.yaml](#chat_with_openai_compatible_bailian_cosyvoice_musetalkyaml)
-    - [使用的Handler](#使用的handler-5)
+     - [使用的Handler](#使用的handler-5)
   - [本地运行](#本地运行)
     - [uv安装](#uv安装)
     - [依赖安装](#依赖安装)
@@ -145,6 +145,7 @@ HuggingFace
   - [LAM端侧渲染 Client Handler](#lam端侧渲染-client-handler)
     - [形象选择](#形象选择)
   - [OpenAI兼容API的语言模型Handler](#openai兼容api的语言模型handler)
+  - [Qwen-Omni多模态语言模型Handler](#Qwen-Omni多模态语言模型Handler)
   - [MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)
     - [依赖模型](#依赖模型)
   - [百炼 CosyVoice Handler](#百炼-cosyvoice-handler)
@@ -218,6 +219,7 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 | CONFIG名称                                           | ASR |    LLM    |    TTS    | AVATAR|
 |----------------------------------------------------|-----|:---------:|:---------:|------------|
 | chat_with_lam.yaml                                 |SenseVoice|    API    |API| LAM        |
+| chat_with_qwen_omni.yaml                             |Qwen-Omni| Qwen-Omni | Qwen-Omni | lite-avatar |
 | chat_with_minicpm.yaml                             |MiniCPM-o| MiniCPM-o | MiniCPM-o | lite-avatar |
 | chat_with_openai_compatible.yaml                   |SenseVoice|API|CosyVoice| lite-avatar |
 | chat_with_openai_compatible_edge_tts.yaml          |SenseVoice|API|edgetts| lite-avatar |
@@ -268,6 +270,17 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 |Avatar|avatar/lam/avatar_handler_lam_audio2expression|[LAM数字人驱动Handler](#lam数字人驱动handler)|
 ||||
 
+#### chat_with_qwen_omni.yaml
+使用Qwen-Omni进行本地的语音到语音的对话生成，使用了阿里云百炼的线上服务Qwen-Omni-Realtime API。
+##### 使用的Handler
+|类别|Handler|安装说明|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|LLM|llm/minicpm/llm_handler_minicpm|[Qwen-Omni多模态语言模型Handler](#Qwen-Omni多模态语言模型Handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
+||||
+
 #### chat_with_minicpm.yaml
 使用minicpm进行本地的语音到语音的对话生成，对GPU的性能与显存大小有一定要求。
 ##### 使用的Handler
@@ -275,7 +288,7 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 |---|---|---|
 |Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
 |VAD|vad/silerovad/vad_handler/silero||
-|LLM|llm/minicpm/llm_handler_minicpm|[MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)|
+|LLM|llm/qwen_omni/llm_handler_qwen_omni|[MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)|
 |Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
 |||| 
 
@@ -451,6 +464,10 @@ LLMOpenAICompatible:
 >     )
 > ```
 > * LLM默认为百炼api_url + api_key
+
+### Qwen-Omni多模态语言模型Handler
+使用百炼的api来接入qwen-omni的能力，当前仅支持manual模式，vad由本地的SileroVad模执行，并且由于manual模式下asr的结果非常差且不可靠返回，因此额外增加了SenseVoice模块仅用于回显对话记录。
+完整配置文件可以参考chat_with_qwen_omni.yaml，其中avatar模块可以AvatarMusetalk，LiteAvatar二选一。
 
 ### MiniCPM多模态语言模型Handler
 #### 依赖模型
