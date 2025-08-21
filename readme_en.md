@@ -356,7 +356,7 @@ uv run src/demo.py --config <absolute path to config file>.yaml
 ### Docker Execution
 Containerized execution: The container relies on NVIDIA's container environment. After preparing a Docker environment that supports GPUs, execute the following command to complete the construction and deployment of the image:
 ```bash
-./build_and_run.sh --config <absolute path to config file>.yaml
+./build_and_run.sh --config <relative path to config file>.yaml
 ```
 
 ## Handler Dependencies Installation Notes
