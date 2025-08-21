@@ -8,6 +8,7 @@ default:
     cert_key: "ssl_certs/localhost.key"
   chat_engine:
     model_root: "models"
+    concurrent_limit: 1
     handler_search_path:
       - "src/handlers"
     handler_configs:
@@ -40,19 +41,19 @@ default:
         enable_input_transcription: false # 手动模式下，omni的输入的语音识别效果非常差，几乎不可用，默认关闭，直接使用正常asr的结果
         transcription_model: "gummy-realtime-v1"
       # Musetalk和LiteAvatar可以通过配置自由选，默认使用LiteAvatar了
-      AvatarMusetalk:
-        module: avatar/musetalk/avatar_handler_musetalk
-        fps: 20  # Video frame rate
-        batch_size: 2  # Batch processing frame count, must be greater than 2
-        avatar_video_path: "src/handlers/avatar/musetalk/MuseTalk/data/video/yongen.mp4"  # Initialization video path
-        avatar_model_dir: "models/musetalk/avatar_model"  # Default avatar model directory
-        force_create_avatar: false  # Whether to force regenerate digital human data
-        debug: false  # Whether to enable debug mode
-        multi_thread_inference: true  # true: use 2 threads to inference (unet, vae), false: use single-thread to inference
-      # LiteAvatar:
-      #   module: avatar/liteavatar/avatar_handler_liteavatar
-      #   avatar_name: 20250408/sample_data
-      #   fps: 25
-      #   debug: false
-      #   enable_fast_mode: false
-      #   use_gpu: true
+      # AvatarMusetalk:
+      #   module: avatar/musetalk/avatar_handler_musetalk
+      #   fps: 20  # Video frame rate
+      #   batch_size: 2  # Batch processing frame count, must be greater than 2
+      #   avatar_video_path: "src/handlers/avatar/musetalk/MuseTalk/data/video/yongen.mp4"  # Initialization video path
+      #   avatar_model_dir: "models/musetalk/avatar_model"  # Default avatar model directory
+      #   force_create_avatar: false  # Whether to force regenerate digital human data
+      #   debug: false  # Whether to enable debug mode
+      #   multi_thread_inference: true  # true: use 2 threads to inference (unet, vae), false: use single-thread to inference
+      LiteAvatar:
+        module: avatar/liteavatar/avatar_handler_liteavatar
+        avatar_name: 20250408/sample_data
+        fps: 25
+        debug: false
+        enable_fast_mode: false
+        use_gpu: true
