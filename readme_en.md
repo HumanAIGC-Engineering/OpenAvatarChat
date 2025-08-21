@@ -215,7 +215,30 @@ In our tests, using a PC equipped with an i9-13900KF processor and Nvidia RTX 40
 
 ## 🚀 Get Started
 
-Before installing and deploying the corresponding mode, please refer to the **installation methods for relevant modules** and [Optional Deployment](#optional-deployment).
+> [!IMPORTANT]
+> **[PRE-DEPLOYMENT WARNING] IGNORE THIS, AND YOUR DIGITAL HUMAN WILL 100% GO ON STRIKE!**
+>
+> Before you excitedly jump into deployment, **STOP!**
+> Otherwise, you will almost certainly run into these two major pitfalls: **an inaccessible UI** and a **Digital Human that is stuck loading forever**.
+>
+> **To get your Digital Human to work, you MUST complete the following checks first:**
+>
+> 1.  **Confirm Module Installation**: Go to the **installation methods for relevant modules** for your chosen mode and ensure not a single one is missing.
+>
+> 2.  **Nail Down the Network Setup**: This is the lifeline for internal and external communication. **99% of "my Digital Human isn't responding" issues happen right here**! Please carefully read the **SSL and TURN Service** section in the [Optional Deployment](#optional-deployment).
+>
+>     **Specifically, your network environment determines the MANDATORY setup:**
+>     *   **① Localhost-Only Access**
+>         > The simplest setup, usually requiring no extra configuration. However, you can only access it on the machine you deployed it on. It won't be accessible from another device (like your phone).
+>
+>     *   **② LAN (Local Area Network) Access (e.g., from your phone to your PC)**
+>         > An **SSL certificate becomes ESSENTIAL**! Most browsers require a secure `https://` connection to grant camera/microphone permissions. Without it, your Digital Human **can't hear or speak**.
+>
+>     *   **③ Public / Internet Access (for anyone to use)**
+>         > Both an **SSL certificate and a TURN service are NON-NEGOTIABLE**!
+>         > - **Without a valid SSL certificate**, browsers will refuse the connection outright. Users won't even be able to open the page.
+>         > - **Without a TURN service**, users on different networks (e.g., home vs. office) cannot establish a video stream connection. The button will be **stuck on "Waiting..."**.
+
 
 ### Select a config
 The functionalities of OpenAvatarChat will follow the config specified during startup. We provided several sample config files under the config folder.
@@ -597,7 +620,7 @@ uv run install.py --uv --config config/chat_with_openai_compatible_bailian_cosyv
 Note: The mmcv installed by uv by default may report an error "No module named 'mmcv._ext'" during actual runtime. Refer to [MMCV-FAQ](https://mmcv.readthedocs.io/en/latest/faq.html). The solution is:
 ```bash
 uv pip uninstall mmcv
-uv pip install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html
+uv pip install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html --trusted-host download.openmmlab.com
 ```
 
 When running the MuseTalk source code for the first time, it will automatically download a model called s3fd-619a316812.pth. This model is now integrated into the download script. It has already been mapped when starting with Docker. However, when running locally, you need to manually perform the mapping again.
