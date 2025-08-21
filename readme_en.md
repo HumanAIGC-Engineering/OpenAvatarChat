@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-<strong>A modular interactive digital human conversation implementation that runs full-featured on a single PC.</strong>
+<strong>A modular interactive digital human conversation implementation.</strong>
 </p>
 
 <p align="center" style="display: flex; flex-direction: row; justify-content: center">
@@ -13,7 +13,6 @@
 </p>
 
 ## 🔥 Core Highlights
-- **Low-latency digital human real-time conversation: The average response delay is about 2.2 seconds.**
 - **Multimodal language model: Supports multimodal language models including text, audio, video, etc.**
 - **Modular design: Uses modular design, allowing flexible component replacement to achieve different function combinations.**
 
@@ -23,7 +22,7 @@
 
 - [2025.08.19] ⭐️⭐️⭐️ Version 0.5.1 Released:
   - LiteAvatar support multi-session. Please refer to LiteAvatar configuration part below.
-  - Added support for calling Qwen-Omni-Realtime.
+  - Add support for the Qwen-Omni multimodal model, using the Qwen-Omni-Realtime API service of BaiLian. For the configuration file, please refer to this [config](#chat_with_qwen_omniyaml).
 - [2025.08.12] ⭐️⭐️⭐️ Version 0.5.0 Released:
   - Modified to a separated frontend and backend version. The frontend repository[OpenAvatarChat-WebUI](https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI)has been added to facilitate custom frontend interfaces and expand interactions.
   - Added basic support for calling dify, currently only supporting the chatflow version.
@@ -49,9 +48,9 @@
 
 ### Todo List
 
-- [x] Pre-set digital human models reach 100
-- [x] Integrated [LAM](https://github.com/aigc3d/LAM): An open-source project capable of creating ultra-realistic 3D digital humans from a single image in seconds
-- [ ] Integrate [Qwen2.5-Omni](https://github.com/QwenLM/Qwen2.5-Omni)
+- [ ] Refine documentation and video tutorials
+- [ ] Integrate Live2D digital humans
+- [ ] Integrate 3D digital humans
 
 ## Demo
 
@@ -113,6 +112,7 @@ Frequently asked questions encountered during the course of the project can be f
   - [Select a config](#select-a-config)
     - [chat\_with\_lam.yaml](#chat_with_lamyaml)
       - [Used Handlers](#used-handlers)
+    - [chat\_with\_qwen\_omni.yaml](#chat_with_qwen_omniyaml)
     - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
       - [Used Handlers](#used-handlers-1)
     - [chat\_with\_openai\_compatible.yaml](#chat_with_openai_compatibleyaml)
@@ -134,6 +134,7 @@ Frequently asked questions encountered during the course of the project can be f
   - [LAM Client Rendering Handler](#lam-client-rendering-handler)
     - [Select the Avatar Asset](#select-the-avatar-asset)
   - [OpenAI Compatible LLM Handler](#openai-compatible-llm-handler)
+  - [Qwen-Omni Speech2Speech Handler](#qwen-omni-speech2speech-handler)
   - [MiniCPM Omni Speech2Speech Handler](#minicpm-omni-speech2speech-handler)
     - [Models used](#models-used)
   - [Bailian CosyVoice Handler](#bailian-cosyvoice-handler)
@@ -204,6 +205,7 @@ In our tests, using a PC equipped with an i9-13900KF processor and Nvidia RTX 40
 | CONFIG Name                                          | ASR        |    LLM    |    TTS    | AVATAR       |
 |------------------------------------------------------|------------|:---------:|:---------:|--------------|
 | chat_with_lam.yaml                                   | SenseVoice |    API    |   API     | LAM          |
+| chat_with_qwen_omni.yaml                             |Qwen-Omni| Qwen-Omni | Qwen-Omni | lite-avatar |
 | chat_with_minicpm.yaml                               | MiniCPM-o  | MiniCPM-o | MiniCPM-o | lite-avatar  |
 | chat_with_openai_compatible.yaml                     | SenseVoice |    API    | CosyVoice | lite-avatar  |
 | chat_with_openai_compatible_edge_tts.yaml            | SenseVoice |    API    | edgetts   | lite-avatar  |
@@ -256,6 +258,16 @@ This config uses [LAM](https://github.com/aigc3d/LAM) generated gaussion splatti
 |TTS|tts/bailian_tts/tts_handler_cosyvoice_bailian|[Bailian CosyVoice Handler](#bailian-cosyvoice-handler)|
 |Avatar|avatar/lam/avatar_handler_lam_audio2expression|[LAM Avatar Driver Handler](#lam-avatar-driver-handler)|
 ||||
+
+#### chat_with_qwen_omni.yaml
+Local speech-to-speech dialogue generation is implemented using Qwen-Omni, with the Qwen-Omni-Realtime API (from Alibaba Cloud BaiLian).
+|Type|Handler|Install Notes|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|LLM|llm/qwen_omni/llm_handler_qwen_omni|[Qwen-Omni Speech2Speech Handler](#qwen-omni-speech2speech-handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
+|||| 
 
 #### chat_with_minicpm.yaml
 Use MiniCPM-o-2.6 as audio2audio chat model, it need enough VRAM and GPU computaion power.
@@ -432,6 +444,10 @@ LLMOpenAICompatible:
 >     )
 > ```
 > * The default LLM API is Bailian api_url.
+
+### Qwen-Omni Speech2Speech Handler
+The capabilities of Qwen-Omni are integrated via Alibaba Cloud BaiLian's API. Currently, only the manual mode is supported. Voice Activity Detection (VAD) is executed by the local SileroVad model. Additionally, due to the poor quality and unreliability of input_transcription results in manual mode, an extra SenseVoice module has been added exclusively for echoing conversation records.
+For the complete configuration file, please refer to chat_with_qwen_omni.yaml. Among them, the avatar module supports a choice between AvatarMusetalk and LiteAvatar.
 
 ### MiniCPM Omni Speech2Speech Handler
 #### Models used
