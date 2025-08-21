@@ -26,7 +26,7 @@
 
 - [2025.08.19] ⭐️⭐️⭐️ 版本 0.5.1发布:
   - LiteAvatar支持单机多session，详见下文LiteAvatar配置部分
-  - 增加对 Qwen-Omni多模态模型的支持，使用百炼的Qwen-Omni-Realtime API服务，配置文件参考[配置](#chat_with_qwen_omni.yaml)
+  - 增加对 Qwen-Omni多模态模型的支持，使用百炼的Qwen-Omni-Realtime API服务，配置文件参考[配置](#chat_with_qwen_omniyaml)
 - [2025.08.12] ⭐️⭐️⭐️ 版本 0.5.0发布:
   - 修改为前后端分离版本，前端仓库添加[OpenAvatarChat-WebUI](https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI),方便自定义前端界面，拓展交互
   - 增加了对 dify 的基础调用方式的支持，目前仅支持了chatflow版本
@@ -122,7 +122,7 @@ HuggingFace
   - [选择配置](#选择配置)
     - [chat\_with\_lam.yaml](#chat_with_lamyaml)
       - [使用的Handler](#使用的handler)
-    - [chat\_with\_qwen-omni.yaml](#chat_with_qwen_omni.yaml)
+    - [chat\_with\_qwen-omni.yaml](#chat_with_qwen_omniyaml)
     - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
       - [使用的Handler](#使用的handler-1)
     - [chat\_with\_openai\_compatible.yaml](#chat_with_openai_compatibleyaml)
