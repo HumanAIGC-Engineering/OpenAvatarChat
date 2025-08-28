@@ -193,6 +193,7 @@ class ClientHandlerRtc(ClientHandlerBase):
         async def init_config():
             config = {
                 "avatar_config": avatar_config,
+                "rtc_configuration": turn_entity.rtc_configuration if turn_entity is not None else None,
             }
             return JSONResponse(status_code=200, content=config)
 
