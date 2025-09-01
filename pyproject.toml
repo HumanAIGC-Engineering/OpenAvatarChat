@@ -28,7 +28,7 @@ dependencies = [
     "tqdm~=4.67.1",
     "typing-extensions~=4.12.2",
     "uvicorn~=0.34.0",
-    "torch==2.4.1",
+    "torch==2.8.0",
     "torchvision",
     "torchaudio",
     "python-dotenv>=1.1.0",
@@ -50,18 +50,18 @@ members = [
 [tool.uv.sources]
 fastrtc = { path = "src/third_party/gradio_webrtc_videochat/dist/fastrtc-0.0.28.dev0-py3-none-any.whl" }
 torch = [
-    { index = "pytorch-cu124" },
+    { index = "pytorch-cu128" },
 ]
 torchvision = [
-    { index = "pytorch-cu124" },
+    { index = "pytorch-cu128" },
 ]
 torchaudio = [
-    { index = "pytorch-cu124" },
+    { index = "pytorch-cu128" },
 ]
 
 [[tool.uv.index]]
-name = "pytorch-cu124"
-url = "https://download.pytorch.org/whl/cu124"
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
 [tool.uv]

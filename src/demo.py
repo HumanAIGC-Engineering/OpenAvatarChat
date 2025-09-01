@@ -28,6 +28,13 @@ def parse_args():
     parser.add_argument("--env", type=str, default="default", help="environment to use in config file")
     return parser.parse_args()
 
+import torch
+_original_torch_load = torch.load
+def patched_torch_load(*args, **kwargs):
+    if 'weights_only' not in kwargs or kwargs['weights_only'] != True:
+        kwargs['weights_only'] = False
+    return _original_torch_load(*args, **kwargs)
+torch.load = patched_torch_load
 
 class OpenAvatarChatWebServer(uvicorn.Server):
 
