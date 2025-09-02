@@ -10,7 +10,7 @@ import sysconfig
 
 cudnn_path = os.path.join(sysconfig.get_path("purelib"), "nvidia", "cudnn", "lib")
 logger.info("cudnn_path: {}", cudnn_path)
-os.environ["LD_LIBRARY_PATH"] = f"{cudnn_path}:{os.environ['LD_LIBRARY_PATH']}"
+os.environ["LD_LIBRARY_PATH"] = f"{cudnn_path}:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
 
 from handlers.avatar.liteavatar.avatar_output_handler import AvatarOutputHandler
