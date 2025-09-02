@@ -4,6 +4,14 @@ import threading
 import time
 from typing import Optional
 from enum import Enum
+import os
+
+import sysconfig
+
+cudnn_path = os.path.join(sysconfig.get_path("purelib"), "nvidia", "cudnn", "lib")
+logger.info("cudnn_path: {}", cudnn_path)
+os.environ["LD_LIBRARY_PATH"] = f"{cudnn_path}:{os.environ['LD_LIBRARY_PATH']}"
+
 
 from handlers.avatar.liteavatar.avatar_output_handler import AvatarOutputHandler
 from handlers.avatar.liteavatar.avatar_processor import AvatarProcessor
