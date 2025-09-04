@@ -1,0 +1,158 @@
+name: Build Docker Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_type:
+        description: 'Select image type to build'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - 'avatar'
+          - 'lam'
+          - 'both'
+      tag_suffix:
+        description: 'Tag suffix (e.g., v1.0.0, latest)'
+        required: false
+        default: 'latest'
+        type: string
+      push_to_registry:
+        description: 'Push to Docker registry'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-avatar:
+    if: ${{ github.event.inputs.image_type == 'avatar' || github.event.inputs.image_type == 'both' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          lfs: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: ${{ github.event.inputs.push_to_registry == 'true' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Avatar image
+        id: meta-avatar
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-avatar
+          tags: |
+            type=raw,value=${{ github.event.inputs.tag_suffix }}
+            type=raw,value=avatar-${{ github.event.inputs.tag_suffix }}
+            type=sha,prefix=avatar-{{branch}}-
+
+      - name: Build and push Avatar Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          build-args: |
+            CONFIG_FILE=config/chat_with_dify.yaml
+          push: ${{ github.event.inputs.push_to_registry == 'true' }}
+          tags: ${{ steps.meta-avatar.outputs.tags }}
+          labels: ${{ steps.meta-avatar.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+  build-lam:
+    if: ${{ github.event.inputs.image_type == 'lam' || github.event.inputs.image_type == 'both' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          lfs: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: ${{ github.event.inputs.push_to_registry == 'true' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for LAM image
+        id: meta-lam
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-lam
+          tags: |
+            type=raw,value=${{ github.event.inputs.tag_suffix }}
+            type=raw,value=lam-${{ github.event.inputs.tag_suffix }}
+            type=sha,prefix=lam-{{branch}}-
+
+      - name: Build and push LAM Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          build-args: |
+            CONFIG_FILE=config/chat_with_lam_dify.yaml
+          push: ${{ github.event.inputs.push_to_registry == 'true' }}
+          tags: ${{ steps.meta-lam.outputs.tags }}
+          labels: ${{ steps.meta-lam.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+  summary:
+    needs: [build-avatar, build-lam]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Image Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ github.event.inputs.image_type }}" == "avatar" || "${{ github.event.inputs.image_type }}" == "both" ]]; then
+            if [[ "${{ needs.build-avatar.result }}" == "success" ]]; then
+              echo "| Avatar (Dify) | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Avatar (Dify) | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+          
+          if [[ "${{ github.event.inputs.image_type }}" == "lam" || "${{ github.event.inputs.image_type }}" == "both" ]]; then
+            if [[ "${{ needs.build-lam.result }}" == "success" ]]; then
+              echo "| LAM (Dify) | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| LAM (Dify) | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag Suffix:** ${{ github.event.inputs.tag_suffix }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Push to Registry:** ${{ github.event.inputs.push_to_registry }}" >> $GITHUB_STEP_SUMMARY

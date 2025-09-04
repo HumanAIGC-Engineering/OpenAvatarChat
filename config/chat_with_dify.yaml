@@ -1,0 +1,47 @@
+default:
+  logger:
+    log_level: "INFO"
+  service:
+    host: "0.0.0.0"
+    port: 8282
+    cert_file: "ssl_certs/localhost.crt"
+    cert_key: "ssl_certs/localhost.key"
+  chat_engine:
+    model_root: "models"
+    concurrent_limit: 1
+    handler_search_path:
+      - "src/handlers"
+    handler_configs:
+      RtcClient:
+        module: client/rtc_client/client_handler_rtc
+      SileroVad:
+        module: vad/silerovad/vad_handler_silero
+        speaking_threshold: 0.5
+        start_delay: 2048
+        end_delay: 5000
+        buffer_look_back: 5000
+        speech_padding: 512
+      SenseVoice:
+        enabled: True
+        module: asr/sensevoice/asr_handler_sensevoice
+        model_name: "iic/SenseVoiceSmall"
+        device: "cuda"  # 强制使用CUDA，避免MPS检查
+      Edge_TTS:
+        enabled: True
+        module: tts/edgetts/tts_handler_edgetts
+        voice: "zh-CN-XiaoxiaoNeural"
+      Dify:
+        enabled: True
+        module: llm/dify/llm_handler_dify
+        enable_video_input: False
+        api_key: "app-2UxAkljNofeoaGlh8LddGrCt"
+        api_url: "https://copilot.sino-bridge.com:90/v1"
+        response_mode: "streaming"
+        timeout: 30
+      LiteAvatar:
+        module: avatar/liteavatar/avatar_handler_liteavatar
+        avatar_name: 20250408/P1DB_Y1K6USuq-Nlun6Bh94A
+        fps: 25
+        debug: false
+        enable_fast_mode: false
+        use_gpu: false
