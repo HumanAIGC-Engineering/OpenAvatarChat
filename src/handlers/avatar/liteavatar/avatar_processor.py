@@ -208,6 +208,7 @@ class AvatarProcessor:
             self._global_frame_count += 1
 
             self._mouth_img_queue.put(mouth_result)
+            self._callback_counter.add_property("signal2img")
 
             if start_time == -1:
                 start_time = time.time()
@@ -306,14 +307,14 @@ class AvatarProcessor:
         self._mouth2full_thread.start()
 
     def _callback_image(self, image_result: VideoResult):
-        self._callback_counter.add_property("callback_image")
+        self._callback_counter.add_property("image_callback")
         if self._session_running:
             for output_handler in self._output_handlers:
                 output_handler.on_video(image_result)
 
     def _callback_audio(self, audio_result: AudioResult):
         audio_frame = audio_result.audio_frame
-        self._callback_counter.add_property("callback_audio", audio_frame.samples / audio_frame.sample_rate)
+        self._callback_counter.add_property("audio_callback", audio_frame.samples / audio_frame.sample_rate)
         if self._session_running:
             for output_handler in self._output_handlers:
                 output_handler.on_audio(audio_result)

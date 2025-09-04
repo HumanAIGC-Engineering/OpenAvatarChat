@@ -44,7 +44,7 @@ class IntervalCounter:
         if key.startswith("total"):
             raise RuntimeError("key should not start with 'total'")
         interval_key = key
-        total_key = f"total_{key}"
+        total_key = f"{key}_total"
         self._counter_dict[interval_key] += val
         self._counter_dict[total_key] += val
         now = time.time()
@@ -58,8 +58,8 @@ class IntervalCounter:
                     print_obj[k] = round(v, 3)
                 else:
                     print_obj[k] = v
-                if k.startswith("total"):
-                    avg_key = k.replace("total_", "avg_")
+                if k.endswith("total"):
+                    avg_key = k.replace("total", "per_second")
                     print_obj[avg_key] = round(v / (now - self._start_time), 3)
                 else:
                     self._counter_dict[k] = 0

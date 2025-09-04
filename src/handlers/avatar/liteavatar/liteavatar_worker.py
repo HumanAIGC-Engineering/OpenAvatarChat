@@ -5,6 +5,7 @@ import time
 from typing import Optional
 from enum import Enum
 import os
+import torch
 
 import sysconfig
 
@@ -57,13 +58,15 @@ class Tts2FaceOutputHandler(AvatarOutputHandler):
     def on_audio(self, audio_result: AudioResult):
         audio_frame = audio_result.audio_frame
         audio_data = audio_frame.to_ndarray()
-        self.audio_output_queue.put_nowait(audio_data)
+        audio_tensor = torch.from_numpy(audio_data)
+        self.audio_output_queue.put_nowait(audio_tensor)
 
     def on_video(self, video_result: VideoResult):
         self._video_producer_counter.add()
         video_frame = video_result.video_frame
-        data = video_frame.to_ndarray(format="bgr24")
-        self.video_output_queue.put_nowait(data)
+        video_data = video_frame.to_ndarray(format="bgr24")
+        video_tensor = torch.from_numpy(video_data)
+        self.video_output_queue.put_nowait(video_tensor)
 
     def on_avatar_status_change(self, speech_id, avatar_status: AvatarStatus):
         logger.info(f"Avatar status changed: {speech_id} {avatar_status}")

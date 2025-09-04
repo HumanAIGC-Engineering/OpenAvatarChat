@@ -54,7 +54,8 @@ class HandlerTts2FaceContext(HandlerContext):
             if self.lite_avatar_worker.audio_out_queue.qsize() > 0:
                 no_output = False
                 try:
-                    audio = self.lite_avatar_worker.audio_out_queue.get_nowait()
+                    audio_tensor = self.lite_avatar_worker.audio_out_queue.get_nowait()
+                    audio = audio_tensor.numpy()
                     # self.rtc_audio_queue.put_nowait(audio)
                     self.return_data(audio, ChatDataType.AVATAR_AUDIO)
                     no_output = False
@@ -64,7 +65,8 @@ class HandlerTts2FaceContext(HandlerContext):
             if self.lite_avatar_worker.video_out_queue.qsize() > 0:
                 no_output = False
                 try:
-                    video = self.lite_avatar_worker.video_out_queue.get_nowait()
+                    video_tensor = self.lite_avatar_worker.video_out_queue.get_nowait()
+                    video = video_tensor.numpy()
                     # self.rtc_video_queue.put_nowait(video)
                     self.return_data(video, ChatDataType.AVATAR_VIDEO)
                     no_output = False
