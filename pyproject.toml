@@ -66,3 +66,6 @@ explicit = true
 
 [tool.uv]
 no-build-isolation-package = ["chumpy"]
+
+[tool.uv.extra-build-dependencies]
+chumpy = ["wheel"]
