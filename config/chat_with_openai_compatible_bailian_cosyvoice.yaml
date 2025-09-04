@@ -8,7 +8,7 @@ default:
     cert_key: "ssl_certs/localhost.key"
   chat_engine:
     model_root: "models"
-    concurrent_limit: 5
+    concurrent_limit: 2
     handler_search_path:
       - "src/handlers"
     handler_configs:
