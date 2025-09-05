@@ -111,17 +111,12 @@ Frequently asked questions encountered during the course of the project can be f
 - [🚀 Get Started](#-get-started)
   - [Select a config](#select-a-config)
     - [chat\_with\_lam.yaml](#chat_with_lamyaml)
-      - [Used Handlers](#used-handlers)
     - [chat\_with\_qwen\_omni.yaml](#chat_with_qwen_omniyaml)
-    - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
-      - [Used Handlers](#used-handlers-1)
     - [chat\_with\_openai\_compatible.yaml](#chat_with_openai_compatibleyaml)
-      - [Used Handlers](#used-handlers-2)
     - [chat\_with\_openai\_compatible\_edge\_tts.yaml](#chat_with_openai_compatible_edge_ttsyaml)
     - [chat\_with\_openai\_compatible\_bailian\_cosyvoice.yaml](#chat_with_openai_compatible_bailian_cosyvoiceyaml)
-      - [Used Handlers](#used-handlers-3)
     - [chat\_with\_openai\_compatible\_bailian\_cosyvoice\_musetalk.yaml](#chat_with_openai_compatible_bailian_cosyvoice_musetalkyaml)
-    - [Used Handlers](#used-handlers-4)
+    - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
   - [Local Execution](#local-execution)
     - [UV Installation](#uv-installation)
     - [Dependency Installation](#dependency-installation)
@@ -269,18 +264,6 @@ Local speech-to-speech dialogue generation is implemented using Qwen-Omni, with 
 |Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
 |||| 
 
-#### chat_with_minicpm.yaml
-Use MiniCPM-o-2.6 as audio2audio chat model, it need enough VRAM and GPU computaion power.
-
-##### Used Handlers
-|Type|Handler|Install Notes|
-|---|---|---|
-|Client|client/rtc_client/client_handler_rtc|[Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)|
-|VAD|vad/silerovad/vad_handler/silero||
-|LLM|llm/minicpm/llm_handler_minicpm|[MiniCPM Omni Speech2Speech Handler](#minicpm-omni-speech2speech-handler)|
-|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
-|||| 
-
 #### chat_with_openai_compatible.yaml
 This config use openai-compatible api as llm provider and CosyVoice as local tts model.
 
@@ -296,6 +279,7 @@ This config use openai-compatible api as llm provider and CosyVoice as local tts
 
 #### chat_with_openai_compatible_edge_tts.yaml
 This config use Edge TTS, it does not need an API Key of Bailian.
+##### Used Handlers
 |Type|Handler|Install Notes|
 |---|---|---|
 |Client|client/rtc_client/client_handler_rtc|[Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)|
@@ -308,7 +292,6 @@ This config use Edge TTS, it does not need an API Key of Bailian.
 
 #### chat_with_openai_compatible_bailian_cosyvoice.yaml
 Both LLM and TTS are provided by API, it is the lightest config for LiteAvatar.
-
 ##### Used Handlers
 |Type|Handler|Install Notes|
 |---|---|---|
@@ -322,7 +305,7 @@ Both LLM and TTS are provided by API, it is the lightest config for LiteAvatar.
 
 #### chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 Both LLM and TTS are provided by API, while the 2D digital human uses MuseTalk for inference. By default, it uses GPU for inference and CPU inference is not currently supported.
-#### Used Handlers
+##### Used Handlers
 |Type|Handler|Install Notes|
 |---|---|---|
 |Client|client/rtc_client/client_handler_rtc|[Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)|
@@ -333,6 +316,16 @@ Both LLM and TTS are provided by API, while the 2D digital human uses MuseTalk f
 |Avatar|avatar/musetalk/avatar_handler_musetalk|[MuseTalk Avatar Handler](#musetalk-avatar-handler)
 ||||
 
+#### chat_with_minicpm.yaml
+Use MiniCPM-o-2.6 as audio2audio chat model, it need enough VRAM and GPU computaion power.
+##### Used Handlers
+|Type|Handler|Install Notes|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|LLM|llm/minicpm/llm_handler_minicpm|[MiniCPM Omni Speech2Speech Handler](#minicpm-omni-speech2speech-handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar Avatar Handler](#liteavatar-avatar-handler)|
+|||| 
 
 
 ### Local Execution
@@ -450,6 +443,8 @@ The capabilities of Qwen-Omni are integrated via Alibaba Cloud BaiLian's API. Cu
 For the complete configuration file, please refer to chat_with_qwen_omni.yaml. Among them, the avatar module supports a choice between AvatarMusetalk and LiteAvatar.
 
 ### MiniCPM Omni Speech2Speech Handler
+> [!IMPORTANT]
+> **Note：According to the repository size of MiniCPM, it is not included as a submodule. If it is needed, please refer to src/handlers/llm/minicpm/notes.md to get the code first.**
 #### Models used
 In this project, MiniCPM-o-2.6 can be used as a multimodal language model to provide dialogue capabilities for digital humans. Users can download the relevant model as needed from [Huggingface](https://huggingface.co/openbmb/MiniCPM-o-2_6) or [Modelscope](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6). It is recommended to directly download the model to <ProjectRoot>/models/. The default configuration points to this path, so if the model is placed elsewhere, you need to modify the configuration file. There is a corresponding model download script in the scripts directory, which can be used in a Linux environment. Please run the script in the project root directory:
 

@@ -121,18 +121,12 @@ HuggingFace
 - [🚀安装部署](#安装部署)
   - [选择配置](#选择配置)
     - [chat\_with\_lam.yaml](#chat_with_lamyaml)
-      - [使用的Handler](#使用的handler)
     - [chat\_with\_qwen-omni.yaml](#chat_with_qwen_omniyaml)
-    - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
-      - [使用的Handler](#使用的handler-1)
     - [chat\_with\_openai\_compatible.yaml](#chat_with_openai_compatibleyaml)
-     - [使用的Handler](#使用的handler-2)
     - [chat\_with\_openai\_compatible\_edge\_tts.yaml](#chat_with_openai_compatible_edge_ttsyaml)
-     - [使用的Handler](#使用的handler-3)
     - [chat\_with\_openai\_compatible\_bailian\_cosyvoice.yaml](#chat_with_openai_compatible_bailian_cosyvoiceyaml)
-     - [使用的Handler](#使用的handler-4)
     - [chat\_with\_openai\_compatible\_bailian\_cosyvoice\_musetalk.yaml](#chat_with_openai_compatible_bailian_cosyvoice_musetalkyaml)
-     - [使用的Handler](#使用的handler-5)
+    - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
   - [本地运行](#本地运行)
     - [uv安装](#uv安装)
     - [依赖安装](#依赖安装)
@@ -281,17 +275,6 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 |Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
 ||||
 
-#### chat_with_minicpm.yaml
-使用minicpm进行本地的语音到语音的对话生成，对GPU的性能与显存大小有一定要求。
-##### 使用的Handler
-|类别|Handler|安装说明|
-|---|---|---|
-|Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
-|VAD|vad/silerovad/vad_handler/silero||
-|LLM|llm/minicpm/llm_handler_minicpm|[MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)|
-|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
-|||| 
-
 #### chat_with_openai_compatible.yaml
 该配置使用云端语言模型API，TTS使用cosyvoice，运行在本地。
 #### 使用的Handler
@@ -335,7 +318,7 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 
 #### chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 语言模型与TTS都使用云端API，2D数字人使用MuseTalk进行推理，默认是用GPU进行推理，暂不支持CPU推理。
-#### 使用的Handler
+##### 使用的Handler
 |类别|Handler|安装说明|
 |---|---|---|
 |Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
@@ -346,6 +329,16 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 |Avatar|avatar/musetalk/avatar_handler_musetalk|[MuseTalk数字人Handler](#musetalk数字人handler)|
 ||||
 
+#### chat_with_minicpm.yaml
+使用minicpm进行本地的语音到语音的对话生成，对GPU的性能与显存大小有一定要求。
+##### 使用的Handler
+|类别|Handler|安装说明|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|LLM|llm/minicpm/llm_handler_minicpm|[MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
+|||| 
 
 ### 本地运行
 
@@ -470,6 +463,8 @@ LLMOpenAICompatible:
 完整配置文件可以参考chat_with_qwen_omni.yaml，其中avatar模块可以AvatarMusetalk，LiteAvatar二选一。
 
 ### MiniCPM多模态语言模型Handler
+> [!IMPORTANT]
+> **注意：MiniCPM由于考虑到尺寸关系，没有直接作为子模块包含到项目中，如果有需要，请参照src/handlers/llm/minicpm/notes.md中的说明获取相关代码**
 #### 依赖模型
 * MiniCPM-o-2.6
 本项目可以使用MiniCPM-o-2.6作为多模态语言模型为数字人提供对话能力，用户可以按需从[Huggingface](https://huggingface.co/openbmb/MiniCPM-o-2_6)或者[Modelscope](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6)下载相关模型。建议将模型直接下载到 \<ProjectRoot\>/models/ 默认配置的模型路径指向这里，如果放置与其他位置，需要修改配置文件。scripts目录中有对应模型的下载脚本，可供在linux环境下使用，请在项目根目录下运行脚本：
