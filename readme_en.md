@@ -386,9 +386,51 @@ uv run src/demo.py --config <absolute path to config file>.yaml
 ```
 
 ### Docker Execution
+> [!Note] 
 Containerized execution: The container relies on NVIDIA's container environment. After preparing a Docker environment that supports GPUs, execute the following command to complete the construction and deployment of the image:
 ```bash
 ./build_and_run.sh --config <relative path to config file>.yaml
+```
+
+> [!Note]  
+> For RTX 50-series GPUs, we have updated the CUDA version to 12.8 in the project's `pyproject.toml` and adapted it for MuseTalk. We tested this in a Docker environment (Ubuntu 24.04, Driver Version: 575.64.03), and confirmed that Lam, LiteAvatar, and MuseTalk all run normally.  
+If you need to build the image yourself, use `build_cuda128.sh` (which uses `Dockerfile.cuda128`). To run the image, use `run_docker_cuda128.sh`. Unlike previous versions, `Dockerfile.cuda128` packages all dependencies required by the project into the image file—dynamic loading via config files is no longer used, making it easier to test all digital humans.  
+
+
+```bash
+# Clone the project repository
+git clone https://github.com/HumanAIGC-Engineering/OpenAvatarChat.git
+
+# Navigate to the project directory
+cd OpenAvatarChat
+
+# Download all submodules
+git submodule update --init --recursive --depth 1
+
+# Download models required for LiteAvatar
+# The script uses ModelScope to download models by default. 
+# If ModelScope is not installed locally, install it first with: pip install modelscope
+bash scripts/download_liteavatar_weights.sh
+
+# Download models required for LAM
+git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ./models/wav2vec2-base-960h
+wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
+tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
+
+# Download models required for MuseTalk
+bash scripts/download_musetalk_weights.sh
+
+# Build the Docker image (with CUDA 12.8)
+bash build_cuda128.sh
+
+# (Optional) If using the Bailian API:
+# Create a .env file in the project root and add your API key
+touch .env 
+# Edit the .env file manually to add: DASHSCOPE_API_KEY=sk-xxxxx
+
+# Run the Docker container
+# Replace the config file with your desired one (example below)
+bash run_docker_cuda128.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
 
 ## Handler Dependencies Installation Notes
