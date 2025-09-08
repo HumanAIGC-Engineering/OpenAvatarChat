@@ -414,33 +414,35 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
 ./build_and_run.sh --config <配置文件的相对路径>.yaml
 ```
 > [!Note]
-针对50系列显卡，我们升级了项目的pyproject.toml中cuda版本为12.8，并针对musetalk进行了适配，使用docker环境进行了测试（ubuntu-24.04， Driver Version：575.64.03），Lam，Liteavatar，Musetalk均可以正常运行。
-如果需要自己build镜像，可以使用build_cuda128.sh进行构建（使用Dockerfile.cuda128），运行使用run_docker_cuda128.sh。与之前不同的是Dockerfile.cuda128将项目依赖的所有环境都打包在镜像文件中，不再根据config文件进行动态加载，方便测试所有数字人。
+针对50系列显卡，我们已将项目`pyproject.toml`中的CUDA版本升级至12.8，并完成了对MuseTalk的适配。通过Docker环境（Ubuntu 24.04，驱动版本：575.64.03）测试验证，Lam、LiteAvatar、MuseTalk均能正常运行。
+如需自行构建镜像，可使用`build_cuda128.sh`脚本（基于`Dockerfile.cuda128`）进行构建，运行则使用`run_docker_cuda128.sh`脚本。与旧版本不同，`Dockerfile.cuda128`将项目所需的所有依赖环境统一打包到镜像中，无需再通过配置文件动态加载，便于测试所有数字人模型。
+
 ```bash
-# 下载本项目
-https://github.com/HumanAIGC-Engineering/OpenAvatarChat.git
+# 克隆项目并进入目录
+git clone https://github.com/HumanAIGC-Engineering/OpenAvatarChat.git && cd OpenAvatarChat
 
 # 下载所有子模块
 git submodule update --init --recursive --depth 1
 
-# 下载Liteavatar所需要模型，脚本默认使用ModelScope下载模型（本地没有的话，使用pip install modelscope安装一下）
+# 下载LiteAvatar所需模型
+# 脚本默认通过ModelScope下载模型（若本地未安装ModelScope，需先执行pip install modelscope进行安装）
 bash scripts/download_liteavatar_weights.sh
 
-# 下载lam所需要模型
+# 下载LAM所需模型
 git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ./models/wav2vec2-base-960h
 wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
 tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
 
-# 下载musetalk所需要的模型
+# 下载MuseTalk所需模型
 bash scripts/download_musetalk_weights.sh
 
 # 构建镜像
 bash build_cuda128.sh
 
-# 如果使用百炼的API，可以在项目中创建一个.env文件
-touch .env # 然后手动添加一行自己的api-key: DASHSCOPE_API_KEY=sk-xxxxx
+# 如需使用百炼API，可在项目根目录创建.env文件
+touch .env  # 并手动添加个人API密钥：DASHSCOPE_API_KEY=sk-xxxxx
 
-# 运行镜像，config文件可以根据自己的需要替换，以下为示例
+# 运行镜像（可根据需求替换配置文件，以下为示例命令）
 bash run_docker_cuda128.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
 
