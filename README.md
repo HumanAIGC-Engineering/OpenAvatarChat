@@ -351,7 +351,7 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 > ```
 > 本项目通过git子模块方式引用三方库，运行前需要更新子模块
 > ```bash
-> git submodule update --init --recursive
+> git submodule update --init --recursive --depth 1
 > ```
 > 强烈建议：国内用户依然使用git clone的方式下载，而不要直接下载zip文件，方便这里的git submodule和git lfs的操作，github访问的问题，可以参考[github访问问题](https://github.com/maxiaof/github-hosts)
 > 
@@ -408,8 +408,40 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
 
 ### Docker运行
 容器化运行：容器依赖nvidia的容器环境，在准备好支持GPU的docker环境后，运行以下命令即可完成镜像的构建与启动：
+> [!Note]
+> 原有的运行方式：
 ```bash
 ./build_and_run.sh --config <配置文件的相对路径>.yaml
+```
+> [!Note]
+针对50系列显卡，我们升级了项目的pyproject.toml中cuda版本为12.8，并针对musetalk进行了适配，使用docker环境进行了测试（ubuntu-24.04， Driver Version：575.64.03），Lam，Liteavatar，Musetalk均可以正常运行。
+如果需要自己build镜像，可以使用build_cuda128.sh进行构建（使用Dockerfile.cuda128），运行使用run_docker_cuda128.sh。与之前不同的是Dockerfile.cuda128将项目依赖的所有环境都打包在镜像文件中，不再根据config文件进行动态加载，方便测试所有数字人。
+```bash
+# 下载本项目
+https://github.com/HumanAIGC-Engineering/OpenAvatarChat.git
+
+# 下载所有子模块
+git submodule update --init --recursive --depth 1
+
+# 下载Liteavatar所需要模型，脚本默认使用ModelScope下载模型（本地没有的话，使用pip install modelscope安装一下）
+bash scripts/download_liteavatar_weights.sh
+
+# 下载lam所需要模型
+git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ./models/wav2vec2-base-960h
+wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
+tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
+
+# 下载musetalk所需要的模型
+bash scripts/download_musetalk_weights.sh
+
+# 构建镜像
+bash build_cuda128.sh
+
+# 如果使用百炼的API，可以在项目中创建一个.env文件
+touch .env # 然后手动添加一行自己的api-key: DASHSCOPE_API_KEY=sk-xxxxx
+
+# 运行镜像，config文件可以根据自己的需要替换，以下为示例
+bash run_docker_cuda128.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
 
 
