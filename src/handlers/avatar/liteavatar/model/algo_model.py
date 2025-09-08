@@ -66,6 +66,7 @@ class VideoResult(BaseModel):
     avatar_status: AvatarStatus
     video_frame: Any | av.VideoFrame
     end_of_speech: bool
+    bg_frame_id: int
 
     model_config = {
         "arbitrary_types_allowed": True
