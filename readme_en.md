@@ -675,7 +675,9 @@ Avatar_MuseTalk:
 * Docker
 
 ```bash
-./build_and_run.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+bash build_cuda128.sh
+
+bash run_docker_cuda128.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
 
 * Local deployment
@@ -696,7 +698,7 @@ uv run install.py --uv --config config/chat_with_openai_compatible_bailian_cosyv
 Note: The mmcv installed by uv by default may report an error "No module named 'mmcv._ext'" during actual runtime. Refer to [MMCV-FAQ](https://mmcv.readthedocs.io/en/latest/faq.html). The solution is:
 ```bash
 uv pip uninstall mmcv
-uv pip install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html --trusted-host download.openmmlab.com
+uv run mim install mmcv==2.2.0 --force
 ```
 
 When running the MuseTalk source code for the first time, it will automatically download a model called s3fd-619a316812.pth. This model is now integrated into the download script. It has already been mapped when starting with Docker. However, when running locally, you need to manually perform the mapping again.
