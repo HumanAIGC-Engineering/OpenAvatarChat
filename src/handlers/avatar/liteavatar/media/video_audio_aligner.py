@@ -19,6 +19,7 @@ class VideoAudioAligner:
 
     def get_speech_level_algined_audio(self, audio_data, origin_sample_rate,
                                        frame_count, speech_id, end_of_speech):
+        # return audio only when new audio is added
         if speech_id != self._current_speech_id:
             self._audio_byte_length_current_speech = 0
             self._audio_data_current_speech = bytearray()
