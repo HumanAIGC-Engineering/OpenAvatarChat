@@ -141,6 +141,7 @@ class HandlerTTS(HandlerBase, ABC):
                 context.input_text = ''
         except Exception as e:
             logger.error(e)
+            context.synthesizer.streaming_complete()
             context.synthesizer = None
 
     def destroy_context(self, context: HandlerContext):
