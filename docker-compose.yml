@@ -1,0 +1,55 @@
+services:
+  coturn:
+    image: coturn/coturn
+    container_name: coturn-server
+    command: >
+      --log-file=stdout
+    environment:
+      - DETECT_EXTERNAL_IP=yes
+      - DETECT_RELAY_IP=yes
+    volumes:
+      - ./coturn-data/turnserver.conf:/etc/coturn/turnserver.conf
+      - ./ssl_certs/localhost.crt:/etc/turn_cert.pem
+      - ./ssl_certs/localhost.crt:/etc/turn_key.pem
+    network_mode: host
+    restart: unless-stopped
+
+  open-avatar-chat:
+    image: open-avatar-chat:latest
+    container_name: open-avatar-chat
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    command: >
+      --config=/root/open-avatar-chat/config/chat_with_openai_compatible_bailian_cosyvoice.yaml
+    volumes:
+      - ./build:/root/open-avatar-chat/build \
+      - ./models:/root/open-avatar-chat/models \
+      - ./ssl_certs:/root/open-avatar-chat/ssl_certs \
+      - ./config:/root/open-avatar-chat/config \
+      - ./.env:/root/open-avatar-chat/.env \
+      - ./models/musetalk/s3fd-619a316812/:/root/.cache/torch/hub/checkpoints/ \
+      - ./exp:/root/open-avatar-chat/exp \
+      - ./resource:/root/open-avatar-chat/resource \
+    ports:
+      - "8282:8282"
+    networks:
+      - nat_network
+    shm_size: "2gb"
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    depends_on:
+      - coturn
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+
+networks:
+  nat_network:
+    driver: bridge
+    
