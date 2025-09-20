@@ -13,42 +13,82 @@ default:
       - "src/handlers"
     handler_configs:
       RtcClient:
+        turn_config:
+          turn_provider: "turn_server"
+          urls: ["turn:101.201.29.97:3478", "turns:101.201.29.97:5349"]
+          username: "openavatar"
+          credential: "asd123"
+          realm: "turn.101-201-29-97.turnserver"
         module: client/rtc_client/client_handler_rtc
         # max time a session will last for
-        connection_ttl: 900
+        connection_ttl: 1800
       SileroVad:
         module: vad/silerovad/vad_handler_silero
-        speaking_threshold: 0.5
-        start_delay: 2048
-        end_delay: 5000
-        buffer_look_back: 5000
-        speech_padding: 512
+        speaking_threshold: 0.4
+        start_delay: 2400
+        end_delay: 16000
+        buffer_look_back: 14400
+        speech_padding: 1200
       SenseVoice:
         enabled: True
         module: asr/sensevoice/asr_handler_sensevoice
         model_name: "iic/SenseVoiceSmall"
+      Paraformer:
+        enabled: False
+        module: asr/paraformer/asr_handler_paraformer
+        model_name: "paraformer-realtime-v2"
+        api_key: "sk-c70f4210a7994069b92fed3d33deb5d7" # default=os.getenv("DASHSCOPE_API_KEY")
+        sample_rate: 16000
+        format: "pcm"
+        enable_intermediate_result: True
+        enable_punctuation_prediction: True
+        enable_inverse_text_normalization: True
+        language_hints: ["zh"]
+        max_sentence_silence: 800
+        enable_emotion_recognition: False
+        enable_semantic_sentence_detection: False
       CosyVoice:
         enabled: True
         module: tts/bailian_tts/tts_handler_cosyvoice_bailian
         voice: "longxiaochun"
         model_name: "cosyvoice-v1"
+        # default=os.getenv("DASHSCOPE_API_KEY")
+        api_key: "sk-c70f4210a7994069b92fed3d33deb5d7" # default=os.getenv("DASHSCOPE_API_KEY")
         # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
       LLMOpenAICompatible:
         enabled: True
         module: llm/openai_compatible/llm_handler_openai_compatible
-        model_name: "qwen-plus"
-        enable_video_input: False # ensure your llm support video input
+        model_name: "qwen-vl-plus"
+        enable_video_input: True # ensure your llm support video input
         history_length: 20
         # model_name: "gemini-2.0-flash"
-        system_prompt: "请你扮演一个 AI 助手，用简短的两三句对话来回答用户的问题，并在对话内容中加入合适的标点符号，不需要讨论标点符号相关的内容"
+        system_prompt: "
+          ### 角色与任务
+          你是中海高科AI心理师，专为青少年提供温暖的倾听。你的核心使命是像朋友一样，温暖、耐心地陪伴和倾听，而不是一个说教的老师。
+          
+          ### 对话风格与原则
+          *   **像朋友一样聊天**：保持对话**自然、简洁、口语化**。一次只聊一个点，多用“后来呢？”“可以多和我说说吗？”这样的开放式问题，鼓励对方继续分享。
+          *   **先共情，后引导**：你的首要任务是理解和确认对方的感受（比如：“听起来你感觉很委屈/很累……”）。**不要急着说教或给建议**。在充分倾听后，可以引导他们自己思考解决方案，而不是直接给出答案。
+          *   **保持谦逊**：记住你只是一个AI，不是心理医生。**绝不提供心理诊断或医疗建议**。在合适的时机，可以温和地提醒用户这一点。
+          
+          ### 【安全红线 - 绝对优先】
+          如果用户明确表达**自杀、自残或伤害他人**的想法，你必须**立即中断**当前对话，并只回复以下固定内容，不要添加任何多余的话：
+          
+          “听到你这么说，我非常担心。你的安全是最重要的事。我是一个AI，能做的有限，但请相信，有很多人可以帮助你。请立即联系他们：
+          - **全国希望24小时热线：400-161-9995**
+          - **情况紧急请拨打：110 或 120**
+          他们是专业的，能给你现在最需要的支持。请一定联系他们。”
+          
+          "  
         api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
         # api_url: 'http://127.0.0.1:11434/v1' # ollama
         # api_url: 'https://generativelanguage.googleapis.com/v1beta/openai/'
         # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
+        api_key: "sk-c70f4210a7994069b92fed3d33deb5d7" # default=os.getenv("DASHSCOPE_API_KEY")
       LiteAvatar:
         module: avatar/liteavatar/avatar_handler_liteavatar
-        avatar_name: 20250408/sample_data
-        fps: 25
+        avatar_name: 20250612/P1-64AzfrJY037WpS69RiUMw  
+        fps: 8
         debug: false
         enable_fast_mode: false
-        use_gpu: true
+        use_gpu: false

@@ -1,0 +1,10 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "src/handlers/client/rtc_client/frontend"
+		}
+	]
+}

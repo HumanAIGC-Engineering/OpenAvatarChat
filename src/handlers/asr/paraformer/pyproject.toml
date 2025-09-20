@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asr-paraformer"
+version = "0.1.0"
+description = "Aliyun Paraformer ASR Handler"
+dependencies = [
+    "dashscope>=1.14.0",
+    "numpy>=1.21.0",
+    "torch>=1.9.0",
+    "loguru>=0.6.0",
+    "pydantic>=1.8.0",
+]

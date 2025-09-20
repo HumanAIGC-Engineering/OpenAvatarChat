@@ -1,24 +1,24 @@
 [submodule "src/avatar/algo/tts2face_cpu"]
 	path = src/handlers/avatar/liteavatar/algo/liteavatar
-	url = https://github.com/HumanAIGC/lite-avatar.git
+	url = git@github.com:HumanAIGC/lite-avatar.git
 [submodule "src/third_party/silero_vad"]
 	path = src/handlers/vad/silerovad/silero_vad
-	url = https://github.com/snakers4/silero-vad.git
+	url = git@github.com:snakers4/silero-vad.git
 [submodule "src/third_party/MiniCPM-o"]
 	path = src/handlers/llm/minicpm/MiniCPM-o
-	url = https://github.com/OpenBMB/MiniCPM-o.git
+	url = git@github.com:OpenBMB/MiniCPM-o.git
 [submodule "src/third_party/gradio_webrtc_videochat"]
 	path = src/third_party/gradio_webrtc_videochat
-	url = https://github.com/HumanAIGC-Engineering/gradio-webrtc.git
+	url = git@github.com:leauyn/gradio-webrtc.git
 [submodule "src/third_party/CosyVoice"]
 	path = src/handlers/tts/cosyvoice/CosyVoice
-	url = https://github.com/FunAudioLLM/CosyVoice.git
+	url = git@github.com:FunAudioLLM/CosyVoice.git
 [submodule "src/handlers/avatar/lam/LAM_Audio2Expression"]
 	path = src/handlers/avatar/lam/LAM_Audio2Expression
-	url = https://github.com/aigc3d/LAM_Audio2Expression.git
+	url = git@github.com:aigc3d/LAM_Audio2Expression.git
 [submodule "src/handlers/avatar/musetalk/MuseTalk"]
 	path = src/handlers/avatar/musetalk/MuseTalk
-	url = https://github.com/TMElyralab/MuseTalk.git
+	url = git@github.com:TMElyralab/MuseTalk.git
 [submodule "src/handlers/client/rtc_client/frontend"]
 	path = src/handlers/client/rtc_client/frontend
-	url = https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI.git
+	url = git@github.com:leauyn/OpenAvatarChat-WebUI.git

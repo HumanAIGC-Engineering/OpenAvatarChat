@@ -62,7 +62,7 @@ def setup_demo():
         display: none !important;
     }
     """
-    with gr.Blocks(css=css) as gradio_block:
+    with gr.Blocks(css=css, title="AI 数字人陪伴") as gradio_block:
         with gr.Column():
             with gr.Group() as rtc_container:
                 pass

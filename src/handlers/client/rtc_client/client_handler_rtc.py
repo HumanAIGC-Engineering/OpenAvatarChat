@@ -213,7 +213,7 @@ class ClientHandlerRtc(ClientHandlerBase):
                 gradio.components.HTML(
                     """
                     <h1 id="openavatarchat">
-                       The Gradio page is no longer available. Please use the openavatarchat-webui submodule instead.
+                       AI 数字人陪伴
                     </h1>
                     """,
                     visible=True

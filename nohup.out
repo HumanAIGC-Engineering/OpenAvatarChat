@@ -1,0 +1,322 @@
+MODE=UI python src/demo.py
+2025-09-15 09:05:54.324 | INFO     | service.service_utils.service_config_loader:load_configs:23 - Load config with env default from /data/projects/github/OpenAvatarChat/config/chat_with_openai_compatible_bailian_cosyvoice.yaml
+2025-09-15 09:05:54.354 | INFO     | service.service_utils.logger_utils:config_loggers:8 - Set log level to INFO
+new /gradio
+2025-09-15 09:05:54.587 | INFO     | chat_engine.core.handler_manager:initialize:48 - Use handler search path: ['/data/projects/github/OpenAvatarChat/src/handlers']
+2025-09-15 09:05:54.587 | INFO     | chat_engine.core.handler_manager:initialize:72 - Try to load client.rtc_client.client_handler_rtc
+2025-09-15 09:05:54.806 | INFO     | chat_engine.core.handler_manager:register_handler:130 - Registered handler RtcClient(<class 'client.rtc_client.client_handler_rtc.ClientHandlerRtc'>) with config: enabled=True module='client/rtc_client/client_handler_rtc' concurrent_limit=2 connection_ttl=1800 turn_config={'turn_provider': 'turn_server', 'urls': <BoxList: ['turn:101.201.29.97:3478', 'turns:101.201.29.97:5349']>, 'username': 'openavatar', 'credential': 'asd123', 'realm': 'turn.101-201-29-97.turnserver'}
+2025-09-15 09:05:54.806 | INFO     | chat_engine.core.handler_manager:initialize:72 - Try to load vad.silerovad.vad_handler_silero
+2025-09-15 09:05:54.914 | INFO     | chat_engine.core.handler_manager:register_handler:130 - Registered handler SileroVad(<class 'vad.silerovad.vad_handler_silero.HandlerAudioVAD'>) with config: enabled=True module='vad/silerovad/vad_handler_silero' concurrent_limit=2 speaking_threshold=0.4 start_delay=2400 end_delay=16000 buffer_look_back=14400 speech_padding=1200
+2025-09-15 09:05:54.914 | INFO     | chat_engine.core.handler_manager:initialize:72 - Try to load asr.sensevoice.asr_handler_sensevoice
+2025-09-15 09:05:58.148 | INFO     | chat_engine.core.handler_manager:register_handler:130 - Registered handler SenseVoice(<class 'asr.sensevoice.asr_handler_sensevoice.HandlerASR'>) with config: enabled=True module='asr/sensevoice/asr_handler_sensevoice' concurrent_limit=2 model_name='iic/SenseVoiceSmall'
+2025-09-15 09:05:58.148 | INFO     | chat_engine.core.handler_manager:initialize:72 - Try to load tts.bailian_tts.tts_handler_cosyvoice_bailian
+2025-09-15 09:05:58.307 | INFO     | chat_engine.core.handler_manager:register_handler:130 - Registered handler CosyVoice(<class 'tts.bailian_tts.tts_handler_cosyvoice_bailian.HandlerTTS'>) with config: enabled=True module='tts/bailian_tts/tts_handler_cosyvoice_bailian' concurrent_limit=2 ref_audio_path=None ref_audio_text=None voice='longxiaochun' sample_rate=24000 api_key='sk-c70f4210a7994069b92fed3d33deb5d7' model_name='cosyvoice-v1'
+2025-09-15 09:05:58.307 | INFO     | chat_engine.core.handler_manager:initialize:72 - Try to load llm.openai_compatible.llm_handler_openai_compatible
+2025-09-15 09:05:58.558 | INFO     | chat_engine.core.handler_manager:register_handler:130 - Registered handler LLMOpenAICompatible(<class 'llm.openai_compatible.llm_handler_openai_compatible.HandlerLLM'>) with config: enabled=True module='llm/openai_compatible/llm_handler_openai_compatible' concurrent_limit=2 model_name='qwen-vl-plus' system_prompt=' ### 角色与任务 你是中海高科AI心理师，专为青少年提供温暖的倾听。你的核心任务是成为一个优秀的倾听者，而不是一个说教的老师。\n### 对话核心原则 1.  **共情与简洁**: 你的回答要温暖、有同理心，但同时要**简洁自然，像聊天一样**。一次只围绕一个焦点进行回应，鼓励用户继续说下去。 2.  **倾听与建议**: 你的首要工作是倾听和理解对方的感受。多用“听起来这让你觉得...”来确认他的情绪，并给出解决方案。 3.  **明确AI边界**: 你不是医生，**绝不能进行心理诊断**或提供医疗建议。要让用户知道你是一个AI伙伴。\n### 【最高优先级：安全红线】 如果用户明确表达**自杀、自残或伤害他人**的想法，你必须**立即中断**当前对话，并直接发送以下固定内容，不要添加任何多余的话：\n“听到你这么说，我非常担心。你的安全是最重要的事。我是一个AI，能做的有限，但请相信，有很多人可以帮助你。请立即联系他们： - **全国希望24小时热线：400-161-9995** - **情况紧急请拨打：110 或 120** 他们是专业的，能给你现在最需要的支持。请一定联系他们。”\n' api_key='sk-c70f4210a7994069b92fed3d33deb5d7' api_url='https://dashscope.aliyuncs.com/compatible-mode/v1' enable_video_input=True history_length=20
+2025-09-15 09:05:58.558 | INFO     | chat_engine.core.handler_manager:initialize:72 - Try to load avatar.liteavatar.avatar_handler_liteavatar
+2025-09-15 09:05:58.561 | INFO     | handlers.avatar.liteavatar.liteavatar_worker:<module>:13 - cudnn_path: /root/miniconda3/envs/webrtc/lib/python3.10/site-packages/nvidia/cudnn/lib
+2025-09-15 09:05:58.595 | INFO     | chat_engine.core.handler_manager:register_handler:130 - Registered handler LiteAvatar(<class 'avatar.liteavatar.avatar_handler_liteavatar.HandlerTts2Face'>) with config: enabled=True module='avatar/liteavatar/avatar_handler_liteavatar' concurrent_limit=2 avatar_name='20250612/P1-64AzfrJY037WpS69RiUMw' debug=False fps=8 enable_fast_mode=False use_gpu=False
+2025-09-15 09:06:02.517 | INFO     | handlers.avatar.liteavatar.liteavatar_worker:<module>:13 - cudnn_path: /root/miniconda3/envs/webrtc/lib/python3.10/site-packages/nvidia/cudnn/lib
+2025-09-15 09:06:02.610 | INFO     | handlers.avatar.liteavatar.avatar_processor_factory:create_avatar_processor:17 - create avatar processor with init option: audio_sample_rate=24000 video_frame_rate=8 avatar_name='20250612/P1-64AzfrJY037WpS69RiUMw' debug=False enable_fast_mode=False use_gpu=False
+2025-09-15 09:06:03.594 | INFO     | handlers.avatar.liteavatar.avatar_processor:__init__:34 - init avatar processor audio_sample_rate=24000 video_frame_rate=8 avatar_name='20250612/P1-64AzfrJY037WpS69RiUMw' debug=False enable_fast_mode=False use_gpu=False
+2025-09-15 09:06:03.594 | INFO     | handlers.avatar.liteavatar.avatar_processor:_init_algo:298 - init algo
+2025-09-15 09:06:03.594 | INFO     | handlers.avatar.liteavatar.algo.tts2face_cpu_adapter:_get_avatar_data_dir:86 - use avatar name 20250612/P1-64AzfrJY037WpS69RiUMw
+2025-09-15 09:06:03.594 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:__init__:47 - liteAvatar init start...
+2025-09-15 09:06:07.585 | INFO     | handlers.avatar.liteavatar.liteavatar_worker:<module>:13 - cudnn_path: /root/miniconda3/envs/webrtc/lib/python3.10/site-packages/nvidia/cudnn/lib
+2025-09-15 09:06:07.691 | INFO     | handlers.avatar.liteavatar.avatar_processor_factory:create_avatar_processor:17 - create avatar processor with init option: audio_sample_rate=24000 video_frame_rate=8 avatar_name='20250612/P1-64AzfrJY037WpS69RiUMw' debug=False enable_fast_mode=False use_gpu=False
+2025-09-15 09:06:08.458 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:__init__:59 - audio2mouth init over in 4.863443851470947s
+2025-09-15 09:06:08.458 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:__init__:67 - liteAvatar init over
+2025-09-15 09:06:08.458 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:load_dynamic_model:86 - start to load dynamic data
+2025-09-15 09:06:08.609 | INFO     | chat_engine.core.handler_manager:load_handlers:144 - Handler LiteAvatar loaded in 10013 milliseconds
+2025-09-15 09:06:08.609 | INFO     | chat_engine.core.handler_manager:load_handlers:144 - Handler RtcClient loaded in 0 milliseconds
+2025-09-15 09:06:08.703 | INFO     | handlers.avatar.liteavatar.avatar_processor:__init__:34 - init avatar processor audio_sample_rate=24000 video_frame_rate=8 avatar_name='20250612/P1-64AzfrJY037WpS69RiUMw' debug=False enable_fast_mode=False use_gpu=False
+2025-09-15 09:06:08.703 | INFO     | handlers.avatar.liteavatar.avatar_processor:_init_algo:298 - init algo
+2025-09-15 09:06:08.703 | INFO     | handlers.avatar.liteavatar.algo.tts2face_cpu_adapter:_get_avatar_data_dir:86 - use avatar name 20250612/P1-64AzfrJY037WpS69RiUMw
+2025-09-15 09:06:08.704 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:__init__:47 - liteAvatar init start...
+2025-09-15 09:06:08.749 | INFO     | chat_engine.core.handler_manager:load_handlers:144 - Handler SileroVad loaded in 139 milliseconds
+2025-09-15 09:06:08,877 - modelscope - INFO - Intra-cloud acceleration enabled for downloading from iic/SenseVoiceSmall
+WARNING:root:trust_remote_code: False
+2025-09-15 09:06:09.403 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:load_data_sync:130 - load data sync in 0.896s
+2025-09-15 09:06:09.404 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:load_data:134 - loading data from /data/projects/github/OpenAvatarChat/resource/avatar/liteavatar/20250612/P1-64AzfrJY037WpS69RiUMw
+  0%|          | 0/150 [00:00<?, ?it/s]  2%|▏         | 3/150 [00:00<00:04, 29.74it/s]  9%|▉         | 14/150 [00:00<00:01, 73.24it/s] 15%|█▍        | 22/150 [00:00<00:02, 60.32it/s] 21%|██▏       | 32/150 [00:00<00:01, 73.31it/s] 28%|██▊       | 42/150 [00:00<00:01, 81.61it/s] 35%|███▍      | 52/150 [00:00<00:01, 86.78it/s] 41%|████▏     | 62/150 [00:00<00:00, 90.76it/s] 48%|████▊     | 72/150 [00:00<00:00, 93.15it/s] 55%|█████▍    | 82/150 [00:00<00:00, 94.86it/s] 61%|██████▏   | 92/150 [00:01<00:00, 95.86it/s] 68%|██████▊   | 102/150 [00:01<00:00, 96.62it/s] 75%|███████▍  | 112/150 [00:01<00:00, 97.33it/s] 81%|████████▏ | 122/150 [00:01<00:00, 97.49it/s] 88%|████████▊ | 132/150 [00:01<00:00, 97.68it/s] 95%|█████████▍| 142/150 [00:01<00:00, 97.75it/s]100%|██████████| 150/150 [00:01<00:00, 89.86it/s]
+2025-09-15 09:06:11.075 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:load_data:147 - load data over in 1.6703462600708008s
+2025-09-15 09:06:11.075 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:load_dynamic_model:96 - load dynamic model in 2.617s
+2025-09-15 09:06:11.075 | INFO     | handlers.avatar.liteavatar.algo.bg_frame_counter:__init__:7 - create bg frame counter with 150 frames
+/data/projects/github/OpenAvatarChat/src/handlers/avatar/liteavatar/algo/liteavatar/funasr_local/models/e2e_asr_paraformer.py:278: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(False):
+extract paraformer feature in 0.25ms
+extract all feature in 0.25s
+audio length: 1.0s
+generate 30 frames in 0.295s with avg inference time 9.828ms/frame
+2025-09-15 09:06:11.380 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:audio2param:275 - silence part: 0-30 frames
+extract paraformer feature in 0.209ms
+extract all feature in 0.209s
+audio length: 1.0s
+generate 30 frames in 0.25s with avg inference time 8.331ms/frame
+2025-09-15 09:06:11.643 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:audio2param:275 - silence part: 0-30 frames
+extract paraformer feature in 0.208ms
+extract all feature in 0.208s
+audio length: 1.0s
+generate 30 frames in 0.248s with avg inference time 8.279ms/frame
+2025-09-15 09:06:11.904 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:audio2param:275 - silence part: 0-30 frames
+extract paraformer feature in 0.205ms
+extract all feature in 0.205s
+audio length: 1.0s
+generate 30 frames in 0.245s with avg inference time 8.171ms/frame
+2025-09-15 09:06:12.162 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:audio2param:275 - silence part: 0-30 frames
+extract paraformer feature in 0.205ms
+extract all feature in 0.205s
+audio length: 1.0s
+generate 30 frames in 0.269s with avg inference time 8.965ms/frame
+2025-09-15 09:06:12.444 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:audio2param:275 - silence part: 0-30 frames
+funasr version: 1.2.7.
+Downloading Model from https://www.modelscope.cn to directory: /data/projects/github/OpenAvatarChat/models/iic/SenseVoiceSmall
+2025-09-15 09:06:13.411 | INFO     | chat_engine.core.handler_manager:load_handlers:144 - Handler SenseVoice loaded in 4662 milliseconds
+2025-09-15 09:06:13.412 | INFO     | chat_engine.core.handler_manager:load_handlers:144 - Handler CosyVoice loaded in 0 milliseconds
+2025-09-15 09:06:13.412 | INFO     | chat_engine.core.handler_manager:load_handlers:144 - Handler LLMOpenAICompatible loaded in 0 milliseconds
+2025-09-15 09:06:13.412 | INFO     | service.rtc_service.rtc_provider:prepare_rtc_configuration:31 - Parsing RTC config: {'turn_provider': 'turn_server', 'urls': <BoxList: ['turn:101.201.29.97:3478', 'turns:101.201.29.97:5349']>, 'username': 'openavatar', 'credential': 'asd123', 'realm': 'turn.101-201-29-97.turnserver'}
+2025-09-15 09:06:13.413 | INFO     | service.rtc_service.rtc_provider:prepare_rtc_configuration:56 - Use turn_server as rtc turn provider.
+2025-09-15 09:06:13.581 | INFO     | client.rtc_client.client_handler_rtc:setup_rtc_ui:202 - Serving frontend from /data/projects/github/OpenAvatarChat/src/handlers/client/rtc_client/frontend/dist
+2025-09-15 09:06:13.861 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:__init__:59 - audio2mouth init over in 5.156787395477295s
+2025-09-15 09:06:13.861 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:__init__:67 - liteAvatar init over
+2025-09-15 09:06:13.861 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:load_dynamic_model:86 - start to load dynamic data
+2025-09-15 09:06:13.889 | INFO     | chat_engine.core.handler_manager:load_handlers:150 - Setup client handler RtcClient loaded in 476 milliseconds
+2025-09-15 09:06:13.889 | WARNING  | service.service_utils.ssl_helpers:create_ssl_context:26 - Cert file /data/projects/github/OpenAvatarChat/ssl_certs/localhost.crt not found
+2025-09-15 09:06:13.889 | WARNING  | service.service_utils.ssl_helpers:create_ssl_context:29 - Key file /data/projects/github/OpenAvatarChat/ssl_certs/localhost.key not found
+2025-09-15 09:06:13.890 | INFO     | service.service_utils.ssl_helpers:create_ssl_context:32 - Service will be started on 0.0.0.0:8282
+INFO:     Started server process [268243]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8282 (Press CTRL+C to quit)
+2025-09-15 09:06:14.695 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:load_data_sync:130 - load data sync in 0.785s
+2025-09-15 09:06:14.696 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:load_data:134 - loading data from /data/projects/github/OpenAvatarChat/resource/avatar/liteavatar/20250612/P1-64AzfrJY037WpS69RiUMw
+  0%|          | 0/150 [00:00<?, ?it/s]  3%|▎         | 4/150 [00:00<00:03, 39.78it/s] 12%|█▏        | 18/150 [00:00<00:01, 94.93it/s] 21%|██▏       | 32/150 [00:00<00:01, 112.35it/s] 31%|███       | 46/150 [00:00<00:00, 120.72it/s] 40%|████      | 60/150 [00:00<00:00, 124.75it/s] 49%|████▉     | 74/150 [00:00<00:00, 127.11it/s] 59%|█████▊    | 88/150 [00:00<00:00, 128.61it/s] 68%|██████▊   | 102/150 [00:00<00:00, 129.47it/s] 77%|███████▋  | 116/150 [00:00<00:00, 129.95it/s] 87%|████████▋ | 130/150 [00:01<00:00, 130.68it/s] 96%|█████████▌| 144/150 [00:01<00:00, 130.05it/s]100%|██████████| 150/150 [00:01<00:00, 123.07it/s]
+2025-09-15 09:06:15.916 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:load_data:147 - load data over in 1.2197239398956299s
+2025-09-15 09:06:15.916 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:load_dynamic_model:96 - load dynamic model in 2.055s
+2025-09-15 09:06:15.916 | INFO     | handlers.avatar.liteavatar.algo.bg_frame_counter:__init__:7 - create bg frame counter with 150 frames
+/data/projects/github/OpenAvatarChat/src/handlers/avatar/liteavatar/algo/liteavatar/funasr_local/models/e2e_asr_paraformer.py:278: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(False):
+extract paraformer feature in 0.216ms
+extract all feature in 0.216s
+audio length: 1.0s
+generate 30 frames in 0.249s with avg inference time 8.301ms/frame
+2025-09-15 09:06:16.174 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:audio2param:275 - silence part: 0-30 frames
+extract paraformer feature in 0.124ms
+extract all feature in 0.124s
+audio length: 1.0s
+generate 30 frames in 0.154s with avg inference time 5.127ms/frame
+2025-09-15 09:06:16.341 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:audio2param:275 - silence part: 0-30 frames
+extract paraformer feature in 0.125ms
+extract all feature in 0.125s
+audio length: 1.0s
+generate 30 frames in 0.154s with avg inference time 5.147ms/frame
+2025-09-15 09:06:16.508 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:audio2param:275 - silence part: 0-30 frames
+[32mINFO[0m:	  Visit [36mhttps://fastrtc.org/userguide/api/[0m for WebRTC or Websocket API docs.
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "GET /ui/index.html HTTP/1.1" 200 OK
+extract paraformer feature in 0.129ms
+extract all feature in 0.129s
+audio length: 1.0s
+generate 30 frames in 0.159s with avg inference time 5.292ms/frame
+2025-09-15 09:06:16.680 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:audio2param:275 - silence part: 0-30 frames
+extract paraformer feature in 0.124ms
+extract all feature in 0.124s
+audio length: 1.0s
+generate 30 frames in 0.154s with avg inference time 5.123ms/frame
+2025-09-15 09:06:16.846 | INFO     | handlers.avatar.liteavatar.algo.liteavatar.lite_avatar:audio2param:275 - silence part: 0-30 frames
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "GET /openavatarchat/initconfig HTTP/1.1" 200 OK
+2025-09-15 09:06:23.249 | INFO     | chat_engine.common.client_handler_base:start_session:52 - Starting session 3cea59
+2025-09-15 09:06:23.250 | INFO     | handlers.avatar.liteavatar.liteavatar_worker:_event_input_loop:142 - receive event: Tts2FaceEvent.START
+2025-09-15 09:06:23.250 | INFO     | handlers.avatar.liteavatar.liteavatar_worker:on_start:53 - on algo processor start
+2025-09-15 09:06:23.251 | INFO     | handlers.avatar.liteavatar.avatar_processor:_audio2signal_loop:114 - audio2signal loop started
+2025-09-15 09:06:23.251 | INFO     | handlers.avatar.liteavatar.avatar_processor:_signal2img_loop:173 - signal2img loop started
+2025-09-15 09:06:23.251 | INFO     | handlers.avatar.liteavatar.avatar_processor:_mouth2full_loop:225 - combine img loop started
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+2025-09-15 09:06:29.160 | WARNING  | engine_utils.general_slicer:update_start_id:56 - Update slicer start id to 93895
+2025-09-15 09:06:29.313 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_end:112 - Pre start of new human speech
+2025-09-15 09:06:29.314 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_pre_start:89 - Back to not started status
+2025-09-15 09:06:29.438 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_end:112 - Pre start of new human speech
+2025-09-15 09:06:29.470 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_pre_start:89 - Back to not started status
+2025-09-15 09:06:29.593 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_end:112 - Pre start of new human speech
+2025-09-15 09:06:29.746 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_pre_start:89 - Back to not started status
+2025-09-15 09:06:29.747 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_end:112 - Pre start of new human speech
+2025-09-15 09:06:29.839 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_pre_start:89 - Back to not started status
+2025-09-15 09:06:30.487 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_end:112 - Pre start of new human speech
+2025-09-15 09:06:30.671 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_pre_start:78 - Start of human speech
+2025-09-15 09:06:30.672 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_pre_start:85 - VAD pre_start to start got timestamp 101063
+2025-09-15 09:06:30.695 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:30.695 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:30.755 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:30.756 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:30.787 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:30.787 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:30.879 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:30.884 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:31.418 | INFO     | avatar.liteavatar.avatar_handler_liteavatar:destroy_context:132 - destroy context with session id: session
+2025-09-15 09:06:31.418 | INFO     | handlers.avatar.liteavatar.liteavatar_handler_context:clear:92 - clear tts2face context
+2025-09-15 09:06:31.419 | INFO     | handlers.avatar.liteavatar.liteavatar_worker:_event_input_loop:142 - receive event: Tts2FaceEvent.STOP
+2025-09-15 09:06:31.419 | INFO     | handlers.avatar.liteavatar.avatar_processor:stop:79 - stop avatar processor, totol session time 8.168
+2025-09-15 09:06:31.419 | INFO     | handlers.avatar.liteavatar.liteavatar_worker:on_stop:56 - on algo processor stop
+2025-09-15 09:06:31.446 | INFO     | handlers.avatar.liteavatar.liteavatar_handler_context:_media_out_loop:78 - media out loop exit
+2025-09-15 09:06:31.463 | INFO     | handlers.avatar.liteavatar.avatar_processor:_audio2signal_loop:167 - audio2signal loop stopped
+2025-09-15 09:06:31.466 | INFO     | handlers.avatar.liteavatar.avatar_processor:_signal2img_loop:222 - signal2img loop ended
+2025-09-15 09:06:31.467 | INFO     | handlers.avatar.liteavatar.liteavatar_handler_context:_event_out_loop:89 - event out loop exit
+2025-09-15 09:06:31.467 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:destroy_context:148 - destroy context
+2025-09-15 09:06:31.469 | INFO     | chat_engine.core.chat_session:stop:386 - chat session stopped
+2025-09-15 09:06:31.514 | INFO     | handlers.avatar.liteavatar.avatar_processor:_mouth2full_loop:281 - combine img loop ended
+2025-09-15 09:06:31.514 | INFO     | handlers.avatar.liteavatar.avatar_processor:stop:89 - avatar processor stopped
+2025-09-15 09:06:33.256 | INFO     | chat_engine.common.client_handler_base:start_session:52 - Starting session 50zikh
+2025-09-15 09:06:33.257 | INFO     | handlers.avatar.liteavatar.liteavatar_worker:_event_input_loop:142 - receive event: Tts2FaceEvent.START
+2025-09-15 09:06:33.257 | INFO     | handlers.avatar.liteavatar.liteavatar_worker:on_start:53 - on algo processor start
+2025-09-15 09:06:33.258 | INFO     | handlers.avatar.liteavatar.avatar_processor:_audio2signal_loop:114 - audio2signal loop started
+2025-09-15 09:06:33.258 | INFO     | handlers.avatar.liteavatar.avatar_processor:_signal2img_loop:173 - signal2img loop started
+2025-09-15 09:06:33.258 | INFO     | handlers.avatar.liteavatar.avatar_processor:_mouth2full_loop:225 - combine img loop started
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+INFO:     2409:8900:2481:a525:4888:8ff:fe60:b18b:0 - "POST /webrtc/offer HTTP/1.1" 200 OK
+2025-09-15 09:06:39.156 | WARNING  | engine_utils.general_slicer:update_start_id:56 - Update slicer start id to 93622
+2025-09-15 09:06:39.157 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_end:112 - Pre start of new human speech
+2025-09-15 09:06:39.280 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_pre_start:78 - Start of human speech
+2025-09-15 09:06:39.280 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_pre_start:85 - VAD pre_start to start got timestamp 93622
+2025-09-15 09:06:39.307 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.368 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.368 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.429 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.429 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.490 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.491 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.521 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.522 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.613 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.613 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.674 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.734 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.735 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.796 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.796 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.857 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.857 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.919 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.920 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.950 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:39.951 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.042 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.042 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.073 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.073 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.164 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.194 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.194 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.255 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.256 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.346 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.347 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.407 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.408 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.408 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.408 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.499 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.500 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.560 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.561 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.591 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.682 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.683 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.727 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_start:98 - End of human speech
+2025-09-15 09:06:40.727 | INFO     | vad.silerovad.vad_handler_silero:_update_status_on_start:105 - VAD start to start got timestamp 118198
+2025-09-15 09:06:40.743 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:119 - audio in
+2025-09-15 09:06:40.744 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:139 - dump audio
+  0%|[34m          [0m| 0/1 [00:00<?, ?it/s]100%|[34m██████████[0m| 1/1 [00:00<00:00,  2.46it/s]{'load_data': '0.000', 'extract_feat': '0.009', 'forward': '0.407', 'batch_size': '1', 'rtf': '0.205'}, : 100%|[34m██████████[0m| 1/1 [00:00<00:00,  2.46it/s]rtf_avg: 0.205: 100%|[34m██████████[0m| 1/1 [00:00<00:00,  2.46it/s]                                                                                          rtf_avg: 0.205: 100%|[34m██████████[0m| 1/1 [00:00<00:00,  2.45it/s]
+2025-09-15 09:06:41.159 | INFO     | asr.sensevoice.asr_handler_sensevoice:handle:143 - [{'key': 'rand_key_3HqdZ6J6afU1z', 'text': '<|en|><|EMO_UNKNOWN|><|Speech|><|woitn|>ok'}]
+2025-09-15 09:06:41.176 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:131 - llm input qwen-vl-plus ok 
+2025-09-15 09:06:41.944 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 听起来
+2025-09-15 09:06:41.965 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 听起来
+2025-09-15 09:06:41.970 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 你
+2025-09-15 09:06:41.975 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 可能
+2025-09-15 09:06:41.976 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 遇到了
+2025-09-15 09:06:41.985 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 一些
+2025-09-15 09:06:42.000 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 困扰
+2025-09-15 09:06:42.012 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - ，
+2025-09-15 09:06:42.026 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 我能
+2025-09-15 09:06:42.061 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 理解
+2025-09-15 09:06:42.065 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 你现在
+2025-09-15 09:06:42.077 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 的心情
+2025-09-15 09:06:42.081 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 。
+2025-09-15 09:06:42.089 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:on_open:160 - 连接成功
+2025-09-15 09:06:42.090 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 你
+2025-09-15 09:06:42.090 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 可能
+2025-09-15 09:06:42.091 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 遇到了
+2025-09-15 09:06:42.092 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 一些
+2025-09-15 09:06:42.092 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 困扰
+2025-09-15 09:06:42.092 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call ，
+2025-09-15 09:06:42.093 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 我能
+2025-09-15 09:06:42.093 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 理解
+2025-09-15 09:06:42.093 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 你现在
+2025-09-15 09:06:42.094 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 的心情
+2025-09-15 09:06:42.094 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 。
+2025-09-15 09:06:42.097 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 如果你
+2025-09-15 09:06:42.105 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 愿意
+2025-09-15 09:06:42.118 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 的话
+2025-09-15 09:06:42.125 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 如果你
+2025-09-15 09:06:42.125 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 愿意
+2025-09-15 09:06:42.126 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 的话
+2025-09-15 09:06:42.222 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - ，
+2025-09-15 09:06:42.225 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 可以
+2025-09-15 09:06:42.229 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 和
+2025-09-15 09:06:42.232 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 我
+2025-09-15 09:06:42.236 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 分享
+2025-09-15 09:06:42.242 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 一下
+2025-09-15 09:06:42.246 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 发生了
+2025-09-15 09:06:42.247 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call ，
+2025-09-15 09:06:42.247 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 可以
+2025-09-15 09:06:42.248 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 和
+2025-09-15 09:06:42.248 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 我
+2025-09-15 09:06:42.249 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 分享
+2025-09-15 09:06:42.249 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 一下
+2025-09-15 09:06:42.250 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 发生了
+2025-09-15 09:06:42.252 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 什么
+2025-09-15 09:06:42.254 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - 吗
+2025-09-15 09:06:42.269 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:151 - ？
+2025-09-15 09:06:42.280 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 什么
+2025-09-15 09:06:42.280 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call 吗
+2025-09-15 09:06:42.281 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:134 - streaming_call ？
+2025-09-15 09:06:42.287 | INFO     | llm.openai_compatible.llm_handler_openai_compatible:handle:173 - avatar text end
+2025-09-15 09:06:42.311 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:handle:137 - streaming_call last 
+2025-09-15 09:06:42.462 | INFO     | avatar.liteavatar.avatar_handler_liteavatar:destroy_context:132 - destroy context with session id: session
+2025-09-15 09:06:42.462 | INFO     | handlers.avatar.liteavatar.liteavatar_handler_context:clear:92 - clear tts2face context
+2025-09-15 09:06:42.463 | INFO     | handlers.avatar.liteavatar.liteavatar_worker:_event_input_loop:142 - receive event: Tts2FaceEvent.STOP
+2025-09-15 09:06:42.463 | INFO     | handlers.avatar.liteavatar.avatar_processor:stop:79 - stop avatar processor, totol session time 9.205
+2025-09-15 09:06:42.463 | INFO     | handlers.avatar.liteavatar.liteavatar_worker:on_stop:56 - on algo processor stop
+2025-09-15 09:06:42.469 | INFO     | handlers.avatar.liteavatar.avatar_processor:_audio2signal_loop:167 - audio2signal loop stopped
+2025-09-15 09:06:42.481 | INFO     | handlers.avatar.liteavatar.liteavatar_handler_context:_media_out_loop:78 - media out loop exit
+2025-09-15 09:06:42.489 | INFO     | handlers.avatar.liteavatar.avatar_processor:_mouth2full_loop:281 - combine img loop ended
+2025-09-15 09:06:42.507 | INFO     | handlers.avatar.liteavatar.liteavatar_handler_context:_event_out_loop:89 - event out loop exit
+2025-09-15 09:06:42.569 | INFO     | handlers.avatar.liteavatar.avatar_processor:_signal2img_loop:222 - signal2img loop ended
+2025-09-15 09:06:42.570 | INFO     | handlers.avatar.liteavatar.avatar_processor:stop:89 - avatar processor stopped
+2025-09-15 09:06:44.165 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:on_complete:196 - speech end
+2025-09-15 09:06:44.166 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:on_complete:197 - 合成完成
+2025-09-15 09:06:44.166 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:on_close:209 - 连接关闭
+2025-09-15 09:06:44.174 | INFO     | tts.bailian_tts.tts_handler_cosyvoice_bailian:destroy_context:148 - destroy context
+2025-09-15 09:06:44.174 | INFO     | chat_engine.core.chat_session:stop:386 - chat session stopped
+error: Recipe `gradio` was terminated on line 2 by signal 1
