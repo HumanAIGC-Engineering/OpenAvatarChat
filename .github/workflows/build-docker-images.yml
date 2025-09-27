@@ -1,18 +1,25 @@
-name: Build OpenAvatarChat AMD64 (Complete)
+name: Build OpenAvatarChat AMD64 (Multi-Step)
 
 on:
   workflow_dispatch:  # 仅允许手动触发
 
 env:
-  IMAGE_NAME: openavatar-chat-complete
-  IMAGE_TAG: latest
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/openavatar-chat-complete
+  IMAGE_TAG: ${{ github.run_id }}  # 使用run_id作为唯一标签
+  FULL_IMAGE_NAME: ghcr.io/${{ github.repository }}/openavatar-chat-complete
 
 jobs:
-  build-complete:
+  build-image:
+    name: "第一步：构建镜像"
     runs-on: ubuntu-latest  # 使用AMD64运行器
     timeout-minutes: 480  # 8小时超时
     permissions:
       contents: read
+      packages: write  # 需要写权限来推送包
+    outputs:
+      image_tag: ${{ env.IMAGE_TAG }}
+      full_image_name: ${{ env.FULL_IMAGE_NAME }}
 
     steps:
       - name: Checkout code
@@ -24,28 +31,47 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build complete OpenAvatarChat image
-        run: |
-          echo "🚀 开始构建完整的OpenAvatarChat ARM64镜像..."
-          docker build \
-            -f Dockerfile \
-            -t ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
-            --build-arg CONFIG_FILE=config/chat_with_dify.yaml \
-            .
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Test complete image
+      - name: Build and push OpenAvatarChat image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          build-args: |
+            CONFIG_FILE=config/chat_with_dify.yaml
+          push: true
+          tags: ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=OpenAvatarChat Complete Image
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test pushed image
         run: |
-          echo "🧪 测试镜像功能..."
-          docker run --rm --entrypoint /bin/bash ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "echo '✅ OpenAvatarChat AMD64 image works!'"
+          echo "🧪 测试推送的镜像功能..."
+
+          # 拉取刚刚推送的镜像
+          echo "📥 拉取镜像进行测试..."
+          docker pull ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+          # 使用本地镜像进行测试
+          docker run --rm --entrypoint /bin/bash ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "echo '✅ OpenAvatarChat AMD64 image works!'"
 
           echo "🔧 测试Python环境..."
-          docker run --rm --entrypoint uv ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python --version
+          docker run --rm --entrypoint uv ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python --version
 
           echo "🔧 测试uv包管理器..."
-          docker run --rm --entrypoint uv ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --version
+          docker run --rm --entrypoint uv ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} --version
 
           echo "🔧 测试应用模块导入..."
-          docker run --rm --entrypoint uv ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python -c "
+          docker run --rm --entrypoint uv ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python -c "
           import sys
           sys.path.append('/root/open-avatar-chat/src')
           try:
@@ -58,7 +84,7 @@ jobs:
           "
 
           echo "🔧 测试关键依赖..."
-          docker run --rm --entrypoint uv ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python -c "
+          docker run --rm --entrypoint uv ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python -c "
           try:
             import loguru
             import torch
@@ -70,103 +96,113 @@ jobs:
           "
 
           echo "🔧 测试容器基础功能..."
-          docker run --rm --entrypoint /bin/bash ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "
+          docker run --rm --entrypoint /bin/bash ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "
           echo '📁 检查工作目录...'
-          pwd && ls -la
-          echo '📁 检查虚拟环境...'
-          ls -la .venv/ | head -10
+          pwd && ls -la | head -10
           echo '✅ 容器基础功能正常'
           "
 
-      - name: Save complete image
-        run: |
-          echo "💾 保存镜像为artifact..."
+          echo "✅ 第一步测试完成，镜像已推送至: ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
 
-          # 首先验证镜像是否存在
-          echo "🔍 检查镜像是否存在..."
-          docker images ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+  compress-image:
+    name: "第二步：压缩镜像"
+    runs-on: ubuntu-latest
+    needs: build-image  # 依赖第一步完成
+    timeout-minutes: 180  # 3小时超时
+
+    steps:
+      - name: Pull image from registry
+        run: |
+          echo "📥 从registry拉取镜像..."
+
+          # 从第一步获取镜像信息
+          IMAGE_TAG=${{ needs.build-image.outputs.image_tag }}
+          FULL_IMAGE_NAME=${{ needs.build-image.outputs.full_image_name }}
+
+          echo "🔍 拉取镜像: $FULL_IMAGE_NAME:$IMAGE_TAG"
+          docker pull $FULL_IMAGE_NAME:$IMAGE_TAG
+
+          # 验证镜像
+          echo "📊 拉取的镜像信息:"
+          docker images $FULL_IMAGE_NAME:$IMAGE_TAG
+
+      - name: Compress image with XZ
+        run: |
+          echo "🗜️ 开始压缩镜像..."
+
+          # 获取镜像信息
+          IMAGE_TAG=${{ needs.build-image.outputs.image_tag }}
+          FULL_IMAGE_NAME=${{ needs.build-image.outputs.full_image_name }}
 
           # 检查磁盘空间
-          echo "💽 检查磁盘使用情况..."
-          df -h
-          echo "💽 当前目录磁盘使用:"
-          du -sh . 2>/dev/null || echo "du命令失败"
-
-          # 清理不需要的Docker数据
-          echo "🧹 清理Docker系统..."
-          docker system prune -f
-          docker image prune -f
-
-          echo "💽 清理后的磁盘使用情况:"
+          echo "💽 当前磁盘空间:"
           df -h
 
-          # 直接管道压缩，避免创建大临时文件
-          echo "📦 创建并压缩镜像..."
-          set -o pipefail  # 管道中任一命令失败则退出
-          if docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} | gzip -c > ${{ env.IMAGE_NAME }}-amd64.tar.gz; then
-            echo "✅ 压缩完成"
-          else
-            echo "❌ 压缩失败，检查错误"
-            echo "检查docker save是否正常工作..."
-            docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > /tmp/test.tar 2>&1 || echo "docker save 失败"
-            ls -lh /tmp/test.tar 2>/dev/null || echo "test.tar不存在"
+          # 导出镜像为tar
+          echo "📦 导出镜像为tar文件..."
+          docker save $FULL_IMAGE_NAME:$IMAGE_TAG > openavatar-chat-complete-amd64.tar
+
+          # 验证tar文件
+          echo "📊 tar文件大小:"
+          ls -lh openavatar-chat-complete-amd64.tar
+          TAR_SIZE=$(stat -c %s openavatar-chat-complete-amd64.tar 2>/dev/null || wc -c < openavatar-chat-complete-amd64.tar)
+          echo "tar文件大小: $TAR_SIZE 字节"
+
+          if [ "$TAR_SIZE" -lt 1000000000 ]; then  # 小于1GB
+            echo "❌ tar文件太小，可能有问题: $TAR_SIZE 字节"
             exit 1
           fi
+
+          # 安装XZ工具
+          echo "🔧 安装XZ压缩工具..."
+          sudo apt-get update && sudo apt-get install -y xz-utils
+
+          # 使用XZ压缩 (多线程，最高压缩率)
+          echo "📦 压缩中 (这可能需要一些时间)..."
+          xz -T0 -9 openavatar-chat-complete-amd64.tar
 
           # 检查压缩结果
           echo "📊 压缩后大小:"
-          ls -lh ${{ env.IMAGE_NAME }}-amd64.tar.gz
+          ls -lh openavatar-chat-complete-amd64.tar.xz
 
-          # 检查文件大小是否合理（至少应该有几MB）
-          FILE_SIZE=$(stat -c %s ${{ env.IMAGE_NAME }}-amd64.tar.gz 2>/dev/null || wc -c < ${{ env.IMAGE_NAME }}-amd64.tar.gz)
-          if [ "$FILE_SIZE" -lt 1000000 ]; then  # 小于1MB
-            echo "❌ 文件大小异常: $FILE_SIZE 字节"
-            echo "🔍 调试信息:"
-            echo "检查文件内容:"
-            head -c 200 ${{ env.IMAGE_NAME }}-amd64.tar.gz | od -c || echo "无法读取文件"
-            echo "检查gzip是否安装:"
-            which gzip || echo "gzip未找到"
-            gzip --version 2>/dev/null | head -1 || echo "gzip版本检查失败"
-            echo "检查磁盘空间:"
-            df -h .
+          XZ_SIZE=$(stat -c %s openavatar-chat-complete-amd64.tar.xz 2>/dev/null || wc -c < openavatar-chat-complete-amd64.tar.xz)
+          echo "压缩文件大小: $XZ_SIZE 字节"
+
+          if [ "$XZ_SIZE" -lt 100000000 ]; then  # 小于100MB
+            echo "❌ 压缩文件太小，可能有问题: $XZ_SIZE 字节"
             exit 1
-          else
-            echo "✅ 文件大小正常: $FILE_SIZE 字节"
           fi
 
-          # 再次验证镜像信息
-          echo "📊 原始镜像大小:"
-          docker images ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          # 显示压缩率
+          COMPRESSION_RATIO=$((TAR_SIZE * 100 / XZ_SIZE))
+          echo "📊 压缩率: 约 ${COMPRESSION_RATIO}% (XZ格式)"
 
-          # 验证文件是否正确创建
-          echo "✅ 文件验证:"
-          file ${{ env.IMAGE_NAME }}-amd64.tar.gz 2>/dev/null || echo "file命令不可用"
+          echo "✅ 压缩完成"
 
-          # 最终磁盘检查
-          echo "💽 最终磁盘使用情况:"
-          df -h
-
-      - name: Upload complete image artifact
+      - name: Upload compressed image artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.IMAGE_NAME }}-amd64
-          path: ${{ env.IMAGE_NAME }}-amd64.tar.gz
+          path: ${{ env.IMAGE_NAME }}-amd64.tar.xz
           retention-days: 7
 
-      - name: Show build summary
+      - name: Show final build summary
         run: |
-          echo "✅ 构建完成!"
-          echo "📦 完整的OpenAvatarChat AMD64镜像已准备好下载"
-          echo "🔧 镜像信息:"
-          docker images ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          echo "🎉 完整构建流程完成!"
+          echo "📦 OpenAvatarChat AMD64镜像已压缩并准备下载"
           echo ""
           echo "📥 下载方式:"
-          echo "1. 在GitHub Actions页面下载artifact"
-          echo "2. 解压: gunzip ${{ env.IMAGE_NAME }}-amd64.tar.gz"
-          echo "3. 加载: docker load < ${{ env.IMAGE_NAME }}-amd64.tar"
-          echo "4. 运行: docker run -it ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
+          echo "1. 在GitHub Actions页面找到 '${{ env.IMAGE_NAME }}-amd64' artifact"
+          echo "2. 下载压缩文件: ${{ env.IMAGE_NAME }}-amd64.tar.xz"
+          echo "3. 解压: xz -d ${{ env.IMAGE_NAME }}-amd64.tar.xz"
+          echo "4. 加载镜像: docker load < ${{ env.IMAGE_NAME }}-amd64.tar"
+          echo "5. 运行: docker run -it ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
           echo ""
           echo "💡 使用提示:"
           echo "- 确保有GPU环境以获得最佳性能"
-          echo "- 运行时挂载必要的目录: -v \$(pwd)/config:/root/open-avatar-chat/config"
+          echo "- 运行时挂载配置目录: -v \$(pwd)/config:/root/open-avatar-chat/config"
           echo "- 查看README.md了解详细配置说明"
+          echo ""
+          echo "📊 构建统计:"
+          echo "- 第一步：镜像构建和测试 ✅"
+          echo "- 第二步：镜像压缩和打包 ✅"
