@@ -6,8 +6,8 @@ ARG CONFIG_FILE=config/chat_with_minicpm.yaml
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Use Tsinghua University APT mirrors
-RUN sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
-    sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+# RUN sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
+#     sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
 
 # Update package list and install required dependencies
 RUN apt-get update && \
