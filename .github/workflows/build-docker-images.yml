@@ -8,6 +8,8 @@ env:
   IMAGE_NAME: ${{ github.repository }}/openavatar-chat-complete
   IMAGE_TAG: ${{ github.run_id }}  # 使用run_id作为唯一标签
   FULL_IMAGE_NAME: ghcr.io/${{ github.repository }}/openavatar-chat-complete
+  # Docker镜像名称必须全部小写，将GitHub repo名称转换为小写
+  DOCKER_IMAGE_NAME: ghcr.io/shangzy-coder/openavatarchat/openavatar-chat-complete
 
 jobs:
   build-image:
@@ -19,7 +21,7 @@ jobs:
       packages: write  # 需要写权限来推送包
     outputs:
       image_tag: ${{ env.IMAGE_TAG }}
-      full_image_name: ${{ env.FULL_IMAGE_NAME }}
+      docker_image_name: ${{ env.DOCKER_IMAGE_NAME }}
 
     steps:
       - name: Checkout code
@@ -46,7 +48,7 @@ jobs:
           build-args: |
             CONFIG_FILE=config/chat_with_dify.yaml
           push: true
-          tags: ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          tags: ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.description=OpenAvatarChat Complete Image
@@ -59,19 +61,19 @@ jobs:
 
           # 拉取刚刚推送的镜像
           echo "📥 拉取镜像进行测试..."
-          docker pull ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          docker pull ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
           # 使用本地镜像进行测试
-          docker run --rm --entrypoint /bin/bash ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "echo '✅ OpenAvatarChat AMD64 image works!'"
+          docker run --rm --entrypoint /bin/bash ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "echo '✅ OpenAvatarChat AMD64 image works!'"
 
           echo "🔧 测试Python环境..."
-          docker run --rm --entrypoint uv ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python --version
+          docker run --rm --entrypoint uv ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python --version
 
           echo "🔧 测试uv包管理器..."
-          docker run --rm --entrypoint uv ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} --version
+          docker run --rm --entrypoint uv ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }} --version
 
           echo "🔧 测试应用模块导入..."
-          docker run --rm --entrypoint uv ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python -c "
+          docker run --rm --entrypoint uv ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python -c "
           import sys
           sys.path.append('/root/open-avatar-chat/src')
           try:
@@ -84,7 +86,7 @@ jobs:
           "
 
           echo "🔧 测试关键依赖..."
-          docker run --rm --entrypoint uv ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python -c "
+          docker run --rm --entrypoint uv ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python -c "
           try:
             import loguru
             import torch
@@ -96,13 +98,13 @@ jobs:
           "
 
           echo "🔧 测试容器基础功能..."
-          docker run --rm --entrypoint /bin/bash ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "
+          docker run --rm --entrypoint /bin/bash ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "
           echo '📁 检查工作目录...'
           pwd && ls -la | head -10
           echo '✅ 容器基础功能正常'
           "
 
-          echo "✅ 第一步测试完成，镜像已推送至: ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
+          echo "✅ 第一步测试完成，镜像已推送至: ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
 
   compress-image:
     name: "第二步：压缩镜像"
@@ -117,14 +119,14 @@ jobs:
 
           # 从第一步获取镜像信息
           IMAGE_TAG=${{ needs.build-image.outputs.image_tag }}
-          FULL_IMAGE_NAME=${{ needs.build-image.outputs.full_image_name }}
+          DOCKER_IMAGE_NAME=${{ needs.build-image.outputs.docker_image_name }}
 
-          echo "🔍 拉取镜像: $FULL_IMAGE_NAME:$IMAGE_TAG"
-          docker pull $FULL_IMAGE_NAME:$IMAGE_TAG
+          echo "🔍 拉取镜像: $DOCKER_IMAGE_NAME:$IMAGE_TAG"
+          docker pull $DOCKER_IMAGE_NAME:$IMAGE_TAG
 
           # 验证镜像
           echo "📊 拉取的镜像信息:"
-          docker images $FULL_IMAGE_NAME:$IMAGE_TAG
+          docker images $DOCKER_IMAGE_NAME:$IMAGE_TAG
 
       - name: Compress image with XZ
         run: |
@@ -132,7 +134,7 @@ jobs:
 
           # 获取镜像信息
           IMAGE_TAG=${{ needs.build-image.outputs.image_tag }}
-          FULL_IMAGE_NAME=${{ needs.build-image.outputs.full_image_name }}
+          DOCKER_IMAGE_NAME=${{ needs.build-image.outputs.docker_image_name }}
 
           # 检查磁盘空间
           echo "💽 当前磁盘空间:"
@@ -140,7 +142,7 @@ jobs:
 
           # 导出镜像为tar
           echo "📦 导出镜像为tar文件..."
-          docker save $FULL_IMAGE_NAME:$IMAGE_TAG > openavatar-chat-complete-amd64.tar
+          docker save $DOCKER_IMAGE_NAME:$IMAGE_TAG > openavatar-chat-complete-amd64.tar
 
           # 验证tar文件
           echo "📊 tar文件大小:"
@@ -182,8 +184,8 @@ jobs:
       - name: Upload compressed image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.IMAGE_NAME }}-amd64
-          path: ${{ env.IMAGE_NAME }}-amd64.tar.xz
+          name: openavatar-chat-complete-amd64
+          path: openavatar-chat-complete-amd64.tar.xz
           retention-days: 7
 
       - name: Show final build summary
@@ -192,11 +194,11 @@ jobs:
           echo "📦 OpenAvatarChat AMD64镜像已压缩并准备下载"
           echo ""
           echo "📥 下载方式:"
-          echo "1. 在GitHub Actions页面找到 '${{ env.IMAGE_NAME }}-amd64' artifact"
-          echo "2. 下载压缩文件: ${{ env.IMAGE_NAME }}-amd64.tar.xz"
-          echo "3. 解压: xz -d ${{ env.IMAGE_NAME }}-amd64.tar.xz"
-          echo "4. 加载镜像: docker load < ${{ env.IMAGE_NAME }}-amd64.tar"
-          echo "5. 运行: docker run -it ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
+          echo "1. 在GitHub Actions页面找到 'openavatar-chat-complete-amd64' artifact"
+          echo "2. 下载压缩文件: openavatar-chat-complete-amd64.tar.xz"
+          echo "3. 解压: xz -d openavatar-chat-complete-amd64.tar.xz"
+          echo "4. 加载镜像: docker load < openavatar-chat-complete-amd64.tar"
+          echo "5. 运行: docker run -it ${{ needs.build-image.outputs.docker_image_name }}:${{ needs.build-image.outputs.image_tag }}"
           echo ""
           echo "💡 使用提示:"
           echo "- 确保有GPU环境以获得最佳性能"
