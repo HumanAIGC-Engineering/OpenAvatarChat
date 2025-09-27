@@ -23,13 +23,21 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 ARG WORK_DIR=/root/open-avatar-chat
 WORKDIR $WORK_DIR
 
+# Set UV cache to /tmp to avoid disk space issues
+ENV UV_CACHE_DIR=/tmp/uv-cache
+
 # Install core dependencies
 COPY ./install.py $WORK_DIR/install.py
 COPY ./pyproject.toml $WORK_DIR/pyproject.toml
 COPY ./src/third_party $WORK_DIR/src/third_party
 RUN pip install uv && \
     uv venv --python 3.11.11 && \
-    uv sync --no-install-workspace
+    UV_NO_CACHE=1 uv sync --no-install-workspace && \
+    # Clean up after core installation
+    uv cache clean && \
+    rm -rf /root/.cache/pip/* /tmp/* && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 ADD ./src $WORK_DIR/src
 
@@ -43,15 +51,25 @@ RUN chmod +x $WORK_DIR/scripts/pre_config_install.sh && \
     $WORK_DIR/scripts/pre_config_install.sh --config /tmp/build_config.yaml
 
 # Install config dependencies
-RUN uv run install.py \
+RUN UV_NO_CACHE=1 uv run install.py \
     --config /tmp/build_config.yaml \
     --uv \
-    --skip-core
+    --skip-core && \
+    # Clean up uv cache to free space
+    uv cache clean && \
+    rm -rf /root/.cache/pip/* /tmp/* && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Execute post-config installation script
 RUN chmod +x $WORK_DIR/scripts/post_config_install.sh && \
     $WORK_DIR/scripts/post_config_install.sh --config /tmp/build_config.yaml && \
-    rm /tmp/build_config.yaml
+    rm /tmp/build_config.yaml && \
+    # Final cleanup
+    uv cache clean && \
+    rm -rf /root/.cache/pip/* /tmp/* && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 ADD ./resource $WORK_DIR/resource
 ADD ./.env* $WORK_DIR/
