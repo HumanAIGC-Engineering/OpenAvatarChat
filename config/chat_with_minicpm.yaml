@@ -37,4 +37,4 @@ default:
         fps: 25
         debug: false
         enable_fast_mode: false
-        use_gpu: false
+        use_gpu: true
