@@ -39,13 +39,13 @@ jobs:
           docker run --rm --entrypoint /bin/bash ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "echo '✅ OpenAvatarChat AMD64 image works!'"
 
           echo "🔧 测试Python环境..."
-          docker run --rm --entrypoint python3 ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "import sys; print('Python version:', sys.version)"
+          docker run --rm --entrypoint uv ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python --version
 
           echo "🔧 测试uv包管理器..."
           docker run --rm --entrypoint uv ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --version
 
           echo "🔧 测试应用模块导入..."
-          docker run --rm --entrypoint python3 ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "
+          docker run --rm --entrypoint uv ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python -c "
           import sys
           sys.path.append('/root/open-avatar-chat/src')
           try:
@@ -57,10 +57,24 @@ jobs:
             sys.exit(1)
           "
 
+          echo "🔧 测试关键依赖..."
+          docker run --rm --entrypoint uv ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} run python -c "
+          try:
+            import loguru
+            import torch
+            import numpy
+            print('✅ 关键依赖检查通过: loguru, torch, numpy')
+          except ImportError as e:
+            print('❌ 依赖缺失:', str(e))
+            sys.exit(1)
+          "
+
           echo "🔧 测试容器基础功能..."
           docker run --rm --entrypoint /bin/bash ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "
           echo '📁 检查工作目录...'
           pwd && ls -la
+          echo '📁 检查虚拟环境...'
+          ls -la .venv/ | head -10
           echo '✅ 容器基础功能正常'
           "
 
