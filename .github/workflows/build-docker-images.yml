@@ -102,11 +102,37 @@ jobs:
 
           # 直接管道压缩，避免创建大临时文件
           echo "📦 创建并压缩镜像..."
-          docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} | gzip -c > ${{ env.IMAGE_NAME }}-amd64.tar.gz
+          set -o pipefail  # 管道中任一命令失败则退出
+          if docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} | gzip -c > ${{ env.IMAGE_NAME }}-amd64.tar.gz; then
+            echo "✅ 压缩完成"
+          else
+            echo "❌ 压缩失败，检查错误"
+            echo "检查docker save是否正常工作..."
+            docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > /tmp/test.tar 2>&1 || echo "docker save 失败"
+            ls -lh /tmp/test.tar 2>/dev/null || echo "test.tar不存在"
+            exit 1
+          fi
 
           # 检查压缩结果
           echo "📊 压缩后大小:"
           ls -lh ${{ env.IMAGE_NAME }}-amd64.tar.gz
+
+          # 检查文件大小是否合理（至少应该有几MB）
+          FILE_SIZE=$(stat -c %s ${{ env.IMAGE_NAME }}-amd64.tar.gz 2>/dev/null || wc -c < ${{ env.IMAGE_NAME }}-amd64.tar.gz)
+          if [ "$FILE_SIZE" -lt 1000000 ]; then  # 小于1MB
+            echo "❌ 文件大小异常: $FILE_SIZE 字节"
+            echo "🔍 调试信息:"
+            echo "检查文件内容:"
+            head -c 200 ${{ env.IMAGE_NAME }}-amd64.tar.gz | od -c || echo "无法读取文件"
+            echo "检查gzip是否安装:"
+            which gzip || echo "gzip未找到"
+            gzip --version 2>/dev/null | head -1 || echo "gzip版本检查失败"
+            echo "检查磁盘空间:"
+            df -h .
+            exit 1
+          else
+            echo "✅ 文件大小正常: $FILE_SIZE 字节"
+          fi
 
           # 再次验证镜像信息
           echo "📊 原始镜像大小:"
@@ -114,9 +140,7 @@ jobs:
 
           # 验证文件是否正确创建
           echo "✅ 文件验证:"
-          file ${{ env.IMAGE_NAME }}-amd64.tar.gz || echo "file命令不可用"
-          echo "文件大小（字节）:"
-          stat -c %s ${{ env.IMAGE_NAME }}-amd64.tar.gz 2>/dev/null || wc -c < ${{ env.IMAGE_NAME }}-amd64.tar.gz
+          file ${{ env.IMAGE_NAME }}-amd64.tar.gz 2>/dev/null || echo "file命令不可用"
 
           # 最终磁盘检查
           echo "💽 最终磁盘使用情况:"
