@@ -121,18 +121,12 @@ HuggingFace
 - [🚀安装部署](#安装部署)
   - [选择配置](#选择配置)
     - [chat\_with\_lam.yaml](#chat_with_lamyaml)
-      - [使用的Handler](#使用的handler)
     - [chat\_with\_qwen-omni.yaml](#chat_with_qwen_omniyaml)
-    - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
-      - [使用的Handler](#使用的handler-1)
     - [chat\_with\_openai\_compatible.yaml](#chat_with_openai_compatibleyaml)
-     - [使用的Handler](#使用的handler-2)
     - [chat\_with\_openai\_compatible\_edge\_tts.yaml](#chat_with_openai_compatible_edge_ttsyaml)
-     - [使用的Handler](#使用的handler-3)
     - [chat\_with\_openai\_compatible\_bailian\_cosyvoice.yaml](#chat_with_openai_compatible_bailian_cosyvoiceyaml)
-     - [使用的Handler](#使用的handler-4)
     - [chat\_with\_openai\_compatible\_bailian\_cosyvoice\_musetalk.yaml](#chat_with_openai_compatible_bailian_cosyvoice_musetalkyaml)
-     - [使用的Handler](#使用的handler-5)
+    - [chat\_with\_minicpm.yaml](#chat_with_minicpmyaml)
   - [本地运行](#本地运行)
     - [uv安装](#uv安装)
     - [依赖安装](#依赖安装)
@@ -281,17 +275,6 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 |Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
 ||||
 
-#### chat_with_minicpm.yaml
-使用minicpm进行本地的语音到语音的对话生成，对GPU的性能与显存大小有一定要求。
-##### 使用的Handler
-|类别|Handler|安装说明|
-|---|---|---|
-|Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
-|VAD|vad/silerovad/vad_handler/silero||
-|LLM|llm/minicpm/llm_handler_minicpm|[MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)|
-|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
-|||| 
-
 #### chat_with_openai_compatible.yaml
 该配置使用云端语言模型API，TTS使用cosyvoice，运行在本地。
 #### 使用的Handler
@@ -335,7 +318,7 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 
 #### chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 语言模型与TTS都使用云端API，2D数字人使用MuseTalk进行推理，默认是用GPU进行推理，暂不支持CPU推理。
-#### 使用的Handler
+##### 使用的Handler
 |类别|Handler|安装说明|
 |---|---|---|
 |Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
@@ -346,6 +329,16 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 |Avatar|avatar/musetalk/avatar_handler_musetalk|[MuseTalk数字人Handler](#musetalk数字人handler)|
 ||||
 
+#### chat_with_minicpm.yaml
+使用minicpm进行本地的语音到语音的对话生成，对GPU的性能与显存大小有一定要求。
+##### 使用的Handler
+|类别|Handler|安装说明|
+|---|---|---|
+|Client|client/rtc_client/client_handler_rtc|[服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)|
+|VAD|vad/silerovad/vad_handler/silero||
+|LLM|llm/minicpm/llm_handler_minicpm|[MiniCPM多模态语言模型Handler](#minicpm多模态语言模型handler)|
+|Avatar|avatar/liteavatar/avatar_handler_liteavatar|[LiteAvatar数字人Handler](#liteavatar数字人handler)|
+|||| 
 
 ### 本地运行
 
@@ -358,7 +351,7 @@ OpenAvatarChat按照配置文件启动并组织各个模块，可以按照选择
 > ```
 > 本项目通过git子模块方式引用三方库，运行前需要更新子模块
 > ```bash
-> git submodule update --init --recursive
+> git submodule update --init --recursive --depth 1
 > ```
 > 强烈建议：国内用户依然使用git clone的方式下载，而不要直接下载zip文件，方便这里的git submodule和git lfs的操作，github访问的问题，可以参考[github访问问题](https://github.com/maxiaof/github-hosts)
 > 
@@ -415,8 +408,42 @@ uv run src/demo.py --config <配置文件的绝对路径>.yaml
 
 ### Docker运行
 容器化运行：容器依赖nvidia的容器环境，在准备好支持GPU的docker环境后，运行以下命令即可完成镜像的构建与启动：
+> [!Note]
+> 原有的运行方式：
 ```bash
 ./build_and_run.sh --config <配置文件的相对路径>.yaml
+```
+> [!Note]
+针对50系列显卡，我们已将项目`pyproject.toml`中的CUDA版本升级至12.8，并完成了对MuseTalk的适配。通过Docker环境（Ubuntu 24.04，驱动版本：575.64.03）测试验证，Lam、LiteAvatar、MuseTalk均能正常运行。
+如需自行构建镜像，可使用`build_cuda128.sh`脚本（基于`Dockerfile.cuda128`）进行构建，运行则使用`run_docker_cuda128.sh`脚本。与旧版本不同，`Dockerfile.cuda128`将项目所需的所有依赖环境统一打包到镜像中，无需再通过配置文件动态加载，便于测试所有数字人模型。
+
+```bash
+# 克隆项目并进入目录
+git clone https://github.com/HumanAIGC-Engineering/OpenAvatarChat.git && cd OpenAvatarChat
+
+# 下载所有子模块
+git submodule update --init --recursive --depth 1
+
+# 下载LiteAvatar所需模型
+# 脚本默认通过ModelScope下载模型（若本地未安装ModelScope，需先执行pip install modelscope进行安装）
+bash scripts/download_liteavatar_weights.sh
+
+# 下载LAM所需模型
+git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ./models/wav2vec2-base-960h
+wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
+tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
+
+# 下载MuseTalk所需模型
+bash scripts/download_musetalk_weights.sh
+
+# 构建镜像
+bash build_cuda128.sh
+
+# 如需使用百炼API，可在项目根目录创建.env文件
+touch .env  # 并手动添加个人API密钥：DASHSCOPE_API_KEY=sk-xxxxx
+
+# 运行镜像（可根据需求替换配置文件，以下为示例命令）
+bash run_docker_cuda128.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
 
 
@@ -470,6 +497,8 @@ LLMOpenAICompatible:
 完整配置文件可以参考chat_with_qwen_omni.yaml，其中avatar模块可以AvatarMusetalk，LiteAvatar二选一。
 
 ### MiniCPM多模态语言模型Handler
+> [!IMPORTANT]
+> **注意：MiniCPM由于考虑到尺寸关系，没有直接作为子模块包含到项目中，如果有需要，请参照src/handlers/llm/minicpm/notes.md中的说明获取相关代码**
 #### 依赖模型
 * MiniCPM-o-2.6
 本项目可以使用MiniCPM-o-2.6作为多模态语言模型为数字人提供对话能力，用户可以按需从[Huggingface](https://huggingface.co/openbmb/MiniCPM-o-2_6)或者[Modelscope](https://modelscope.cn/models/OpenBMB/MiniCPM-o-2_6)下载相关模型。建议将模型直接下载到 \<ProjectRoot\>/models/ 默认配置的模型路径指向这里，如果放置与其他位置，需要修改配置文件。scripts目录中有对应模型的下载脚本，可供在linux环境下使用，请在项目根目录下运行脚本：
@@ -644,7 +673,9 @@ python scripts/download_avatar_model.py -d
 * Docker
 
 ```
-./build_and_run.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+bash build_cuda128.sh
+
+bash run_docker_cuda128.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
 
 * 本地运行
@@ -663,7 +694,7 @@ uv run install.py --uv --config config/chat_with_openai_compatible_bailian_cosyv
 需要注意的是，uv默认安装的mmcv在实际运行时可能会报错“No module named ‘mmcv._ext’”参考[MMCV-FAQ](https://mmcv.readthedocs.io/en/latest/faq.html)，解决方法是：
 ```bash
 uv pip uninstall mmcv
-uv pip install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html --trusted-host download.openmmlab.com
+uv run mim install mmcv==2.2.0 --force
 ```
 
 MuseTalk源码中第一次启动默认会下载一个模型s3fd-619a316812.pth，该模型目前已集成在下载脚本中。在Docker启动时已经做了映射处理。但在本地运行时，需要再手动进行一次映射。

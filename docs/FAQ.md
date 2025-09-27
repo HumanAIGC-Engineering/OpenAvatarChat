@@ -101,6 +101,13 @@ AutoDL不支持个人用户开启自定义端口，无法远程登录。
 Non-quantized minicpm shows lag on 4090. Recommend switching LLM to API call or using non-multimodal local models.  
 minicpm非量化版本在4090上测试下来是会存在卡顿，建议llm改用api调用，或者本地的非多模态模型。
 
+### Common Unexpected Behaviours / 常见意外情况
+
+**Q: Session stopped unexpectedly without any error log after a while / 运行过程中session意外的停止，但是日志中并没有明显异常**
+
+There is max duration limit of session in the rtc handler. It's called 'connection_ttl' in config of client handler, the default is 900 seconds. It can be altered by user.
+rtc handler中有一个session的时长限制，这个参数可以被配置在client handler下，参数名是connection_ttl，默认是900秒。
+
 ## Audio Related Issues / 语音相关问题
 
 ### TTS Model / TTS 模型

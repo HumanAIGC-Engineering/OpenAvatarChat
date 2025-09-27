@@ -78,7 +78,7 @@ class HandlerTTS(HandlerBase, ABC):
         self.task_queue_map = {}
         if torch.cuda.is_available():
             self.device = torch.device("cuda:0")
-        elif torch.mps.is_available():
+        elif torch.backends.mps.is_available():
             self.device = torch.device("mps")
         else:
             self.device = torch.device("cpu")

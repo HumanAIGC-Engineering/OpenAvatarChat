@@ -13,6 +13,7 @@ from loguru import logger
 import numpy as np
 from handlers.avatar.liteavatar.algo.audio2signal_speed_limiter import Audio2SignalSpeedLimiter
 from handlers.avatar.liteavatar.algo.base_algo_adapter import BaseAlgoAdapter
+from handlers.avatar.liteavatar.media.speech_audio_aligner import SpeechAudioAligner
 from handlers.avatar.liteavatar.media.speech_audio_processor import SpeechAudioProcessor
 from handlers.avatar.liteavatar.avatar_output_handler import AvatarOutputHandler
 from handlers.avatar.liteavatar.media.video_audio_aligner import VideoAudioAligner
@@ -56,6 +57,7 @@ class AvatarProcessor:
         # other helpers
         self._audio2signal_speed_limiter = None
         self._video_audio_aligner = None
+        self._speech_audio_aligner = None
 
         # statistic counter
         self._audio2signal_counter = IntervalCounter("generate signal")
@@ -135,6 +137,8 @@ class AvatarProcessor:
             signal_vals = self._algo_adapter.audio2signal(audio_slice)
             avatar_status = AvatarStatus.SPEAKING
 
+            self._speech_audio_aligner.add_audio(audio_slice.play_audio_data, speech_id)
+
             # remove front padding audio and relative frames
             front_padding_duration = audio_slice.front_padding_duration
             target_round_time = audio_slice.get_audio_duration() - front_padding_duration - 0.1
@@ -143,20 +147,21 @@ class AvatarProcessor:
             padding_audio_count = int(front_padding_duration) * self._init_option.audio_sample_rate * 2
             audio_slice.play_audio_data = audio_slice.play_audio_data[padding_audio_count:]
 
-            audio_slice.play_audio_data = self._video_audio_aligner.get_speech_level_algined_audio(
-                audio_slice.play_audio_data, audio_slice.play_audio_sample_rate, len(signal_vals),
-                audio_slice.speech_id, audio_slice.end_of_speech)
+            # audio_slice.play_audio_data = self._video_audio_aligner.get_speech_level_algined_audio(
+            #     audio_slice.play_audio_data, audio_slice.play_audio_sample_rate, len(signal_vals),
+            #     audio_slice.speech_id, audio_slice.end_of_speech)
 
             for i, signal in enumerate(signal_vals):
-                end_of_speech = audio_slice.end_of_speech and i == len(signal_vals) - 1
+                frame_end_of_speech = audio_slice.end_of_speech and i == len(signal_vals) - 1
+                audio_slice = self._speech_audio_aligner.get_speech_level_algined_audio(end_of_speech=frame_end_of_speech)
                 middle_result = SignalResult(
                     speech_id=speech_id,
-                    end_of_speech=end_of_speech,
+                    end_of_speech=frame_end_of_speech,
                     middle_data=signal,
                     frame_id=i,
                     global_frame_id=self._global_frame_count,
                     avatar_status=avatar_status,
-                    audio_slice=audio_slice if i == 0 else None
+                    audio_slice=audio_slice,
                 )
                 self._audio2signal_counter.add()
                 self._signal_queue.put_nowait(middle_result)
@@ -208,6 +213,7 @@ class AvatarProcessor:
             self._global_frame_count += 1
 
             self._mouth_img_queue.put(mouth_result)
+            self._callback_counter.add_property("signal2img")
 
             if start_time == -1:
                 start_time = time.time()
@@ -292,6 +298,7 @@ class AvatarProcessor:
         )
         self._audio2signal_speed_limiter = Audio2SignalSpeedLimiter(self._init_option.video_frame_rate)
         self._video_audio_aligner = VideoAudioAligner(self._init_option.video_frame_rate)
+        self._speech_audio_aligner = SpeechAudioAligner(self._init_option.video_frame_rate, self._init_option.audio_sample_rate)
 
     def _init_algo(self):
         logger.info("init algo")
@@ -306,14 +313,14 @@ class AvatarProcessor:
         self._mouth2full_thread.start()
 
     def _callback_image(self, image_result: VideoResult):
-        self._callback_counter.add_property("callback_image")
+        self._callback_counter.add_property("image_callback")
         if self._session_running:
             for output_handler in self._output_handlers:
                 output_handler.on_video(image_result)
 
     def _callback_audio(self, audio_result: AudioResult):
         audio_frame = audio_result.audio_frame
-        self._callback_counter.add_property("callback_audio", audio_frame.samples / audio_frame.sample_rate)
+        self._callback_counter.add_property("audio_callback", audio_frame.samples / audio_frame.sample_rate)
         if self._session_running:
             for output_handler in self._output_handlers:
                 output_handler.on_audio(audio_result)

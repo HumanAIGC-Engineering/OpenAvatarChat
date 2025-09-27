@@ -15,6 +15,8 @@ default:
       LamClient:
         module: client/h5_rendering_client/client_handler_lam
         asset_path: "lam_samples/barbara.zip"
+        # max time a session will last for
+        connection_ttl: 900
       SileroVad:
         module: vad/silerovad/vad_handler_silero
         speaking_threshold: 0.5

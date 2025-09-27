@@ -624,7 +624,8 @@ class AvatarMuseTalkProcessor:
                 video_frame=video_frame,
                 speech_id=speech_id,
                 avatar_status=avatar_status,
-                end_of_speech=end_of_speech
+                end_of_speech=end_of_speech,
+                bg_frame_id=-1
             )
             # Logging logic
             is_idle = (avatar_status == AvatarStatus.LISTENING and speech_id is None)

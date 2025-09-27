@@ -40,7 +40,7 @@ if grep -q "AvatarMusetalk:" "$CONFIG_FILE"; then
     uv pip install chumpy==0.70 --no-build-isolation
     
     echo "Installing mmcv==2.2.0..."
-    uv pip install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html
+    uv run mim install mmcv==2.2.0 --force
     
     echo "AvatarMusetalk dependencies installation completed."
 else

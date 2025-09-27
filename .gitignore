@@ -25,7 +25,6 @@ ssl_certs/localhost.key
 results
 
 /sync*.sh
-/build_and_run*.sh
 models/MiniCPM-o-2_6*
 models/iic
 models
