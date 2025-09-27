@@ -86,16 +86,25 @@ jobs:
           echo "🔍 检查镜像是否存在..."
           docker images ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
-          # 创建临时tar文件，然后压缩
-          echo "📦 创建tar文件..."
-          docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > temp_image.tar
+          # 检查磁盘空间
+          echo "💽 检查磁盘使用情况..."
+          df -h
+          echo "💽 当前目录磁盘使用:"
+          du -sh . 2>/dev/null || echo "du命令失败"
 
-          echo "🗜️  压缩镜像..."
-          gzip temp_image.tar
+          # 清理不需要的Docker数据
+          echo "🧹 清理Docker系统..."
+          docker system prune -f
+          docker image prune -f
 
-          # 移动到最终文件名
-          mv temp_image.tar.gz ${{ env.IMAGE_NAME }}-amd64.tar.gz
+          echo "💽 清理后的磁盘使用情况:"
+          df -h
 
+          # 直接管道压缩，避免创建大临时文件
+          echo "📦 创建并压缩镜像..."
+          docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} | gzip -c > ${{ env.IMAGE_NAME }}-amd64.tar.gz
+
+          # 检查压缩结果
           echo "📊 压缩后大小:"
           ls -lh ${{ env.IMAGE_NAME }}-amd64.tar.gz
 
@@ -105,9 +114,13 @@ jobs:
 
           # 验证文件是否正确创建
           echo "✅ 文件验证:"
-          file ${{ env.IMAGE_NAME }}-amd64.tar.gz
+          file ${{ env.IMAGE_NAME }}-amd64.tar.gz || echo "file命令不可用"
           echo "文件大小（字节）:"
-          stat -c %s ${{ env.IMAGE_NAME }}-amd64.tar.gz
+          stat -c %s ${{ env.IMAGE_NAME }}-amd64.tar.gz 2>/dev/null || wc -c < ${{ env.IMAGE_NAME }}-amd64.tar.gz
+
+          # 最终磁盘检查
+          echo "💽 最终磁盘使用情况:"
+          df -h
 
       - name: Upload complete image artifact
         uses: actions/upload-artifact@v4
