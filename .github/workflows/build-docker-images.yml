@@ -36,26 +36,33 @@ jobs:
       - name: Test complete image
         run: |
           echo "🧪 测试镜像功能..."
-          docker run --rm ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} echo "✅ OpenAvatarChat ARM64 image works!"
+          docker run --rm --entrypoint /bin/bash ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "echo '✅ OpenAvatarChat AMD64 image works!'"
 
           echo "🔧 测试Python环境..."
-          docker run --rm ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} python3 -c "import sys; print('Python version:', sys.version)"
+          docker run --rm --entrypoint python3 ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "import sys; print('Python version:', sys.version)"
 
           echo "🔧 测试uv包管理器..."
-          docker run --rm ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} uv --version
+          docker run --rm --entrypoint uv ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --version
 
-          echo "🔧 测试应用是否能正常启动..."
-          timeout 30s docker run --rm ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} python3 -c "
+          echo "🔧 测试应用模块导入..."
+          docker run --rm --entrypoint python3 ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "
           import sys
           sys.path.append('/root/open-avatar-chat/src')
           try:
             print('Testing import...')
-            from demo import *
+            import demo
             print('✅ 应用模块导入成功')
           except Exception as e:
             print('❌ 导入失败:', str(e))
             sys.exit(1)
-          " || echo "⚠️  应用启动测试超时或失败，这是正常的，因为应用需要更多配置"
+          "
+
+          echo "🔧 测试容器基础功能..."
+          docker run --rm --entrypoint /bin/bash ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -c "
+          echo '📁 检查工作目录...'
+          pwd && ls -la
+          echo '✅ 容器基础功能正常'
+          "
 
       - name: Save complete image
         run: |
