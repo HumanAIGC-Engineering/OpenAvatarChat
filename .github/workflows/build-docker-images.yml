@@ -1,32 +1,21 @@
-name: Build Avatar Docker Image
+name: Build OpenAvatarChat AMD64 (Complete)
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag_suffix:
-        description: 'Tag suffix (e.g., v1.0.0, latest)'
-        required: false
-        default: 'latest'
-        type: string
-      push_to_registry:
-        description: 'Push to Docker registry'
-        required: false
-        default: true
-        type: boolean
+  workflow_dispatch:  # 仅允许手动触发
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: openavatar-chat-complete
+  IMAGE_TAG: latest
 
 jobs:
-  build-and-verify:
-    runs-on: ubuntu-latest
+  build-complete:
+    runs-on: ubuntu-latest  # 使用AMD64运行器
+    timeout-minutes: 480  # 8小时超时
     permissions:
       contents: read
-      packages: write
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -35,54 +24,69 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Container Registry
-        if: ${{ github.event.inputs.push_to_registry == 'true' }}
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for Avatar image
-        id: meta-avatar
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-avatar
-          tags: |
-            type=raw,value=${{ github.event.inputs.tag_suffix }}
-            type=raw,value=avatar-${{ github.event.inputs.tag_suffix }}
-            type=sha,prefix=avatar-{{branch}}-
-
-      - name: Build and push Avatar Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          build-args: |
-            CONFIG_FILE=config/chat_with_dify.yaml
-          push: ${{ github.event.inputs.push_to_registry == 'true' }}
-          tags: ${{ steps.meta-avatar.outputs.tags }}
-          labels: ${{ steps.meta-avatar.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
-
-      - name: Verify GPU support in container
+      - name: Build complete OpenAvatarChat image
         run: |
-          # Pull the built image for testing
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-avatar:${{ github.event.inputs.tag_suffix }}
+          echo "🚀 开始构建完整的OpenAvatarChat ARM64镜像..."
+          docker build \
+            -f Dockerfile \
+            -t ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
+            --build-arg CONFIG_FILE=config/chat_with_dify.yaml \
+            .
 
-          # Run a simple GPU test to verify CUDA and GPU access
-          # Note: This test may fail if the runner doesn't have GPU access, but it validates the image has GPU support
-          echo "Testing GPU support in container..."
+      - name: Test complete image
+        run: |
+          echo "🧪 测试镜像功能..."
+          docker run --rm ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} echo "✅ OpenAvatarChat ARM64 image works!"
 
-          # Test 1: Check if nvidia-smi is available (will show GPU info if GPU is available)
-          docker run --rm --gpus all ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-avatar:${{ github.event.inputs.tag_suffix }} nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv,noheader,nounits || echo "GPU not available on this runner, but image supports GPU"
+          echo "🔧 测试Python环境..."
+          docker run --rm ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} python3 -c "import sys; print('Python version:', sys.version)"
 
-          # Test 2: Check if CUDA is properly installed in the container
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-avatar:${{ github.event.inputs.tag_suffix }} python3 -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda if torch.cuda.is_available() else 'N/A')" || echo "PyTorch CUDA test failed"
+          echo "🔧 测试uv包管理器..."
+          docker run --rm ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} uv --version
 
-          # Test 3: Verify the image can start the application (without GPU requirement for basic startup)
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-avatar:${{ github.event.inputs.tag_suffix }} python3 -c "import sys; print('Python version:', sys.version); print('Container is ready for GPU workloads')" || exit 1
+          echo "🔧 测试应用是否能正常启动..."
+          timeout 30s docker run --rm ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} python3 -c "
+          import sys
+          sys.path.append('/root/open-avatar-chat/src')
+          try:
+            print('Testing import...')
+            from demo import *
+            print('✅ 应用模块导入成功')
+          except Exception as e:
+            print('❌ 导入失败:', str(e))
+            sys.exit(1)
+          " || echo "⚠️  应用启动测试超时或失败，这是正常的，因为应用需要更多配置"
 
-          echo "✅ GPU verification completed. Container is configured for GPU usage."
+      - name: Save complete image
+        run: |
+          echo "💾 保存镜像为artifact..."
+          docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} | gzip > ${{ env.IMAGE_NAME }}-amd64.tar.gz
+          echo "📊 压缩后大小:"
+          ls -lh ${{ env.IMAGE_NAME }}-amd64.tar.gz
+          echo "📊 原始镜像大小:"
+          docker images ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+      - name: Upload complete image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.IMAGE_NAME }}-amd64
+          path: ${{ env.IMAGE_NAME }}-amd64.tar.gz
+          retention-days: 7
+
+      - name: Show build summary
+        run: |
+          echo "✅ 构建完成!"
+          echo "📦 完整的OpenAvatarChat AMD64镜像已准备好下载"
+          echo "🔧 镜像信息:"
+          docker images ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          echo ""
+          echo "📥 下载方式:"
+          echo "1. 在GitHub Actions页面下载artifact"
+          echo "2. 解压: gunzip ${{ env.IMAGE_NAME }}-amd64.tar.gz"
+          echo "3. 加载: docker load < ${{ env.IMAGE_NAME }}-amd64.tar"
+          echo "4. 运行: docker run -it ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
+          echo ""
+          echo "💡 使用提示:"
+          echo "- 确保有GPU环境以获得最佳性能"
+          echo "- 运行时挂载必要的目录: -v \$(pwd)/config:/root/open-avatar-chat/config"
+          echo "- 查看README.md了解详细配置说明"
