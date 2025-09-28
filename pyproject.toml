@@ -43,14 +43,8 @@ members = [
     "src/handlers/vad/silerovad",
     "src/handlers/tts/bailian_tts",
     "src/handlers/asr/sensevoice",
-    "src/handlers/avatar/musetalk",
 ]
 
 [tool.uv.sources]
 fastrtc = { path = "src/third_party/gradio_webrtc_videochat/dist/fastrtc-0.0.28.dev0-py3-none-any.whl" }
 
-[tool.uv]
-no-build-isolation-package = ["chumpy"]
-
-[tool.uv.extra-build-dependencies]
-chumpy = ["wheel"]
