@@ -6,8 +6,8 @@ ARG CONFIG_FILE=config/chat_with_minicpm.yaml
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Use Tsinghua University APT mirrors
-RUN sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
-    sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+# RUN sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
+#     sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
 
 # Update package list and install required dependencies
 RUN apt-get update && \
@@ -23,13 +23,37 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 ARG WORK_DIR=/root/open-avatar-chat
 WORKDIR $WORK_DIR
 
-# Install core dependencies
+# Set UV cache and temp directories to avoid disk space issues
+ENV UV_CACHE_DIR=/tmp/uv-cache
+ENV TMPDIR=/tmp
+ENV TEMP=/tmp
+ENV TMP=/tmp
+ENV PIP_CACHE_DIR=/tmp/pip-cache
+ENV PYTHONPYCACHEPREFIX=/tmp/pycache
+
+# Create temp directory with proper permissions
+RUN mkdir -p /tmp/uv-cache /tmp/pip-cache /tmp/pycache && \
+    chmod 1777 /tmp
+
+# Install core dependencies (with space optimization)
 COPY ./install.py $WORK_DIR/install.py
 COPY ./pyproject.toml $WORK_DIR/pyproject.toml
 COPY ./src/third_party $WORK_DIR/src/third_party
-RUN pip install uv && \
+RUN echo "=== Installing UV and setting up environment ===" && \
+    pip install uv && \
     uv venv --python 3.11.11 && \
-    uv sync --no-install-workspace
+    echo "=== Pre-core-install cleanup ===" && \
+    rm -rf /tmp/* /var/tmp/* && \
+    mkdir -p /tmp /var/tmp && \
+    chmod 1777 /tmp /var/tmp && \
+    echo "=== Installing core dependencies ===" && \
+    UV_NO_CACHE=1 uv sync --no-install-workspace && \
+    echo "=== Post-core-install cleanup ===" && \
+    # Clean up after core installation
+    uv cache clean && \
+    rm -rf /root/.cache/pip/* /tmp/* /var/tmp/* && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 ADD ./src $WORK_DIR/src
 
@@ -42,16 +66,35 @@ COPY $CONFIG_FILE /tmp/build_config.yaml
 RUN chmod +x $WORK_DIR/scripts/pre_config_install.sh && \
     $WORK_DIR/scripts/pre_config_install.sh --config /tmp/build_config.yaml
 
-# Install config dependencies
-RUN uv run install.py \
+# Install config dependencies (with space optimization)
+RUN echo "=== Pre-installation cleanup ===" && \
+    # Aggressive cleanup before installation
+    rm -rf /tmp/* /var/tmp/* /var/cache/* && \
+    mkdir -p /tmp /var/tmp && \
+    chmod 1777 /tmp /var/tmp && \
+    df -h && \
+    echo "=== Starting dependency installation ===" && \
+    UV_NO_CACHE=1 uv run install.py \
     --config /tmp/build_config.yaml \
     --uv \
-    --skip-core
+    --skip-core && \
+    echo "=== Post-installation cleanup ===" && \
+    # Clean up uv cache to free space
+    uv cache clean && \
+    rm -rf /root/.cache/pip/* /tmp/* /var/tmp/* && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    df -h
 
 # Execute post-config installation script
 RUN chmod +x $WORK_DIR/scripts/post_config_install.sh && \
     $WORK_DIR/scripts/post_config_install.sh --config /tmp/build_config.yaml && \
-    rm /tmp/build_config.yaml
+    rm /tmp/build_config.yaml && \
+    # Final cleanup
+    uv cache clean && \
+    rm -rf /root/.cache/pip/* /tmp/* && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 ADD ./resource $WORK_DIR/resource
 ADD ./.env* $WORK_DIR/

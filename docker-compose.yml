@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Avatar (Dify) service
+  avatar-dify:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CONFIG_FILE: config/chat_with_dify.yaml
+    image: open-avatar-chat-avatar:latest
+    container_name: avatar-dify
+    restart: unless-stopped
+    ports:
+      - "8282:8282"
+    volumes:
+      - ./build:/root/open-avatar-chat/build
+      - ./models:/root/open-avatar-chat/models
+      - ./ssl_certs:/root/open-avatar-chat/ssl_certs
+      - ./config:/root/open-avatar-chat/config
+      - ./models/musetalk/s3fd-619a316812/:/root/.cache/torch/hub/checkpoints/
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: ["--config", "config/chat_with_dify.yaml"]
+    networks:
+      - avatar-network
+    profiles:
+      - avatar
+      - all
+
+  # LAM (Dify) service
+  lam-dify:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CONFIG_FILE: config/chat_with_lam_dify.yaml
+    image: open-avatar-chat-lam:latest
+    container_name: lam-dify
+    restart: unless-stopped
+    ports:
+      - "8283:8282"  # Different port to avoid conflict
+    volumes:
+      - ./build:/root/open-avatar-chat/build
+      - ./models:/root/open-avatar-chat/models
+      - ./ssl_certs:/root/open-avatar-chat/ssl_certs
+      - ./config:/root/open-avatar-chat/config
+      - ./models/musetalk/s3fd-619a316812/:/root/.cache/torch/hub/checkpoints/
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: ["--config", "config/chat_with_lam_dify.yaml"]
+    networks:
+      - avatar-network
+    profiles:
+      - lam
+      - all
+
+networks:
+  avatar-network:
+    driver: bridge
+
+# Usage examples:
+# docker-compose --profile avatar up -d     # Start only Avatar service
+# docker-compose --profile lam up -d        # Start only LAM service  
+# docker-compose --profile all up -d        # Start both services
+# docker-compose up avatar-dify              # Start specific service
+# docker-compose up lam-dify                 # Start specific service

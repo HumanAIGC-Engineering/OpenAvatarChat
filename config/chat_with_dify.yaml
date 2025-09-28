@@ -8,13 +8,12 @@ default:
     cert_key: "ssl_certs/localhost.key"
   chat_engine:
     model_root: "models"
+    concurrent_limit: 1
     handler_search_path:
       - "src/handlers"
     handler_configs:
       RtcClient:
         module: client/rtc_client/client_handler_rtc
-        # max time a session will last for
-        connection_ttl: 900
       SileroVad:
         module: vad/silerovad/vad_handler_silero
         speaking_threshold: 0.5
@@ -22,18 +21,26 @@ default:
         end_delay: 5000
         buffer_look_back: 5000
         speech_padding: 512
-      MiniCPM-o:
+      SenseVoice:
         enabled: True
-        module: llm/minicpm/llm_handler_minicpm
-        model_name: "MiniCPM-o-2_6"
-        # model_name: "MiniCPM-o-2_6-int4"
-        voice_prompt: "你是一个AI助手。你能接受视频，音频和文本输入并输出语音和文本。模仿输入音频中的声音特征。"
-        assistant_prompt: "作为助手，你将使用这种声音风格说话。"
-        enable_video_input: True
-        skip_video_frame: 2
+        module: asr/sensevoice/asr_handler_sensevoice
+        model_name: "iic/SenseVoiceSmall"
+        device: "cuda"  # 强制使用CUDA，避免MPS检查
+      Edge_TTS:
+        enabled: True
+        module: tts/edgetts/tts_handler_edgetts
+        voice: "zh-CN-XiaoxiaoNeural"
+      Dify:
+        enabled: True
+        module: llm/dify/llm_handler_dify
+        enable_video_input: False
+        api_key: "app-2UxAkljNofeoaGlh8LddGrCt"
+        api_url: "https://copilot.sino-bridge.com:90/v1"
+        response_mode: "streaming"
+        timeout: 30
       LiteAvatar:
         module: avatar/liteavatar/avatar_handler_liteavatar
-        avatar_name: 20250408/sample_data
+        avatar_name: 20250408/P1DB_Y1K6USuq-Nlun6Bh94A
         fps: 25
         debug: false
         enable_fast_mode: false

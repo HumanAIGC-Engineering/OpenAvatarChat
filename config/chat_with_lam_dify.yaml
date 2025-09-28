@@ -1,0 +1,43 @@
+default:
+  logger:
+    log_level: "INFO"
+  service:
+    host: "0.0.0.0"
+    port: 8282
+    cert_file: "ssl_certs/localhost.crt"
+    cert_key: "ssl_certs/localhost.key"
+  chat_engine:
+    model_root: "models"
+    concurrent_limit: 5  # LAM支持多路并发
+    handler_search_path:
+      - "src/handlers"
+    handler_configs:
+      LamClient:
+        module: client/h5_rendering_client/client_handler_lam
+        asset_path: "lam_samples/barbara.zip"  # 可选择其他形象
+        concurrent_limit: 5
+      SileroVad:
+        module: vad/silerovad/vad_handler_silero
+        speaking_threshold: 0.5
+        start_delay: 2048
+        end_delay: 5000
+        buffer_look_back: 5000
+        speech_padding: 512
+      SenseVoice:
+        enabled: True
+        module: asr/sensevoice/asr_handler_sensevoice
+        model_name: "iic/SenseVoiceSmall"
+      Edge_TTS:
+        enabled: True
+        module: tts/edgetts/tts_handler_edgetts
+        voice: "zh-CN-YunjianNeural"
+      Dify:
+        enabled: True
+        module: llm/dify/llm_handler_dify
+        enable_video_input: False
+        api_key: "app-2UxAkljNofeoaGlh8LddGrCt"
+        api_url: "https://copilot.sino-bridge.com:90/v1"
+        response_mode: "streaming"
+        timeout: 30
+      LAM_Driver:
+        module: avatar/lam/avatar_handler_lam_audio2expression
