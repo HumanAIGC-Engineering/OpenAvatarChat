@@ -99,6 +99,12 @@ class LiteAvatarWorker:
         self.session_running = False
         self.audio_input_thread = None
         self.worker_status = WorkerStatus.IDLE
+
+        # 事件同步：进程就绪与停止确认
+        self._process_ready_event = mp.Event()
+        self._stop_ack_event = mp.Event()
+        self._stop_ack_event.set()  # 初始处于空闲状态
+
         self._avatar_process = mp.Process(target=self.start_avatar, args=[handler_root, config])
         self._avatar_process.start()
     
@@ -107,10 +113,34 @@ class LiteAvatarWorker:
         return self.worker_status
     
     def recruit(self):
+        """招募worker开始新session"""
+        # 确保进程已启动
+        if self._avatar_process is not None and not self._avatar_process.is_alive():
+            logger.info("Starting avatar process in recruit")
+            self._avatar_process.start()
+
+        # 清理上一次STOP的确认标记
+        if self._stop_ack_event.is_set():
+            self._stop_ack_event.clear()
+
+        if not self._process_ready_event.wait(timeout=2.0):
+            raise RuntimeError("Avatar process is not ready")
+
         self.worker_status = WorkerStatus.BUSY
+        logger.info("Avatar worker recruited for new session")
     
     def release(self):
+        """释放worker，等待session完全停止"""
+        logger.info("Releasing avatar worker for next session")
+
+        # 等待STOP确认事件，最多等待2秒
+        if not self._stop_ack_event.wait(timeout=2.0):
+            logger.warning("Stop acknowledgement timeout, forcing release")
+        else:
+            logger.info("Stop acknowledgement received")
+
         self.worker_status = WorkerStatus.IDLE
+        logger.info("Avatar worker released and ready for next session")
 
     def start_avatar(self,
                      handler_root: str,
@@ -128,6 +158,10 @@ class LiteAvatarWorker:
                 use_gpu=config.use_gpu
             )
         )
+        # 标记进程已准备就绪
+        self._process_ready_event.set()
+        logger.info("Avatar process is ready")
+        
         # start event input loop
         event_in_loop = threading.Thread(target=self._event_input_loop)
         event_in_loop.start()
@@ -141,25 +175,40 @@ class LiteAvatarWorker:
             event: Tts2FaceEvent = self.event_in_queue.get()
             logger.info("receive event: {}", event)
             if event == Tts2FaceEvent.START:
-                self.session_running = True
-                result_hanler = Tts2FaceOutputHandler(
-                    audio_output_queue=self.audio_out_queue,
-                    video_output_queue=self.video_out_queue,
-                    event_out_queue=self.event_out_queue,
-                )
-                self.processor.register_output_handler(result_hanler)
-                self.processor.start()
-                self.audio_input_thread = threading.Thread(target=self._audio_input_loop)
-                self.audio_input_thread.start()
+                # 只有在没有活跃session时才启动新session
+                if not self.session_running:
+                    self.session_running = True
+                    result_hanler = Tts2FaceOutputHandler(
+                        audio_output_queue=self.audio_out_queue,
+                        video_output_queue=self.video_out_queue,
+                        event_out_queue=self.event_out_queue,
+                    )
+                    self.processor.register_output_handler(result_hanler)
+                    self.processor.start()
+                    self.audio_input_thread = threading.Thread(target=self._audio_input_loop)
+                    self.audio_input_thread.start()
+                    logger.info("Avatar session started")
+                else:
+                    logger.warning("Received START event but session is already active, ignoring")
 
             elif event == Tts2FaceEvent.STOP:
-                self.session_running = False
-                self.processor.stop()
-                self.processor.clear_output_handlers()
-                self.audio_input_thread.join()
-                self.audio_input_thread = None
-                self._clear_mp_queues()
-                self.context = None
+                # 只有在有活跃session时才停止
+                if self.session_running:
+                    self.session_running = False
+                    
+                    if self.processor is not None:
+                        self.processor.stop()
+                        self.processor.clear_output_handlers()
+                    if self.audio_input_thread is not None:
+                        self.audio_input_thread.join()
+                        self.audio_input_thread = None
+                    self._clear_mp_queues()
+                    self.context = None
+                    logger.info("Avatar session stopped")
+                    # 设置停止确认
+                    self._stop_ack_event.set()
+                else:
+                    logger.warning("Received STOP event but no active session, ignoring")
     
     def _audio_input_loop(self):
         while self.session_running:
