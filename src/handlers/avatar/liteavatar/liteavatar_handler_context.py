@@ -51,7 +51,7 @@ class HandlerTts2FaceContext(HandlerContext):
         while self.loop_running:
             no_output = True
             # get audio
-            if self.lite_avatar_worker.audio_out_queue.qsize() > 0:
+            if not self.lite_avatar_worker.audio_out_queue.empty():
                 no_output = False
                 try:
                     audio_tensor = self.lite_avatar_worker.audio_out_queue.get_nowait()
@@ -62,7 +62,7 @@ class HandlerTts2FaceContext(HandlerContext):
                 except Exception:
                     pass
             # get video
-            if self.lite_avatar_worker.video_out_queue.qsize() > 0:
+            if not self.lite_avatar_worker.video_out_queue.empty():
                 no_output = False
                 try:
                     video_tensor = self.lite_avatar_worker.video_out_queue.get_nowait()
