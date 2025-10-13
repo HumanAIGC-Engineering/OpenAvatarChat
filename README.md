@@ -673,7 +673,9 @@ python scripts/download_avatar_model.py -d
 * Docker
 
 ```
-./build_and_run.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+bash build_cuda128.sh
+
+bash run_docker_cuda128.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
 
 * 本地运行
@@ -692,7 +694,7 @@ uv run install.py --uv --config config/chat_with_openai_compatible_bailian_cosyv
 需要注意的是，uv默认安装的mmcv在实际运行时可能会报错“No module named ‘mmcv._ext’”参考[MMCV-FAQ](https://mmcv.readthedocs.io/en/latest/faq.html)，解决方法是：
 ```bash
 uv pip uninstall mmcv
-uv pip install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html --trusted-host download.openmmlab.com
+uv run mim install mmcv==2.2.0 --force
 ```
 
 MuseTalk源码中第一次启动默认会下载一个模型s3fd-619a316812.pth，该模型目前已集成在下载脚本中。在Docker启动时已经做了映射处理。但在本地运行时，需要再手动进行一次映射。
