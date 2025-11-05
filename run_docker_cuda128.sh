@@ -31,6 +31,8 @@ docker run --rm --gpus all -it --name open-avatar-chat \
     -v `pwd`/models/musetalk/s3fd-619a316812/:/root/.cache/torch/hub/checkpoints/ \
     -v `pwd`/exp:/root/open-avatar-chat/exp \
     -v `pwd`/resource:/root/open-avatar-chat/resource \
+    -e NVIDIA_VISIBLE_DEVICES=all \
+    -e NVIDIA_DRIVER_CAPABILITIES=compute,video,utility \
     -p 8282:8282 \
     open-avatar-chat:latest \
     --config ${CONFIG_PATH:-config/chat_with_openai_compatible_bailian_cosyvoice.yaml}
