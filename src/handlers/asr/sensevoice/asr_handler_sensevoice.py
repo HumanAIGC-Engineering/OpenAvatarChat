@@ -86,8 +86,11 @@ class HandlerASR(HandlerBase, ABC):
 
     def load(self, engine_config: ChatEngineConfigModel, handler_config: Optional[BaseModel] = None):
         if isinstance(handler_config, ASRConfig):
-            self.model_name = handler_config.model_name
-
+            self.model_name = handler_config.model_name       
+            model_path = os.path.join(DirectoryInfo.get_project_dir(), "models", handler_config.model_name)
+            if os.path.exists(model_path):
+                self.model_name = model_path
+        logger.info(f"load model {self.model_name}")
         self.model = AutoModel(model=self.model_name, disable_update=True)
 
     def create_context(self, session_context, handler_config=None):
