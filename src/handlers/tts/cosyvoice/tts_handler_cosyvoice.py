@@ -109,6 +109,9 @@ class HandlerTTS(HandlerBase, ABC):
 
     def load(self, engine_config: ChatEngineConfigModel, handler_config: Optional[BaseModel] = None):
         if isinstance(handler_config, TTSConfig):  
+            model_path = os.path.join(DirectoryInfo.get_models_dir(), handler_config.model_name)
+            if os.path.exists(model_path):
+                handler_config.model_name = model_path
             if not os.path.isabs(handler_config.model_name) and handler_config.model_name is not None:
                 modelscope.snapshot_download(handler_config.model_name)
 

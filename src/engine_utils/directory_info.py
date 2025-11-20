@@ -22,3 +22,7 @@ class DirectoryInfo(object):
     @classmethod
     def get_config_dir(cls):
         return os.path.join(cls.project_dir, 'config')
+    
+    @classmethod
+    def get_models_dir(cls):
+        return os.path.join(cls.project_dir, 'models')
