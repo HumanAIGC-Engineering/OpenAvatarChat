@@ -83,6 +83,12 @@ class SharedMemoryBufferPool:
         else:
             self.video_available = mp.Queue()
         
+        # Monitor thresholds
+        self.audio_low_watermark = max(1, audio_pool_size // 5)
+        self.video_low_watermark = max(1, video_pool_size // 5)
+        self._audio_low_logged = False
+        self._video_low_logged = False
+        
         # Track if cleanup has been registered
         self._cleanup_registered = False
         self._is_cleaned_up = False
@@ -200,12 +206,21 @@ class SharedMemoryBufferPool:
         if self._is_cleaned_up:
             raise RuntimeError("Buffer pool has been cleaned up")
         
-        logger.debug(f"Attempting to acquire audio buffer, queue size: {self.audio_available.qsize()}")
+        queue_size = self._safe_qsize(self.audio_available)
+        logger.debug(f"Attempting to acquire audio buffer, queue size: {queue_size}")
         try:
             index = self.audio_available.get(timeout=timeout)
         except Exception as e:
-            logger.error(f"Failed to acquire audio buffer: {e}, queue size: {self.audio_available.qsize()}")
+            queue_size = self._safe_qsize(self.audio_available)
+            logger.error(f"Failed to acquire audio buffer: {e}, queue size: {queue_size}")
             raise TimeoutError(f"No audio buffer available within {timeout}s") from e
+        
+        self._maybe_log_buffer_usage(
+            buffer_type='audio',
+            queue=self.audio_available,
+            pool_size=self.audio_pool_size,
+            is_release=False
+        )
         
         shm = self.audio_buffers[index]
         if shm is None:
@@ -237,6 +252,13 @@ class SharedMemoryBufferPool:
             logger.error(f"Failed to acquire video buffer: {e}")
             raise TimeoutError(f"No video buffer available within {timeout}s") from e
         
+        self._maybe_log_buffer_usage(
+            buffer_type='video',
+            queue=self.video_available,
+            pool_size=self.video_pool_size,
+            is_release=False
+        )
+        
         shm = self.video_buffers[index]
         if shm is None:
             logger.error(f"Video buffer {index} is None")
@@ -258,6 +280,12 @@ class SharedMemoryBufferPool:
         if self.audio_buffers[index] is not None:
             self.audio_available.put(index)
             logger.debug(f"Released audio buffer {index}")
+            self._maybe_log_buffer_usage(
+                buffer_type='audio',
+                queue=self.audio_available,
+                pool_size=self.audio_pool_size,
+                is_release=True
+            )
         else:
             logger.warning(f"Attempted to release None audio buffer {index}")
     
@@ -275,8 +303,48 @@ class SharedMemoryBufferPool:
         if self.video_buffers[index] is not None:
             self.video_available.put(index)
             logger.debug(f"Released video buffer {index}")
+            self._maybe_log_buffer_usage(
+                buffer_type='video',
+                queue=self.video_available,
+                pool_size=self.video_pool_size,
+                is_release=True
+            )
         else:
             logger.warning(f"Attempted to release None video buffer {index}")
+
+    def _safe_qsize(self, queue):
+        try:
+            return queue.qsize()
+        except (NotImplementedError, AttributeError):
+            return None
+    
+    def _maybe_log_buffer_usage(self, buffer_type: str, queue, pool_size: int, is_release: bool):
+        size = self._safe_qsize(queue)
+        if size is None:
+            return
+        
+        in_use = pool_size - size
+        if buffer_type == 'audio':
+            watermark = self.audio_low_watermark
+            flag_attr = '_audio_low_logged'
+        else:
+            watermark = self.video_low_watermark
+            flag_attr = '_video_low_logged'
+        
+        low_logged = getattr(self, flag_attr, False)
+        
+        if size <= watermark:
+            if not low_logged:
+                logger.warning(
+                    f"{buffer_type.capitalize()} buffer low: available={size}, in_use={in_use}, pool_size={pool_size}"
+                )
+                setattr(self, flag_attr, True)
+        else:
+            if low_logged and is_release:
+                logger.info(
+                    f"{buffer_type.capitalize()} buffer recovered: available={size}, in_use={in_use}, pool_size={pool_size}"
+                )
+            setattr(self, flag_attr, False)
     
     def cleanup(self):
         """

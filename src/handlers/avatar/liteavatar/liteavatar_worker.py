@@ -5,7 +5,6 @@ import time
 from typing import Optional
 from enum import Enum
 import os
-import torch
 import numpy as np
 from multiprocessing import shared_memory
 
@@ -35,6 +34,7 @@ class Tts2FaceConfigModel(HandlerBaseConfigModel, BaseModel):
     fps: int = Field(default=25)
     enable_fast_mode: bool = Field(default=False)
     use_gpu: bool = Field(default=True)
+    stop_ack_timeout: float = Field(default=5.0)
 
 
 class Tts2FaceEvent(Enum):
@@ -147,10 +147,13 @@ class LiteAvatarWorker:
         self.session_running = False
         self.audio_input_thread = None
         self.worker_status = WorkerStatus.IDLE
+        self._handler_root = handler_root
+        self._config = config
 
         # Event synchronization: stop acknowledgement
         self._stop_ack_event = mp.Event()
-        self._stop_ack_event.set()  # Initial state: idle
+        self._stop_ack_event.clear()
+        self.stop_ack_timeout = getattr(config, "stop_ack_timeout", 5.0)
 
         # Initialize shared memory buffer pool
         # Calculate maximum buffer sizes
@@ -159,26 +162,8 @@ class LiteAvatarWorker:
         self.audio_pool_size = 10
         self.video_pool_size = 10
         
-        self.shm_pool = SharedMemoryBufferPool(
-            audio_pool_size=self.audio_pool_size,
-            video_pool_size=self.video_pool_size,
-            max_audio_size=self.max_audio_size,
-            max_video_size=self.max_video_size,
-            create_mode=True
-        )
-        
-        # Pass shared memory names and queues to child process
-        shm_names = self.shm_pool.get_shm_names()
-        audio_available_queue = self.shm_pool.audio_available
-        video_available_queue = self.shm_pool.video_available
-
-        self._avatar_process = mp.Process(
-            target=self.start_avatar, 
-            args=[handler_root, config, shm_names, self.audio_pool_size, 
-                  self.video_pool_size, self.max_audio_size, self.max_video_size,
-                  audio_available_queue, video_available_queue]
-        )
-        self._avatar_process.start()
+        self._init_shared_memory_pool()
+        self._start_avatar_process()
 
     def __getstate__(self):
         """Exclude shm_pool from serialization to child process."""
@@ -199,10 +184,6 @@ class LiteAvatarWorker:
         if self._avatar_process is not None and not self._avatar_process.is_alive():
             raise RuntimeError("Avatar process is not alive")
 
-        # Clear previous stop acknowledgement if present
-        if self._stop_ack_event.is_set():
-            self._stop_ack_event.clear()
-
         self.worker_status = WorkerStatus.BUSY
         logger.info("Avatar worker recruited for new session")
     
@@ -210,11 +191,15 @@ class LiteAvatarWorker:
         """Release worker and wait for session to stop"""
         logger.info("Releasing avatar worker for next session")
 
-        # Wait for stop acknowledgement (timeout: 2 seconds)
-        if not self._stop_ack_event.wait(timeout=2.0):
-            logger.warning("Stop acknowledgement timeout, forcing release")
+        # Wait for stop acknowledgement with configurable timeout
+        if not self._stop_ack_event.wait(timeout=self.stop_ack_timeout):
+            logger.error(
+                f"Stop acknowledgement timeout after {self.stop_ack_timeout}s, restarting avatar worker"
+            )
+            self._restart_avatar_process()
         else:
             logger.info("Stop acknowledgement received")
+            self._stop_ack_event.clear()
 
         self.worker_status = WorkerStatus.IDLE
         logger.info("Avatar worker released and ready for next session")
@@ -323,7 +308,16 @@ class LiteAvatarWorker:
     def _clear_mp_queues(self):
         for q in self.io_queues:
             while not q.empty():
-                q.get()
+                item = q.get()
+                try:
+                    if q is self.audio_out_queue and isinstance(item, SharedMemoryDataPacket):
+                        if self.shm_pool is not None:
+                            self.shm_pool.release_audio_buffer(item.buffer_index)
+                    elif q is self.video_out_queue and isinstance(item, SharedMemoryDataPacket):
+                        if self.shm_pool is not None:
+                            self.shm_pool.release_video_buffer(item.buffer_index)
+                except Exception as release_error:
+                    logger.error("Failed to release buffer while clearing queue: {}", release_error)
     
     def destroy(self):
         """Terminate avatar process and cleanup resources."""
@@ -336,8 +330,39 @@ class LiteAvatarWorker:
                         logger.warning("Force killing avatar process")
                         self._avatar_process.kill()
                         self._avatar_process.join()
+                self._avatar_process = None
             
             if hasattr(self, 'shm_pool') and self.shm_pool is not None:
                 self.shm_pool.cleanup()
+                self.shm_pool = None
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
+
+    def _init_shared_memory_pool(self):
+        self.shm_pool = SharedMemoryBufferPool(
+            audio_pool_size=self.audio_pool_size,
+            video_pool_size=self.video_pool_size,
+            max_audio_size=self.max_audio_size,
+            max_video_size=self.max_video_size,
+            create_mode=True
+        )
+
+    def _start_avatar_process(self):
+        shm_names = self.shm_pool.get_shm_names()
+        audio_available_queue = self.shm_pool.audio_available
+        video_available_queue = self.shm_pool.video_available
+
+        self._avatar_process = mp.Process(
+            target=self.start_avatar,
+            args=[self._handler_root, self._config, shm_names, self.audio_pool_size,
+                  self.video_pool_size, self.max_audio_size, self.max_video_size,
+                  audio_available_queue, video_available_queue]
+        )
+        self._avatar_process.start()
+
+    def _restart_avatar_process(self):
+        logger.info("Restarting avatar worker process")
+        self.destroy()
+        self._init_shared_memory_pool()
+        self._start_avatar_process()
+        self._stop_ack_event.clear()
