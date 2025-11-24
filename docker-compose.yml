@@ -19,7 +19,8 @@ services:
     container_name: open-avatar-chat
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+      # - UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
     command: >
       --config=/root/open-avatar-chat/config/chat_with_openai_compatible_bailian_cosyvoice.yaml
     volumes:
