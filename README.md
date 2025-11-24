@@ -450,7 +450,7 @@ bash run_docker_cuda128.sh --config config/chat_with_openai_compatible_bailian_c
 ```
 
 #### Docker Compose
-支持使用docker compose一次性拉起openavatarchat服务和镜像方式启动的coturn服务。
+支持使用docker compose一次性拉起open avatar chat服务和镜像方式启动的coturn服务。
 
 > [!Note]
 > 在构建完成open-avatar-chat:latest之后，可以到项目根目录下的`docker-compose.yml`文件中修改config对应的要启动的配置文件，默认为`chat_with_openai_compatible_bailian_cosyvoice.yaml`.
