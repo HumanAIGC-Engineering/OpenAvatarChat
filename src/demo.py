@@ -49,7 +49,7 @@ class OpenAvatarChatWebServer(uvicorn.Server):
 
 
 def setup_demo():
-    app = FastAPI()
+    app = FastAPI(docs_url=None, redoc_url=None)
 
     css = """
 

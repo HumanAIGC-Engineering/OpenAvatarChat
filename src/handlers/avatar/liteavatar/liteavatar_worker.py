@@ -5,7 +5,8 @@ import time
 from typing import Optional
 from enum import Enum
 import os
-import torch
+import numpy as np
+from multiprocessing import shared_memory
 
 import sysconfig
 
@@ -18,6 +19,7 @@ from handlers.avatar.liteavatar.avatar_output_handler import AvatarOutputHandler
 from handlers.avatar.liteavatar.avatar_processor import AvatarProcessor
 from handlers.avatar.liteavatar.avatar_processor_factory import AvatarProcessorFactory, AvatarAlgoType
 from handlers.avatar.liteavatar.model.algo_model import AvatarInitOption, AudioResult, VideoResult, AvatarStatus
+from handlers.avatar.liteavatar.shared_memory_buffer_pool import SharedMemoryBufferPool, SharedMemoryDataPacket
 from engine_utils.interval_counter import IntervalCounter
 from chat_engine.common.handler_base import HandlerBaseConfigModel
 from pydantic import BaseModel, Field
@@ -32,6 +34,7 @@ class Tts2FaceConfigModel(HandlerBaseConfigModel, BaseModel):
     fps: int = Field(default=25)
     enable_fast_mode: bool = Field(default=False)
     use_gpu: bool = Field(default=True)
+    stop_ack_timeout: float = Field(default=5.0)
 
 
 class Tts2FaceEvent(Enum):
@@ -43,10 +46,11 @@ class Tts2FaceEvent(Enum):
 
 class Tts2FaceOutputHandler(AvatarOutputHandler):
     def __init__(self, audio_output_queue, video_output_queue,
-                 event_out_queue):
+                 event_out_queue, shm_pool: SharedMemoryBufferPool):
         self.audio_output_queue = audio_output_queue
         self.video_output_queue = video_output_queue
         self.event_out_queue = event_out_queue
+        self.shm_pool = shm_pool
         self._video_producer_counter = IntervalCounter("video_producer")
 
     def on_start(self, init_option: AvatarInitOption):
@@ -58,15 +62,59 @@ class Tts2FaceOutputHandler(AvatarOutputHandler):
     def on_audio(self, audio_result: AudioResult):
         audio_frame = audio_result.audio_frame
         audio_data = audio_frame.to_ndarray()
-        audio_tensor = torch.from_numpy(audio_data)
-        self.audio_output_queue.put_nowait(audio_tensor)
+        
+        try:
+            # Acquire buffer from pool
+            buf_idx, shm_name, buf_size = self.shm_pool.acquire_audio_buffer()
+            
+            # Write to shared memory
+            shm = shared_memory.SharedMemory(name=shm_name)
+            np_buffer = np.ndarray(audio_data.shape, dtype=audio_data.dtype, buffer=shm.buf)
+            np_buffer[:] = audio_data
+            
+            # Create packet and send
+            packet = SharedMemoryDataPacket(
+                buffer_index=buf_idx,
+                shm_name=shm_name,
+                data_size=audio_data.nbytes,
+                shape=audio_data.shape,
+                dtype=str(audio_data.dtype),
+                buffer_type='audio'
+            )
+            self.audio_output_queue.put_nowait(packet)
+            shm.close()  # Don't unlink, just close this process's reference
+            
+        except Exception as e:
+            logger.error(f"Error sending audio via shared memory: {e}")
 
     def on_video(self, video_result: VideoResult):
         self._video_producer_counter.add()
         video_frame = video_result.video_frame
         video_data = video_frame.to_ndarray(format="bgr24")
-        video_tensor = torch.from_numpy(video_data)
-        self.video_output_queue.put_nowait(video_tensor)
+        
+        try:
+            # Acquire buffer from pool
+            buf_idx, shm_name, buf_size = self.shm_pool.acquire_video_buffer()
+            
+            # Write to shared memory
+            shm = shared_memory.SharedMemory(name=shm_name)
+            np_buffer = np.ndarray(video_data.shape, dtype=video_data.dtype, buffer=shm.buf)
+            np_buffer[:] = video_data
+            
+            # Create packet and send
+            packet = SharedMemoryDataPacket(
+                buffer_index=buf_idx,
+                shm_name=shm_name,
+                data_size=video_data.nbytes,
+                shape=video_data.shape,
+                dtype=str(video_data.dtype),
+                buffer_type='video'
+            )
+            self.video_output_queue.put_nowait(packet)
+            shm.close()  # Don't unlink, just close this process's reference
+            
+        except Exception as e:
+            logger.error(f"Error sending video via shared memory: {e}")
 
     def on_avatar_status_change(self, speech_id, avatar_status: AvatarStatus):
         logger.info(f"Avatar status changed: {speech_id} {avatar_status}")
@@ -99,14 +147,33 @@ class LiteAvatarWorker:
         self.session_running = False
         self.audio_input_thread = None
         self.worker_status = WorkerStatus.IDLE
+        self._handler_root = handler_root
+        self._config = config
 
         # Event synchronization: stop acknowledgement
         self._stop_ack_event = mp.Event()
-        self._stop_ack_event.set()  # Initial state: idle
+        self._stop_ack_event.clear()
+        self.stop_ack_timeout = getattr(config, "stop_ack_timeout", 5.0)
 
-        self._avatar_process = mp.Process(target=self.start_avatar, args=[handler_root, config])
-        self._avatar_process.start()
+        # Initialize shared memory buffer pool
+        # Calculate maximum buffer sizes
+        self.max_audio_size = 24000 * 2 * 1  # sample_rate * bytes_per_sample * max_seconds (1秒)
+        self.max_video_size = 1920 * 1080 * 3  # max_width * max_height * channels
+        self.audio_pool_size = 10
+        self.video_pool_size = 10
+        
+        self._init_shared_memory_pool()
+        self._start_avatar_process()
+
+    def __getstate__(self):
+        """Exclude shm_pool from serialization to child process."""
+        state = self.__dict__.copy()
+        state['shm_pool'] = None
+        return state
     
+    def __setstate__(self, state):
+        """Restore state in child process."""
+        self.__dict__.update(state)
     
     def get_status(self):
         return self.worker_status
@@ -117,10 +184,6 @@ class LiteAvatarWorker:
         if self._avatar_process is not None and not self._avatar_process.is_alive():
             raise RuntimeError("Avatar process is not alive")
 
-        # Clear previous stop acknowledgement if present
-        if self._stop_ack_event.is_set():
-            self._stop_ack_event.clear()
-
         self.worker_status = WorkerStatus.BUSY
         logger.info("Avatar worker recruited for new session")
     
@@ -128,40 +191,70 @@ class LiteAvatarWorker:
         """Release worker and wait for session to stop"""
         logger.info("Releasing avatar worker for next session")
 
-        # Wait for stop acknowledgement (timeout: 2 seconds)
-        if not self._stop_ack_event.wait(timeout=2.0):
-            logger.warning("Stop acknowledgement timeout, forcing release")
+        # Wait for stop acknowledgement with configurable timeout
+        if not self._stop_ack_event.wait(timeout=self.stop_ack_timeout):
+            logger.error(
+                f"Stop acknowledgement timeout after {self.stop_ack_timeout}s, restarting avatar worker"
+            )
+            self._restart_avatar_process()
         else:
             logger.info("Stop acknowledgement received")
+            self._stop_ack_event.clear()
 
         self.worker_status = WorkerStatus.IDLE
         logger.info("Avatar worker released and ready for next session")
 
     def start_avatar(self,
                      handler_root: str,
-                     config: Tts2FaceConfigModel):
+                     config: Tts2FaceConfigModel,
+                     shm_names: dict,
+                     audio_pool_size: int,
+                     video_pool_size: int,
+                     max_audio_size: int,
+                     max_video_size: int,
+                     audio_available_queue,
+                     video_available_queue):
 
-        self.processor = AvatarProcessorFactory.create_avatar_processor(
-            handler_root,
-            AvatarAlgoType.TTS2FACE_CPU,
-            AvatarInitOption(
-                audio_sample_rate=24000,
-                video_frame_rate=config.fps,
-                avatar_name=config.avatar_name,
-                debug=config.debug,
-                enable_fast_mode=config.enable_fast_mode,
-                use_gpu=config.use_gpu
+        try:
+            # Attach to shared memory created by parent process
+            self.shm_pool = SharedMemoryBufferPool(
+                audio_pool_size=audio_pool_size,
+                video_pool_size=video_pool_size,
+                max_audio_size=max_audio_size,
+                max_video_size=max_video_size,
+                create_mode=False,
+                shm_names=shm_names,
+                audio_available_queue=audio_available_queue,
+                video_available_queue=video_available_queue
             )
-        )
-        logger.info("Avatar process is ready")
-        
-        # Start event input loop
-        event_in_loop = threading.Thread(target=self._event_input_loop)
-        event_in_loop.start()
-        
-        # Keep process alive
-        while True:
-            time.sleep(1)
+            logger.info("Child process attached to shared memory buffer pool")
+
+            self.processor = AvatarProcessorFactory.create_avatar_processor(
+                handler_root,
+                AvatarAlgoType.TTS2FACE_CPU,
+                AvatarInitOption(
+                    audio_sample_rate=24000,
+                    video_frame_rate=config.fps,
+                    avatar_name=config.avatar_name,
+                    debug=config.debug,
+                    enable_fast_mode=config.enable_fast_mode,
+                    use_gpu=config.use_gpu
+                )
+            )
+            logger.info("Avatar process is ready")
+            
+            # Start event input loop
+            event_in_loop = threading.Thread(target=self._event_input_loop)
+            event_in_loop.start()
+            
+            # Keep process alive
+            while True:
+                time.sleep(1)
+        except Exception as e:
+            logger.error(f"Error in avatar process: {e}")
+        finally:
+            if hasattr(self, 'shm_pool') and self.shm_pool is not None:
+                self.shm_pool.cleanup()
     
     def _event_input_loop(self):
         while True:
@@ -175,6 +268,7 @@ class LiteAvatarWorker:
                         audio_output_queue=self.audio_out_queue,
                         video_output_queue=self.video_out_queue,
                         event_out_queue=self.event_out_queue,
+                        shm_pool=self.shm_pool,
                     )
                     self.processor.register_output_handler(result_hanler)
                     self.processor.start()
@@ -214,20 +308,61 @@ class LiteAvatarWorker:
     def _clear_mp_queues(self):
         for q in self.io_queues:
             while not q.empty():
-                q.get()
+                item = q.get()
+                try:
+                    if q is self.audio_out_queue and isinstance(item, SharedMemoryDataPacket):
+                        if self.shm_pool is not None:
+                            self.shm_pool.release_audio_buffer(item.buffer_index)
+                    elif q is self.video_out_queue and isinstance(item, SharedMemoryDataPacket):
+                        if self.shm_pool is not None:
+                            self.shm_pool.release_video_buffer(item.buffer_index)
+                except Exception as release_error:
+                    logger.error("Failed to release buffer while clearing queue: {}", release_error)
     
     def destroy(self):
-        """terminate avatar process when object is destroyed"""
+        """Terminate avatar process and cleanup resources."""
         try:
             if self._avatar_process is not None:
                 if self._avatar_process.is_alive():
-                    logger.info("Terminating avatar process in destructor")
                     self._avatar_process.terminate()
                     self._avatar_process.join(timeout=5)
                     if self._avatar_process.is_alive():
-                        logger.warning("Avatar process still alive after terminate, killing it")
+                        logger.warning("Force killing avatar process")
                         self._avatar_process.kill()
                         self._avatar_process.join()
-                logger.info("Avatar process terminated successfully")
+                self._avatar_process = None
+            
+            if hasattr(self, 'shm_pool') and self.shm_pool is not None:
+                self.shm_pool.cleanup()
+                self.shm_pool = None
         except Exception as e:
-            logger.error(f"Error during avatar process cleanup: {e}")
+            logger.error(f"Error during cleanup: {e}")
+
+    def _init_shared_memory_pool(self):
+        self.shm_pool = SharedMemoryBufferPool(
+            audio_pool_size=self.audio_pool_size,
+            video_pool_size=self.video_pool_size,
+            max_audio_size=self.max_audio_size,
+            max_video_size=self.max_video_size,
+            create_mode=True
+        )
+
+    def _start_avatar_process(self):
+        shm_names = self.shm_pool.get_shm_names()
+        audio_available_queue = self.shm_pool.audio_available
+        video_available_queue = self.shm_pool.video_available
+
+        self._avatar_process = mp.Process(
+            target=self.start_avatar,
+            args=[self._handler_root, self._config, shm_names, self.audio_pool_size,
+                  self.video_pool_size, self.max_audio_size, self.max_video_size,
+                  audio_available_queue, video_available_queue]
+        )
+        self._avatar_process.start()
+
+    def _restart_avatar_process(self):
+        logger.info("Restarting avatar worker process")
+        self.destroy()
+        self._init_shared_memory_pool()
+        self._start_avatar_process()
+        self._stop_ack_event.clear()

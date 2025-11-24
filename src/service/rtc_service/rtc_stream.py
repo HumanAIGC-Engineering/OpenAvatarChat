@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 import uuid
 import weakref
 from typing import Optional, Dict
@@ -16,10 +17,14 @@ from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.data_models.chat_signal import ChatSignal
 from chat_engine.data_models.chat_signal_type import ChatSignalType, ChatSignalSourceType
 from engine_utils.interval_counter import IntervalCounter
-from aiortc.codecs import vpx 
-vpx.DEFAULT_BITRATE = 5000000
-vpx.MIN_BITRATE = 1000000
-vpx.MAX_BITRATE = 10000000
+
+def _get_h264_encoder_info():
+    """Get H.264 encoder info dynamically to avoid circular imports"""
+    try:
+        from handlers.client.rtc_client import client_handler_rtc
+        return client_handler_rtc._selected_h264_encoder, client_handler_rtc._actual_h264_encoder
+    except Exception:
+        return "unknown", None
 
 
 class RtcStream(AsyncAudioVideoStreamHandler):
@@ -69,6 +74,11 @@ class RtcStream(AsyncAudioVideoStreamHandler):
             session_id = kwargs.get("webrtc_id", None)
             if session_id is None:
                 session_id = uuid.uuid4().hex
+            
+            # Log codec information
+            selected_encoder, _ = _get_h264_encoder_info()
+            logger.debug(f"[{session_id}] H.264 encoder: {selected_encoder}")
+            
             new_stream = RtcStream(
                 session_id,
                 expected_layout=self.expected_layout,
@@ -113,24 +123,40 @@ class RtcStream(AsyncAudioVideoStreamHandler):
                 self.emit_counter.add_property("audio_emit", sample_num / self.output_sample_rate)
                 return self.output_sample_rate, audio_array
         except Exception as e:
-            logger.opt(exception=e).error(f"Error in emit: ")
+            logger.opt(exception=e).error("Error in emit: ")
             raise
 
     async def video_emit(self) -> VideoEmitType:
         try:
             if not self.first_audio_emitted:
                 await asyncio.sleep(0.1)
+            
+            # Log actual encoder being used (for verification)
+            selected_encoder, actual_encoder = _get_h264_encoder_info()
+            if actual_encoder:
+                logger.debug(f"[{self.session_id}] Using H.264 encoder: {actual_encoder}")
+            
             self.emit_counter.add_property("video_emit")
+            
             while not self.quit.is_set():
+                get_data_start = time.perf_counter()
                 video_frame_data: ChatData = await self.client_session_delegate.get_data(EngineChannelType.VIDEO)
+                get_data_wait_time = time.perf_counter() - get_data_start
+                
+                # Log slow data retrieval
+                if get_data_wait_time > 0.05:
+                    logger.debug(f"[{self.session_id}] Slow video data retrieval: {get_data_wait_time:.3f}s")
+                
                 if video_frame_data is None or video_frame_data.data is None:
                     continue
+                
                 frame_data = video_frame_data.data.get_main_data().squeeze()
                 if frame_data is None:
                     continue
+                
                 return frame_data
         except Exception as e:
-            logger.opt(exception=e).error(f"Error in video_emit: ")
+            logger.opt(exception=e).error("Error in video_emit")
             raise
 
     async def receive(self, frame: tuple[int, np.ndarray]):

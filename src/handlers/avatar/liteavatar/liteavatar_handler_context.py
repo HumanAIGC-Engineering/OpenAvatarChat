@@ -3,6 +3,7 @@ import time
 from typing import Dict
 from loguru import logger
 import numpy as np
+from multiprocessing import shared_memory
 
 from chat_engine.contexts.handler_context import HandlerContext
 from chat_engine.contexts.session_context import SharedStates
@@ -11,6 +12,7 @@ from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBun
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.common.engine_channel_type import EngineChannelType
 from handlers.avatar.liteavatar.liteavatar_worker import LiteAvatarWorker, Tts2FaceEvent
+from handlers.avatar.liteavatar.shared_memory_buffer_pool import SharedMemoryDataPacket
 
 
 class HandlerTts2FaceContext(HandlerContext):
@@ -50,28 +52,75 @@ class HandlerTts2FaceContext(HandlerContext):
     def _media_out_loop(self):
         while self.loop_running:
             no_output = True
-            # get audio
-            if self.lite_avatar_worker.audio_out_queue.qsize() > 0:
+            
+            # Process audio
+            try:
+                packet: SharedMemoryDataPacket = self.lite_avatar_worker.audio_out_queue.get_nowait()
                 no_output = False
+                shm = None
                 try:
-                    audio_tensor = self.lite_avatar_worker.audio_out_queue.get_nowait()
-                    audio = audio_tensor.numpy()
-                    # self.rtc_audio_queue.put_nowait(audio)
+                    shm = shared_memory.SharedMemory(name=packet.shm_name)
+                    audio = np.ndarray(
+                        packet.shape,
+                        dtype=np.dtype(packet.dtype),
+                        buffer=shm.buf[:packet.data_size]
+                    ).copy()
+                    shm.close()
+                    shm = None
+                    
                     self.return_data(audio, ChatDataType.AVATAR_AUDIO)
-                    no_output = False
-                except Exception:
-                    pass
-            # get video
-            if self.lite_avatar_worker.video_out_queue.qsize() > 0:
+                except Exception as e:
+                    import traceback
+                    logger.error(f"Error processing audio: {e.__class__.__name__}: {e}")
+                    logger.error(f"Packet: idx={packet.buffer_index}, name={packet.shm_name}, shape={packet.shape}")
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+                    if shm is not None:
+                        try:
+                            shm.close()
+                        except:
+                            pass
+                finally:
+                    try:
+                        self.lite_avatar_worker.shm_pool.release_audio_buffer(packet.buffer_index)
+                    except Exception as e:
+                        logger.error(f"Error releasing audio buffer: {e}")
+            except:
+                pass  # Queue empty
+            
+            # Process video
+            try:
+                packet: SharedMemoryDataPacket = self.lite_avatar_worker.video_out_queue.get_nowait()
                 no_output = False
+                shm = None
                 try:
-                    video_tensor = self.lite_avatar_worker.video_out_queue.get_nowait()
-                    video = video_tensor.numpy()
-                    # self.rtc_video_queue.put_nowait(video)
+                    shm = shared_memory.SharedMemory(name=packet.shm_name)
+                    video = np.ndarray(
+                        packet.shape,
+                        dtype=np.dtype(packet.dtype),
+                        buffer=shm.buf[:packet.data_size]
+                    ).copy()
+                    shm.close()
+                    shm = None
+                    
                     self.return_data(video, ChatDataType.AVATAR_VIDEO)
-                    no_output = False
-                except Exception:
-                    pass
+                except Exception as e:
+                    import traceback
+                    logger.error(f"Error processing video: {e.__class__.__name__}: {e}")
+                    logger.error(f"Packet: idx={packet.buffer_index}, name={packet.shm_name}, shape={packet.shape}")
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+                    if shm is not None:
+                        try:
+                            shm.close()
+                        except:
+                            pass
+                finally:
+                    try:
+                        self.lite_avatar_worker.shm_pool.release_video_buffer(packet.buffer_index)
+                    except Exception as e:
+                        logger.error(f"Error releasing video buffer: {e}")
+            except:
+                pass  # Queue empty
+            
             if no_output:
                 time.sleep(0.05)
                 continue

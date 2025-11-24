@@ -22,6 +22,8 @@ docker run --rm --gpus all -it --name open-avatar-chat \
     -v `pwd`/ssl_certs:/root/open-avatar-chat/ssl_certs \
     -v `pwd`/config:/root/open-avatar-chat/config \
     -v `pwd`/models/musetalk/s3fd-619a316812/:/root/.cache/torch/hub/checkpoints/ \
+    -e NVIDIA_VISIBLE_DEVICES=all \
+    -e NVIDIA_DRIVER_CAPABILITIES=compute,video,utility \
     -p 8282:8282 \
     open-avatar-chat:0.0.1 \
     --config ${CONFIG_PATH}
