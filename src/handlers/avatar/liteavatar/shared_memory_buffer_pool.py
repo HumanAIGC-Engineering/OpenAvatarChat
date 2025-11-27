@@ -160,7 +160,8 @@ class SharedMemoryBufferPool:
             except Exception as e:
                 logger.error(f"Failed to attach to audio buffer {i} ({shm_name}): {e}")
                 self.audio_buffers.append(None)
-        logger.info(f"Audio attached: {len(self.audio_buffers)} buffers, queue: {self.audio_available.qsize()}")
+        qsize = self._safe_qsize(self.audio_available)
+        logger.info(f"Audio attached: {len(self.audio_buffers)} buffers, queue: {qsize}")
     
     def _attach_video_pool(self, shm_names: List[str]):
         """Attach to existing video buffer pool."""
@@ -428,4 +429,3 @@ class SharedMemoryBufferPool:
             self.cleanup()
         except Exception as e:
             logger.error(f"Error in __del__: {e}")
-

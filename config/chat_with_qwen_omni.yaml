@@ -16,7 +16,7 @@ default:
         module: client/rtc_client/client_handler_rtc
         connection_ttl: 36000
         # max time a session will last for
-        connection_ttl: 900
+        # connection_ttl: 900
       SileroVad:
         module: vad/silerovad/vad_handler_silero
         speaking_threshold: 0.5
@@ -52,10 +52,16 @@ default:
       #   force_create_avatar: false  # Whether to force regenerate digital human data
       #   debug: false  # Whether to enable debug mode
       #   multi_thread_inference: true  # true: use 2 threads to inference (unet, vae), false: use single-thread to inference
+      # LiteAvatar:
+      #   module: avatar/liteavatar/avatar_handler_liteavatar
+      #   avatar_name: ~/.cache/modelscope/hub/models/HumanAIGC-Engineering/LiteAvatarGallery/20250408/sample_data/
+      #   fps: 25
+      #   debug: false
+      #   enable_fast_mode: false
+      #   use_gpu: false
+
       LiteAvatar:
         module: avatar/liteavatar/avatar_handler_liteavatar
         avatar_name: 20250408/sample_data
         fps: 25
-        debug: false
-        enable_fast_mode: false
-        use_gpu: true
+        use_gpu: false
