@@ -49,6 +49,11 @@ if grep -q "AvatarMusetalk:" "$CONFIG_FILE"; then
     fi
     
     echo "AvatarMusetalk additional configuration completed."
+
+    # 2. Install mmcv==2.2.0
+    echo "Installing mmcv==2.2.0..."
+    uv pip uninstall mmcv
+    uv run mim install mmcv==2.2.0 --force
 else
     echo "No AvatarMusetalk configuration found in config file, skipping additional configuration."
 fi 

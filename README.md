@@ -134,6 +134,7 @@ HuggingFace
       - [仅安装所需模式的依赖](#仅安装所需模式的依赖)
     - [运行](#运行)
   - [Docker运行](#docker运行)
+    - [Docker Compose](#Docker-Compose) 
 - [Handler依赖安装说明](#handler依赖安装说明)
   - [服务端渲染 RTC Client Handler](#服务端渲染-rtc-client-handler)
   - [LAM端侧渲染 Client Handler](#lam端侧渲染-client-handler)
@@ -158,6 +159,8 @@ HuggingFace
 - [相关部署需求](#相关部署需求)
   - [准备ssl证书](#准备ssl证书)
   - [TURN Server](#turn-server)
+    - [本地安装](#本地安装)
+    - [Docker安装](#docker安装)
   - [配置说明](#配置说明)
 - [社区贡献-感谢](#社区贡献-感谢)
 - [Star历史](#star历史)
@@ -446,6 +449,20 @@ touch .env  # 并手动添加个人API密钥：DASHSCOPE_API_KEY=sk-xxxxx
 bash run_docker_cuda128.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
 ```
 
+#### Docker Compose
+支持使用docker compose一次性拉起open avatar chat服务和镜像方式启动的coturn服务。
+
+> [!Note]
+> 在构建完成open-avatar-chat:latest之后，可以到项目根目录下的`docker-compose.yml`文件中修改config对应的要启动的配置文件，默认为`chat_with_openai_compatible_bailian_cosyvoice.yaml`.
+
+```bash
+# 拉起服务
+docker compose up
+
+# 关闭服务
+docker compose down
+```
+
 
 ## Handler依赖安装说明
 ### 服务端渲染 RTC Client Handler
@@ -731,7 +748,10 @@ scripts/create_ssl_certs.sh
 ```
 
 ### TURN Server
-如果点击开始对话后，出现一直等待中的情况，可能你的部署环境存在NAT穿透方面的问题（如部署在云上机器等），需要进行数据中继。在Linux环境下，可以使用coturn来架设TURN服务。可参考以下操作在同一机器上安装、启动并配置使用coturn：
+如果点击开始对话后，出现一直等待中的情况，可能你的部署环境存在NAT穿透方面的问题（如部署在云上机器等），需要进行数据中继。在Linux环境下，可以使用coturn来架设TURN服务。
+
+#### 本地安装
+可参考以下操作在同一机器上安装、启动并配置使用coturn：
 * 运行安装脚本
 ```console
 $ chmod 777 scripts/setup_coturn.sh
@@ -750,6 +770,10 @@ default:
           credential: "your-credential"
 ```
 * 确保防火墙（包括云上机器安全组等策略）开放coturn所需端口
+
+#### docker安装
+可以使用coturn的docker服务，具体请参考[docker compose](#Docker-Compose)章节，统一拉起服务。
+
 
 ### 配置说明
 程序默认启动时，会读取 **<project_root>/configs/chat_with_minicpm.yaml** 中的配置，用户也可以在启动命令后加上--config参数来选择从其他配置文件启动。
