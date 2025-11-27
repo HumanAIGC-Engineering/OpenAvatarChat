@@ -28,9 +28,7 @@ dependencies = [
     "tqdm~=4.67.1",
     "typing-extensions~=4.12.2",
     "uvicorn~=0.34.0",
-    "torch==2.8.0",
     "torchvision",
-    "torchaudio",
     "python-dotenv>=1.1.0",
 ]
 
