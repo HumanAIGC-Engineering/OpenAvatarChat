@@ -124,6 +124,7 @@ Frequently asked questions encountered during the course of the project can be f
       - [Install dependencies for the required mode only](#install-dependencies-for-the-required-mode-only)
     - [Run](#run)
   - [Docker Execution](#docker-execution)
+    - [Docker Compose](#Docker-Compose) 
 - [Handler Dependencies Installation Notes](#handler-dependencies-installation-notes)
   - [Server Rendering RTC Client Handler](#server-rendering-rtc-client-handler)
   - [LAM Client Rendering Handler](#lam-client-rendering-handler)
@@ -148,6 +149,8 @@ Frequently asked questions encountered during the course of the project can be f
 - [Optional Deployment](#optional-deployment)
   - [Prepare ssl certificates](#prepare-ssl-certificates)
   - [TURN Server](#turn-server)
+    - [Local Installation](#local-installation)
+    - [Docker Installation](#docker-installation)
 - [Configuration](#configuration-2)
 - [Community Thanks](#community-thanks)
 - [Star History](#star-history)
@@ -431,6 +434,20 @@ touch .env
 # Run the Docker container
 # Replace the config file with your desired one (example below)
 bash run_docker_cuda128.sh --config config/chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml
+```
+
+#### Docker Compose
+Supports using Docker Compose to start the openavatarchat service along with a coturn service launched via Docker image in one go.
+
+> [!Note]
+> After building the open-avatar-chat:latest image, you can modify the configuration file specified under config in the `docker-compose.yml` file located in the project root directory. The default configuration file is `chat_with_openai_compatible_bailian_cosyvoice.yaml`.
+
+```
+# Start services
+docker compose up
+
+# Stop services
+docker compose down
 ```
 
 ## Handler Dependencies Installation Notes
@@ -724,7 +741,12 @@ scripts/create_ssl_certs.sh
 ```
 
 ### TURN Server
-If you encounter a continuous waiting state after clicking "Start Conversation", it may be due to NAT traversal issues in your deployment environment (such as deployment on cloud machines). In this case, data relay is required. On Linux systems, you can use coturn to set up a TURN server. Follow these steps to install, start, and configure coturn on the same machine:
+If you encounter a continuous waiting state after clicking "Start Conversation", it may be due to NAT traversal issues in your deployment environment (such as deployment on cloud machines). In this case, data relay is required. On Linux systems, you can use coturn to set up a TURN server. 
+
+
+
+#### Local Installation
+Follow these steps to install, start, and configure coturn on the same machine:
 
 * Run the installation script
 ```console
@@ -745,6 +767,8 @@ default:
 ```
 * Ensure that the firewall (including cloud machine security group policies) opens the ports required by coturn
 
+#### Docker Installation
+You can use the Dockerized coturn service. For details, please refer to the [docker compose](#Docker-Compose) section to start all services together.
 
 
 ## Configuration
