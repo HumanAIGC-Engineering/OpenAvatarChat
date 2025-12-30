@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from typing import Dict, Optional, cast, Union, Tuple
+from typing import Any, Dict, Optional, cast, Union, Tuple
 from uuid import uuid4
 
 from loguru import logger
@@ -274,7 +274,8 @@ class RtcClientSessionDelegate(ClientSessionDelegate):
         return data
 
     def put_data(self, modality: EngineChannelType, data: Union[np.ndarray, str],
-                 timestamp: Optional[Tuple[int, int]] = None, samplerate: Optional[int] = None, loopback: bool = False):
+                 timestamp: Optional[Tuple[int, int]] = None, samplerate: Optional[int] = None,
+                 loopback: bool = False, meta: Optional[Dict[str, Any]] = None):
         if timestamp is None:
             timestamp = self.get_timestamp()
         if self.data_submitter is None:
@@ -294,6 +295,9 @@ class RtcClientSessionDelegate(ClientSessionDelegate):
             data_bundle.set_main_data(data)
         else:
             return
+        if meta:
+            for key, value in meta.items():
+                data_bundle.add_meta(key, value)
         chat_data = ChatData(
             source="client",
             type=chat_data_type,

@@ -1,7 +1,7 @@
 import weakref
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Union, Tuple, Optional
+from typing import Union, Tuple, Optional, Dict, Any
 
 import gradio
 import numpy as np
@@ -25,7 +25,8 @@ class ClientSessionDelegate(ABC):
     @abstractmethod
     def put_data(self, modality: EngineChannelType, data: Union[np.ndarray, str],
                  timestamp: Optional[Tuple[int, int]] = None,
-                 samplerate: Optional[int] = None, loopback: bool = False):
+                 samplerate: Optional[int] = None, loopback: bool = False,
+                 meta: Optional[Dict[str, Any]] = None):
         pass
 
     @abstractmethod
