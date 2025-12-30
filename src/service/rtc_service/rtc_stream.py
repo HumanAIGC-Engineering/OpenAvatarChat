@@ -234,6 +234,7 @@ class RtcStream(AsyncAudioVideoStreamHandler):
                     if self.client_session_delegate.shared_states.enable_vad is False:
                         return
                     self.client_session_delegate.shared_states.enable_vad = False
+                    auth_info = message.get("auth")
                     self.client_session_delegate.emit_signal(
                         ChatSignal(
                             # begin a new round of responding
@@ -246,7 +247,8 @@ class RtcStream(AsyncAudioVideoStreamHandler):
                     self.client_session_delegate.put_data(
                         EngineChannelType.TEXT,
                         message['data'],
-                        loopback=True
+                        loopback=True,
+                        meta={"auth": auth_info} if auth_info is not None else None,
                     )
                 # else:
 
