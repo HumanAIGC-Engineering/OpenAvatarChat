@@ -23,8 +23,9 @@ import fractions
 # Global variables for H.264 encoder selection
 _selected_h264_encoder = 'libx264'
 _actual_h264_encoder = None
-_AVError = getattr(av, "AVError", av.error.ExternalError)
-_AVCodecError = getattr(av.error, "Error", av.error.ExternalError)
+# _AVError = getattr(av, "AVError", av.error.ExternalError)
+# _AVCodecError = getattr(av.error, "Error", av.error.ExternalError)
+
 
 def _prioritize_h264():
     """Prioritize H.264 codec over VP8 in aiortc codec list"""
@@ -34,15 +35,16 @@ def _prioritize_h264():
     CODECS["video"] = h264_codecs + other_codecs
     logger.info(f"Video codec priority: {[c.mimeType for c in CODECS['video'][:3]]}")
 
+
 def _configure_h264_hardware_encoding():
     """Configure H.264 to use hardware encoder (must execute before importing fastrtc)"""
     global _selected_h264_encoder, _actual_h264_encoder
-    
+
     # Configure H.264 bitrate
     h264.DEFAULT_BITRATE = 1500000  # 1.5 Mbps default
-    h264.MIN_BITRATE = 500000       # 0.5 Mbps minimum
-    h264.MAX_BITRATE = 2500000      # 2.5 Mbps maximum
-    
+    h264.MIN_BITRATE = 500000  # 0.5 Mbps minimum
+    h264.MAX_BITRATE = 2500000  # 2.5 Mbps maximum
+
     # Detect available hardware encoders (priority: NVENC > QSV > VideoToolbox)
     hardware_encoders = ['h264_nvenc', 'h264_qsv', 'h264_videotoolbox']
     for encoder in hardware_encoders:
@@ -58,16 +60,16 @@ def _configure_h264_hardware_encoding():
             break
         except Exception as e:
             logger.debug(f"Hardware encoder {encoder} not available: {e}")
-    
+
     if _selected_h264_encoder == 'libx264':
         logger.warning("No hardware encoder available, will use libx264 (CPU encoding)")
-    
+
     # Monkey patch H264Encoder._encode_frame to use hardware encoder with fallback
     def patched_encode_frame(self, frame, force_keyframe):
         global _selected_h264_encoder, _actual_h264_encoder
         if self.codec and (
-            frame.width != self.codec.width or frame.height != self.codec.height
-            or abs(self.target_bitrate - self.codec.bit_rate) / self.codec.bit_rate > 0.1
+                frame.width != self.codec.width or frame.height != self.codec.height
+                or abs(self.target_bitrate - self.codec.bit_rate) / self.codec.bit_rate > 0.1
         ):
             self.buffer_data = b""
             self.buffer_pts = None
@@ -86,7 +88,7 @@ def _configure_h264_hardware_encoding():
             if self.codec is None:
                 # Try to create encoder, fallback to software encoder if hardware fails
                 codec_created = False
-                
+
                 try:
                     self.codec = av.CodecContext.create(encoder_to_use, "w")
                     self.codec.width = frame.width
@@ -95,7 +97,7 @@ def _configure_h264_hardware_encoding():
                     self.codec.pix_fmt = "yuv420p"
                     self.codec.framerate = fractions.Fraction(h264.MAX_FRAME_RATE, 1)
                     self.codec.time_base = fractions.Fraction(1, h264.MAX_FRAME_RATE)
-                    
+
                     # Configure encoder-specific options
                     if encoder_to_use == 'libx264':
                         self.codec.options = {"level": "31", "tune": "zerolatency"}
@@ -106,13 +108,13 @@ def _configure_h264_hardware_encoding():
                         self.codec.options = {"preset": "veryfast", "profile": "baseline"}
                     elif encoder_to_use == 'h264_videotoolbox':
                         self.codec.options = {"realtime": "1", "profile": "baseline"}
-                    
+
                     codec_created = True
                     logger.info(f"H.264 encoder created: {encoder_to_use}")
-                    
+
                 except Exception as e:
                     logger.warning(f"Failed to create {encoder_to_use} encoder: {e}")
-                    
+
                     # Fallback to libx264 if hardware encoder fails
                     if encoder_to_use != 'libx264':
                         logger.info("Falling back to libx264 software encoder")
@@ -126,18 +128,18 @@ def _configure_h264_hardware_encoding():
                             self.codec.time_base = fractions.Fraction(1, h264.MAX_FRAME_RATE)
                             self.codec.options = {"level": "31", "tune": "zerolatency"}
                             self.codec.profile = "Baseline"
-                            
+
                             encoder_to_use = "libx264"
                             codec_created = True
                             logger.info("H.264 encoder created: libx264 (fallback)")
-                            
+
                         except Exception as fallback_error:
                             logger.error(f"Failed to create fallback encoder: {fallback_error}")
                             raise
                     else:
                         logger.error(f"Failed to create libx264 encoder: {e}")
                         raise
-                
+
                 if codec_created:
                     actual_encoder = self.codec.name
                     _actual_h264_encoder = actual_encoder
@@ -148,11 +150,11 @@ def _configure_h264_hardware_encoding():
                 for package in self.codec.encode(frame):
                     data_to_send += bytes(package)
                 break
-            except (_AVError, _AVCodecError) as encode_error:
+            except (OSError, ValueError, Exception) as encode_error:  # except (_AVError, _AVCodecError) as encode_error:
                 if fallback_attempted or encoder_to_use == 'libx264':
                     logger.error(f"H.264 encode failed using {encoder_to_use}: {encode_error}")
                     raise
-                
+
                 fallback_attempted = True
                 logger.warning(
                     f"H.264 encode failed using {encoder_to_use}, switching to libx264: {encode_error}"
@@ -174,49 +176,51 @@ def _configure_h264_hardware_encoding():
 
         if data_to_send:
             yield from self._split_bitstream(data_to_send)
-    
+
     # Patch get_encoder
     original_get_encoder = aiortc_codecs.get_encoder
+
     def patched_get_encoder(codec):
         encoder = original_get_encoder(codec)
         logger.debug(f"get_encoder({codec.mimeType}) -> {type(encoder).__name__}")
         return encoder
-    
+
     # Patch RTCPeerConnection.setRemoteDescription to enforce H.264 codec priority
     # This ensures H.264 is selected during WebRTC negotiation instead of VP8
     from aiortc import RTCPeerConnection
     original_set_remote = RTCPeerConnection.setRemoteDescription
-    
+
     async def patched_set_remote_description(self, sessionDescription):
         """Re-order transceiver codecs after SDP negotiation to prioritize H.264"""
         logger.debug(f"setRemoteDescription called with {sessionDescription.type}")
-        
+
         # Call original method (creates/configures transceivers and negotiates codecs)
         await original_set_remote(self, sessionDescription)
-        
+
         # Re-order video transceiver codecs to prioritize H.264
         from aiortc.codecs import get_capabilities
         from aiortc.rtcpeerconnection import filter_preferred_codecs
-        
+
         for transceiver in self._RTCPeerConnection__transceivers:
             if transceiver.kind == "video":
                 logger.debug(f"Transceiver codecs before: {[c.mimeType for c in transceiver._codecs[:3]]}")
-                
+
                 # Get our re-ordered codec capabilities (H.264 first)
                 capabilities = get_capabilities("video")
                 current_codecs = transceiver._codecs
-                
+
                 # Manually call filter_preferred_codecs to re-order
                 refiltered = filter_preferred_codecs(current_codecs, capabilities.codecs)
                 transceiver._codecs = refiltered
-                
+
                 logger.info(f"Video codecs negotiated: {[c.mimeType for c in transceiver._codecs[:2]]}")
-    
+
     # Apply all patches
     h264.H264Encoder._encode_frame = patched_encode_frame
     aiortc_codecs.get_encoder = patched_get_encoder
     RTCPeerConnection.setRemoteDescription = patched_set_remote_description
     logger.info("H.264 encoder configuration completed")
+
 
 # Execute configuration before importing fastrtc
 _prioritize_h264()
