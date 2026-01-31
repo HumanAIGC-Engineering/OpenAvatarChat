@@ -42,6 +42,9 @@ COPY $CONFIG_FILE /tmp/build_config.yaml
 RUN chmod +x $WORK_DIR/scripts/pre_config_install.sh && \
     $WORK_DIR/scripts/pre_config_install.sh --config /tmp/build_config.yaml
 
+# Install runtime dependency required by uv execution
+RUN uv pip install -U openmm
+
 # Install config dependencies
 RUN uv run install.py \
     --config /tmp/build_config.yaml \
