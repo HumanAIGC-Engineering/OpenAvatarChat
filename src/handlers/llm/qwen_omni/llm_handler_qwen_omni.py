@@ -354,11 +354,8 @@ class QwenOmniCallback(OmniRealtimeCallback):
                         out = DataBundle(human_text_def)
                         out.set_main_data(transcript)
                         out.add_meta("human_text_end", True)
-                        # Bind to current turn's speech_id (fallback to session_id if not exists)
-                        speech_id = self.context.current_speech_id or self.context.session_id
-                        out.add_meta("speech_id", speech_id)
                         chat_data = ChatData(type=ChatDataType.HUMAN_TEXT, data=out)
-                        self.context.submit_data(chat_data)
+                        self.context.submit_data(chat_data, finish_stream=True)
                     
             elif event_type == 'conversation.item.input_audio_transcription.failed':
                 # Audio transcription failure handling
@@ -386,7 +383,7 @@ class QwenOmniCallback(OmniRealtimeCallback):
                     logger.debug(f"Audio delta received: len={len(audio_b64)}")
                     audio_item = {
                         'audio_b64_str': audio_b64,
-                        'avatar_speech_end': False
+                        'is_end': False
                     }
                     self.context.recv_audio_queue.put(audio_item)
                 
@@ -501,7 +498,7 @@ class QwenOmniCallback(OmniRealtimeCallback):
             # Add end markers to audio processing queue, ensuring processing after all audio data
             end_item = {
                 'audio_b64_str': None,
-                'avatar_speech_end': True,
+                'is_end': True,
             }
             self.context.recv_audio_queue.put(end_item)
             logger.debug(f"Queued completion markers for speech_id: {speech_id}")
@@ -656,20 +653,17 @@ class HandlerSeq2SeqQwenOmni(HandlerBase, ABC):
             try:
                 queue_item = context.recv_audio_queue.get(timeout=1.0)
                 
-                if queue_item.get('avatar_speech_end', False) == True:
-                    speech_id = context.current_speech_id
-                    if speech_id:
+                if queue_item.get('is_end', False):
+                    if context.current_speech_id:
                         audio_def = context.output_definitions.get(ChatDataType.AVATAR_AUDIO)
                         if audio_def:
                             end_audio = DataBundle(audio_def)
                             end_audio.set_main_data(np.zeros(shape=(1, 240), dtype=np.float32))
-                            end_audio.add_meta("avatar_speech_end", True)
-                            end_audio.add_meta("speech_id", speech_id)
                             end_audio_chat = ChatData(type=ChatDataType.AVATAR_AUDIO, data=end_audio)
-                            context.submit_data(end_audio_chat)
+                            context.submit_data(end_audio_chat, finish_stream=True)
                         
+                        logger.debug(f"Sent audio completion marker for speech_id: {context.current_speech_id}")
                         context.current_speech_id = None
-                        logger.debug(f"Sent audio completion marker for speech_id: {speech_id}")
                     continue
                 
                 # Process audio data
@@ -705,17 +699,12 @@ class HandlerSeq2SeqQwenOmni(HandlerBase, ABC):
                 
                 try:
                     output_definition = context.output_definitions.get(ChatDataType.AVATAR_AUDIO)
-                    # Use session_id as default speech_id to ensure always have valid identifier
-                    speech_id = context.current_speech_id or context.session_id
                     
-                    # Create output data bundle and wrap as ChatData
                     output = DataBundle(output_definition)
                     output.set_main_data(audio_array)
-                    output.add_meta("speech_id", speech_id)
-                    output.add_meta("avatar_speech_end", False)
                     chat_data = ChatData(type=ChatDataType.AVATAR_AUDIO, data=output)
                     
-                    logger.debug(f"Submitting audio: shape={audio_array.shape}, speech_id={speech_id}")
+                    logger.debug(f"Submitting audio: shape={audio_array.shape}")
                     context.submit_data(chat_data)
                     
                 except Exception as e:
@@ -743,9 +732,8 @@ class HandlerSeq2SeqQwenOmni(HandlerBase, ABC):
                             end_text = DataBundle(text_def)
                             end_text.set_main_data("")
                             end_text.add_meta("avatar_text_end", True)
-                            end_text.add_meta("speech_id", speech_id)
                             end_text_chat = ChatData(type=ChatDataType.AVATAR_TEXT, data=end_text)
-                            context.submit_data(end_text_chat)
+                            context.submit_data(end_text_chat, finish_stream=True)
                         logger.debug(f"Sent text completion marker for speech_id: {speech_id}")
                     continue
                 
@@ -756,12 +744,9 @@ class HandlerSeq2SeqQwenOmni(HandlerBase, ABC):
                 
                 try:
                     text_def = context.output_definitions.get(ChatDataType.AVATAR_TEXT)
-                    speech_id = context.current_speech_id or context.session_id
                     
-                    # Create text output data bundle
                     output = DataBundle(text_def)
                     output.set_main_data(text_content)
-                    output.add_meta("speech_id", speech_id)
                     output.add_meta("avatar_text_end", False)
                     
                     logger.debug(f"Submitting text output: {text_content}")
@@ -843,14 +828,11 @@ class HandlerSeq2SeqQwenOmni(HandlerBase, ABC):
         if audio_data is None:
             return
             
-        # Get speech_id for tracking
-        speech_id = inputs.data.get_meta("speech_id")
-        if speech_id is None:
-            speech_id = context.session_id
-            
         # Set current_speech_id when starting audio processing to ensure real-time handling
         if context.current_speech_id is None:
-            context.current_speech_id = speech_id
+            context.current_speech_id = (
+                inputs.stream_id.stream_key_str if inputs.stream_id else context.session_id
+            )
             
         # Convert audio format and send
         if audio_data is not None:
@@ -881,12 +863,9 @@ class HandlerSeq2SeqQwenOmni(HandlerBase, ABC):
         # Check if this is speech end
         speech_end = inputs.data.get_meta("human_speech_end", False)
         if speech_end:
-            # Set current turn identifier
-            context.current_speech_id = speech_id
-            
             # Debug: Save complete audio file when speech ends if enabled
             if context.enable_debug_audio:
-                self._save_debug_audio(context, speech_id)
+                self._save_debug_audio(context, context.current_speech_id)
             
             # Commit audio and create response
             context.conversation.commit()

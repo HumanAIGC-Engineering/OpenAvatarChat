@@ -117,9 +117,9 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Check if Dockerfile.cuda12.8 exists
-if [ ! -f "Dockerfile.cuda12.8" ]; then
-    log_error "Dockerfile.cuda12.8 未找到"
+# Check if Dockerfile exists
+if [ ! -f "Dockerfile" ]; then
+    log_error "Dockerfile 未找到"
     exit 1
 fi
 
@@ -136,13 +136,12 @@ log_info "=== 构建信息 ==="
 log_info "镜像标签: ${IMAGE_TAG}"
 log_info "构建版本: ${BUILD_VERSION} (嵌入到镜像标签中)"
 log_info "构建时间: ${BUILD_DATE} (嵌入到镜像标签中)"
-log_info "Dockerfile: Dockerfile.cuda12.8"
+log_info "Dockerfile: Dockerfile"
 
 #Build command
 BUILD_CMD="docker build ${NO_CACHE} \
     --build-arg BUILD_VERSION=\"${BUILD_VERSION}\" \
     --build-arg BUILD_DATE=\"${BUILD_DATE}\" \
-    -f Dockerfile.cuda12.8 \
     -t \"${IMAGE_TAG}\" ."
 
 log_info "=== 开始构建 ==="

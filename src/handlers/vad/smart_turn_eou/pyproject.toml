@@ -1,0 +1,9 @@
+[project]
+name = "smart-turn-eou"
+version = "0.1.0"
+requires-python = ">=3.11.7, <3.12"
+dependencies = [
+    "onnxruntime~=1.20.1",
+    "transformers>=4.48.0",
+]
+

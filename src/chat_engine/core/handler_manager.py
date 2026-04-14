@@ -1,11 +1,8 @@
-import importlib
 import inspect
 import os.path
 import sys
 import time
 import weakref
-from dataclasses import dataclass, field
-from inspect import isclass, isabstract
 from types import ModuleType
 from typing import Optional, Dict, Tuple
 
@@ -13,17 +10,16 @@ import gradio
 from fastapi import FastAPI
 from loguru import logger
 
+from engine_utils.import_utils import import_class
+from engine_utils.path_utils import validate_search_path
+
 from chat_engine.common.client_handler_base import ClientHandlerBase
-from chat_engine.common.handler_base import HandlerBaseInfo, HandlerBase
+from chat_engine.common.handler_base import HandlerBase
+
+from chat_engine.data_models.internal.handler_session_data import HandlerRegistry
+
 from chat_engine.data_models.chat_engine_config_data import HandlerBaseConfigModel, ChatEngineConfigModel
-from engine_utils.directory_info import DirectoryInfo
-
-
-@dataclass
-class HandlerRegistry:
-    base_info: Optional[HandlerBaseInfo] = field(default=None)
-    handler: Optional[HandlerBase] = field(default=None)
-    handler_config: Optional[HandlerBaseConfigModel] = field(default=None)
+from handlers.manager.manager_handler_base import ManagerHandlerBase
 
 
 class HandlerManager:
@@ -57,49 +53,15 @@ class HandlerManager:
             if handler_config.module is None:
                 logger.warning(f"Handler {handler_name} has no module specified, skipping.")
                 continue
-            module_path = None
-            module_input_path = None
-            for search_path in self.search_path:
-                find_path = os.path.join(search_path, f"{handler_config.module}.py")
-                if os.path.exists(find_path):
-                    module_path = find_path
-                    module_input_path = handler_config.module.replace("\/", ".").replace("/", ".")
-                    break
-            if module_path is None:
-                logger.error(f"Handler {handler_config.module} not found in search path.")
-                raise ValueError(f"Handler {handler_config.module} not found in search path.")
-            try:
-                logger.info(f"Try to load {module_input_path}")
-                module = importlib.import_module(module_input_path)
-            except Exception:
-                logger.error(f"Failed to import handler module {handler_config.module}")
-                raise
-            handler_class = None
-            for name, obj in inspect.getmembers(module):
-                if not isclass(obj):
-                    continue
-                if isabstract(obj):
-                    continue
-                if issubclass(obj, HandlerBase):
-                    handler_class = obj
-                    break
-            if handler_class is None:
-                logger.error(f"Handler module {handler_config.module} does not contain a HandlerBase subclass.")
-                raise ValueError(f"Handler module {handler_config.module} does not contain a HandlerBase subclass.")
+            module, handler_class = import_class(handler_config.module, HandlerBase, self.search_path)
             self.handler_modules[handler_config.module] = module, handler_class
             self.register_handler(handler_name, handler_class())
 
     def add_search_path(self, path: str):
-        if not os.path.isabs(path):
-            if os.path.isdir(path):
-                path = os.path.abspath(path)
-            else:
-                path = os.path.join(DirectoryInfo.get_project_dir(), path)
-        if not os.path.isdir(path):
+        path = validate_search_path(path)
+        if path is None:
             logger.warning(f"Path {path} is not a directory, it is not added to search path.")
             return
-        if not os.path.isabs(path):
-            path = os.path.abspath(path)
         if path not in self.search_path:
             self.search_path.append(path)
             if path not in sys.path:
@@ -135,9 +97,13 @@ class HandlerManager:
                       parent_block: Optional[gradio.blocks.Block] = None):
         enabled_handlers = self.get_enabled_handler_registries()
         client_handlers = []
+        manager_handlers = []
         for registry in enabled_handlers:
             if isinstance(registry.handler, ClientHandlerBase):
                 client_handlers.append(registry)
+            elif isinstance(registry.handler, ManagerHandlerBase):
+                manager_handlers.append(registry)
+
             load_start = time.monotonic()
             registry.handler.load(engine_config, registry.handler_config)
             dur_load = time.monotonic() - load_start
@@ -147,7 +113,14 @@ class HandlerManager:
                 setup_start = time.monotonic()
                 registry.handler.on_setup_app(app, ui, parent_block)
                 dur_setup = time.monotonic() - setup_start
-                logger.info(f"Setup client handler {registry.base_info.name} loaded in {round(dur_setup * 1e3)} milliseconds")
+                logger.info(
+                    f"Setup client handler {registry.base_info.name} loaded in {round(dur_setup * 1e3)} milliseconds")
+            for registry in manager_handlers:
+                setup_start = time.monotonic()
+                registry.handler.on_setup_app(app, ui, parent_block)
+                dur_setup = time.monotonic() - setup_start
+                logger.info(
+                    f"Setup manager handler {registry.base_info.name} loaded in {round(dur_setup * 1e3)} milliseconds")
 
     def get_enabled_handler_registries(self, order_by_priority=True):
         result = []
@@ -171,6 +144,7 @@ class HandlerManager:
                 continue
             if isinstance(registry.handler, ClientHandlerBase) and registry.handler is handler:
                 return registry
+        return None
 
     def destroy(self):
         for handler_name, registry in self.handler_registries.items():

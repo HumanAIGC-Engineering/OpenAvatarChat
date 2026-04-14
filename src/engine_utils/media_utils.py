@@ -14,7 +14,7 @@ import numpy as np
 from src.engine_utils.directory_info import DirectoryInfo
 
 
-class AudioUtils:
+class AudioTestUtils:
 
     @staticmethod
     def read_wav_to_bytes(file_path) -> tuple[bytes, int]:

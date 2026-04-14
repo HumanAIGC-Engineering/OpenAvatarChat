@@ -16,6 +16,10 @@ default:
         module: client/rtc_client/client_handler_rtc
         # max time a session will last for
         connection_ttl: 900
+        output_video_fps: 30 
+      # === 打断处理器 - 接收 INTERRUPT 信号并执行流取消 ===
+      InterruptHandler:
+        module: logic/interrupt/interrupt_handler
       SileroVad:
         module: vad/silerovad/vad_handler_silero
         speaking_threshold: 0.5
@@ -53,6 +57,4 @@ default:
         avatar_model_dir: "models/musetalk/avatar_model"  # Default avatar model directory
         force_create_avatar: false  # Whether to force regenerate digital human data
         debug: false  # Whether to enable debug mode
-        multi_thread_inference: true  # true: use 2 threads to inference (unet, vae), false: use single-thread to inference
-        # debug_save_handler_audio: true  # Whether to save audio frames
-        # debug_replay_speech_id: "speech-d9o18xrugl6-1"  # Speech ID for replay
+        multi_thread_inference: true  # Split UNet and VAE into separate threads for pipelined inference

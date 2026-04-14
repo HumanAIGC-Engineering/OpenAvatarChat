@@ -17,6 +17,8 @@ class EventType(str, Enum):
     EVT_SESSION_STOP = "session_stop"
     EVT_INTERRUPT_SPEECH = "interrupt_speech"
     EVT_SERVER_ERROR = "server_error"
+    EVT_EARLY_VAD_END = "early_vad_end"  # VAD 检测到早期静音，可能的语句结束点
+    EVT_EOU_PREDICTION = "eou_prediction"  # EOU 模型的预测结果
 
 
 class EventEmbeddingDataType(str, Enum):

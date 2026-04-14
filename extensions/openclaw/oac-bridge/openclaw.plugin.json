@@ -1,0 +1,34 @@
+{
+  "id": "oac-bridge",
+  "kind": "channel",
+  "channels": ["oac-bridge"],
+  "name": "OAC Bridge",
+  "description": "OpenAvatarChat bridge: exposes agent tools and provides OAC as an IM channel",
+  "contracts": {
+    "tools": ["get_agent_profile", "list_scheduled_tasks"]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "oac-bridge": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "callbackUrl": {
+            "type": "string",
+            "description": "HTTP URL for delivering OC replies back to OAC (e.g. http://localhost:8011/oc-reply)"
+          },
+          "token": {
+            "type": "string",
+            "description": "Shared secret token for webhook authentication between OAC and OC"
+          },
+          "webhookPath": {
+            "type": "string",
+            "description": "HTTP path for the inbound webhook (default: /oac-bridge/webhook)"
+          }
+        }
+      }
+    }
+  }
+}

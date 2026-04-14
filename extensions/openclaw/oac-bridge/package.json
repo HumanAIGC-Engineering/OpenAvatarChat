@@ -1,0 +1,17 @@
+{
+  "name": "@openclaw/oac-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenAvatarChat bridge: agent profile/task tools + OAC IM channel",
+  "type": "module",
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "channel": {
+      "id": "oac-bridge",
+      "label": "OpenAvatarChat",
+      "blurb": "Connect OpenClaw to OpenAvatarChat digital human interface."
+    }
+  }
+}

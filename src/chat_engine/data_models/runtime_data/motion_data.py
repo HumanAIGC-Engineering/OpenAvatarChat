@@ -122,26 +122,24 @@ class MotionDataSerializer:
         return header + desc_bytes + binary_data
 
     def _serialize_data_bundle(self, data: DataBundle, include_channel_names: bool = False,
-                               definition_only: bool = False):
+                               definition_only: bool = False, start_of_stream: bool = False, end_of_stream: bool = False):
         description = MotionDataDescription()
         data_items = []
 
         description.metadata = data.metadata.copy()
         description.events = data.events.copy()
         if not definition_only:
-            # TODO this should be changed to something else instead of hardcoded name
-            batch_name = data.get_meta("speech_id")
+            batch_name = data.get_meta("stream_key")
 
             if self.last_batch_name is not None and batch_name != self.last_batch_name:
                 self.batch_num += 1
 
             description.batch_name = batch_name
             description.batch_id = self.batch_num
-            description.start_of_batch = data.start_of_stream
-            description.end_of_batch = data.end_of_stream
+            description.start_of_batch = start_of_stream
+            description.end_of_batch = end_of_stream
 
             self.last_batch_name = batch_name
-
             if description.end_of_batch:
                 self.reset()
         else:
@@ -152,20 +150,20 @@ class MotionDataSerializer:
 
         return self._dump_to_bytes(description, data_items)
 
-    def _serialize_definition(self, definition: DataBundleDefinition, include_channel_names: bool = False):
+    def _serialize_definition(self, definition: DataBundleDefinition, include_channel_names: bool = False, start_of_stream: bool = False, end_of_stream: bool = False):
         data_bundle = DataBundle(definition)
         for data_name, registry in self.name_mapping.items():
             entry = definition.find_entry(data_name)
             if entry is not None:
                 default_data = entry.create_default_data(registry.output_data_type)
                 data_bundle.set_data(data_name, default_data)
-        return self._serialize_data_bundle(data_bundle, include_channel_names, definition_only=True)
+        return self._serialize_data_bundle(data_bundle, include_channel_names, definition_only=True, start_of_stream=start_of_stream, end_of_stream=end_of_stream)
 
-    def serialize(self, data: Union[DataBundle, DataBundleDefinition], include_channel_names: bool = False):
+    def serialize(self, data: Union[DataBundle, DataBundleDefinition], include_channel_names: bool = False, start_of_stream: bool = False, end_of_stream: bool = False):
         if isinstance(data, DataBundle):
-            return self._serialize_data_bundle(data, include_channel_names)
+            return self._serialize_data_bundle(data, include_channel_names, start_of_stream=start_of_stream, end_of_stream=end_of_stream)
         if isinstance(data, DataBundleDefinition):
-            return self._serialize_definition(data, include_channel_names)
+            return self._serialize_definition(data, include_channel_names, start_of_stream=start_of_stream, end_of_stream=end_of_stream)
         raise ValueError(f"Unsupported data type {type(data)}.")
 
     def reset(self):

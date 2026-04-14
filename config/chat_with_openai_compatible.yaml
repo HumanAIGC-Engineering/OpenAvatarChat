@@ -15,6 +15,9 @@ default:
         module: client/rtc_client/client_handler_rtc
         # max time a session will last for
         connection_ttl: 900
+      # === 打断处理器 - 接收 INTERRUPT 信号并执行流取消 ===
+      InterruptHandler:
+        module: logic/interrupt/interrupt_handler
       SileroVad:
         module: vad/silerovad/vad_handler_silero
         speaking_threshold: 0.5

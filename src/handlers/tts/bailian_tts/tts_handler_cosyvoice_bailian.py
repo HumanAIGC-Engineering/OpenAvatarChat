@@ -2,7 +2,8 @@ import io
 import os
 import re
 import time
-from typing import Dict, Optional, cast
+from dataclasses import dataclass, field
+from typing import Dict, Optional, Set, cast
 import librosa
 import numpy as np
 from loguru import logger
@@ -19,6 +20,11 @@ from engine_utils.directory_info import DirectoryInfo
 from dashscope.audio.tts_v2 import SpeechSynthesizer, ResultCallback, AudioFormat
 import dashscope
 
+from chat_engine.data_models.chat_signal_type import ChatSignalType
+from chat_engine.data_models.chat_signal import ChatSignal, SignalFilterRule
+from chat_engine.data_models.chat_stream import StreamKey, ChatStreamIdentity
+from chat_engine.data_models.chat_stream_config import ChatStreamConfig
+
 
 class TTSConfig(HandlerBaseConfigModel, BaseModel):
     ref_audio_path: str = Field(default=None)
@@ -29,15 +35,90 @@ class TTSConfig(HandlerBaseConfigModel, BaseModel):
     model_name: str = Field(default="cosyvoice-1")
 
 
+@dataclass
+class BailianTTSSession:
+    """Per-stream session state, isolates synthesizer for each input stream."""
+    input_stream_id: ChatStreamIdentity
+    output_stream_key: Optional[StreamKey] = None
+    synthesizer: Optional[SpeechSynthesizer] = None
+    cancelled: bool = False
+
+    def reset(self):
+        self.cancelled = True
+        if self.synthesizer is not None:
+            try:
+                self.synthesizer.streaming_cancel()
+            except Exception:
+                pass
+            self.synthesizer = None
+
+
 class TTSContext(HandlerContext):
     def __init__(self, session_id: str):
         super().__init__(session_id)
         self.config = None
-        self.local_session_id = 0
-        self.input_text = ''
+        self.api_links: Dict[StreamKey, BailianTTSSession] = {}
         self.dump_audio = False
         self.audio_dump_file = None
-        self.synthesizer = None
+
+    @classmethod
+    def _create_session(cls, input_stream: ChatStreamIdentity) -> BailianTTSSession:
+        return BailianTTSSession(input_stream_id=input_stream)
+
+    def handle_text_stream(self, data: ChatData, handler: 'HandlerTTS'):
+        input_stream = data.stream_id
+        input_stream_key = input_stream.key
+
+        session = self.api_links.get(input_stream_key)
+        if session is None:
+            # 新的输入流到达，取消所有旧 session（同一时间只有一个合成器活跃）
+            for old_key, old_session in list(self.api_links.items()):
+                logger.info(f"TTS: Cancelling previous session for stream {old_key}")
+                old_session.reset()
+            self.api_links.clear()
+
+            session = self._create_session(input_stream)
+            self.api_links[input_stream_key] = session
+
+            # 为新的输入流创建输出流，建立 1:1 的显式关联
+            streamer = self.data_submitter.get_streamer(ChatDataType.AVATAR_AUDIO)
+            output_stream_id = streamer.new_stream(
+                sources=[session.input_stream_id],
+                name="bailian_tts",
+                config=ChatStreamConfig(cancelable=True)
+            )
+            session.output_stream_key = output_stream_id.key
+
+        text = data.data.get_main_data()
+        if text is not None:
+            text = re.sub(r"<\|.*?\|>", "", text)
+
+        text_end = data.is_last_data
+
+        try:
+            if not text_end:
+                if session.synthesizer is None:
+                    streamer = self.data_submitter.get_streamer(ChatDataType.AVATAR_AUDIO)
+                    callback = CosyvoiceCallBack(
+                        context=self,
+                        output_definition=streamer.data_definition,
+                        session=session)
+                    session.synthesizer = SpeechSynthesizer(
+                        model=handler.model_name, voice=handler.voice,
+                        callback=callback, format=AudioFormat.PCM_24000HZ_MONO_16BIT)
+                logger.info(f'streaming_call {text}')
+                session.synthesizer.streaming_call(text)
+            else:
+                logger.info(f'streaming_call last {text}')
+                if session.synthesizer is not None:
+                    session.synthesizer.streaming_call(text)
+                    session.synthesizer.streaming_complete()
+                session.synthesizer = None
+                self.api_links.pop(input_stream_key, None)
+        except Exception as e:
+            logger.error(e)
+            session.reset()
+            self.api_links.pop(input_stream_key, None)
 
 
 class HandlerTTS(HandlerBase, ABC):
@@ -61,19 +142,21 @@ class HandlerTTS(HandlerBase, ABC):
                            context: HandlerContext) -> HandlerDetail:
         definition = DataBundleDefinition()
         definition.add_entry(DataBundleEntry.create_audio_entry("avatar_audio", 1, self.sample_rate))
-        inputs = {
-            ChatDataType.AVATAR_TEXT: HandlerDataInfo(
-                type=ChatDataType.AVATAR_TEXT,
-            )
-        }
-        outputs = {
-            ChatDataType.AVATAR_AUDIO: HandlerDataInfo(
+        inputs = [
+            HandlerDataInfo(type=ChatDataType.AVATAR_TEXT),
+        ]
+        outputs = [
+            HandlerDataInfo(
                 type=ChatDataType.AVATAR_AUDIO,
                 definition=definition,
             )
-        }
+        ]
         return HandlerDetail(
-            inputs=inputs, outputs=outputs,
+            inputs=inputs,
+            outputs=outputs,
+            signal_filters=[
+                SignalFilterRule(ChatSignalType.STREAM_CANCEL, None, None)
+            ]
         )
 
     def load(self, engine_config: ChatEngineConfigModel, handler_config: Optional[BaseModel] = None):
@@ -93,7 +176,6 @@ class HandlerTTS(HandlerBase, ABC):
         if not isinstance(handler_config, TTSConfig):
             handler_config = TTSConfig()
         context = TTSContext(session_context.session_info.session_id)
-        context.input_text = ''
         if context.dump_audio:
             dump_file_path = os.path.join(DirectoryInfo.get_project_dir(), 'temp',
                                           f"dump_avatar_audio_{context.session_id}_{time.localtime().tm_hour}_{time.localtime().tm_min}.pcm")
@@ -110,101 +192,116 @@ class HandlerTTS(HandlerBase, ABC):
 
     def handle(self, context: HandlerContext, inputs: ChatData,
                output_definitions: Dict[ChatDataType, HandlerDataInfo]):
-        output_definition = output_definitions.get(ChatDataType.AVATAR_AUDIO).definition
         context = cast(TTSContext, context)
         if inputs.type == ChatDataType.AVATAR_TEXT:
-            text = inputs.data.get_main_data()
-        else:
-            return
-        speech_id = inputs.data.get_meta("speech_id")
-        if (speech_id is None):
-            speech_id = context.session_id
+            context.handle_text_stream(inputs, self)
 
-        if text is not None:
-            text = re.sub(r"<\|.*?\|>", "", text)
-
-        text_end = inputs.data.get_meta("avatar_text_end", False)
-        try:
-            if not text_end:
-                if context.synthesizer is None:
-                    callback = CosyvoiceCallBack(
-                        context=context, output_definition=output_definition, speech_id=speech_id)
-                    context.synthesizer = SpeechSynthesizer(
-                        model=self.model_name, voice=self.voice, callback=callback, format=AudioFormat.PCM_24000HZ_MONO_16BIT)
-                logger.info(f'streaming_call {text}')
-                context.synthesizer.streaming_call(text)
-            else:
-                logger.info(f'streaming_call last {text}')
-                context.synthesizer.streaming_call(text)
-                context.synthesizer.streaming_complete()
-                context.synthesizer = None
-                context.input_text = ''
-        except Exception as e:
-            logger.error(e)
-            context.synthesizer.streaming_complete()
-            context.synthesizer = None
+    def on_signal(self, context: HandlerContext, signal: ChatSignal):
+        """处理 STREAM_CANCEL 信号，终止被取消的 stream 的处理"""
+        context = cast(TTSContext, context)
+        if signal.type == ChatSignalType.STREAM_CANCEL and signal.related_stream:
+            stream_key = signal.related_stream.key
+            if stream_key is None:
+                return
+            # 检查是否为我们的输入流被取消
+            session = context.api_links.pop(stream_key, None)
+            if session:
+                logger.info(f"TTS: Cancelling session for input stream {stream_key}")
+                session.reset()
+                return
+            # 检查是否为我们的输出流被取消（例如下游发起的打断）
+            for key, session in list(context.api_links.items()):
+                if session.output_stream_key == stream_key:
+                    logger.info(f"TTS: Cancelling session for output stream {stream_key}")
+                    session.reset()
+                    context.api_links.pop(key, None)
+                    return
 
     def destroy_context(self, context: HandlerContext):
         context = cast(TTSContext, context)
         logger.info('destroy context')
+        for session in context.api_links.values():
+            try:
+                session.reset()
+            except Exception as e:
+                logger.opt(exception=e).warning("Failed to reset BailianTTS session on destroy")
+        context.api_links.clear()
+        if context.audio_dump_file is not None:
+            try:
+                context.audio_dump_file.close()
+            except Exception:
+                pass
 
 
 class CosyvoiceCallBack(ResultCallback):
-    def __init__(self, context: TTSContext, output_definition, speech_id):
+    def __init__(self, context: TTSContext, output_definition,
+                 session: BailianTTSSession):
         super().__init__()
         self.context = context
         self.output_definition = output_definition
-        self.speech_id = speech_id
+        self.session = session
         self.temp_bytes = b''
+        self._finished = False
+
+    @property
+    def is_cancelled(self) -> bool:
+        return self.session.cancelled
 
     def on_open(self) -> None:
-        logger.info('连接成功')
+        logger.info('TTS: WebSocket connected')
 
     def on_event(self, message) -> None:
-        # 实现接收合成结果的逻辑
-        # logger.info(message)
         pass
 
+    def _submit_end_frame(self) -> None:
+        if self._finished:
+            return
+        self._finished = True
+        # 如果 session 已被取消，不要提交结束帧（避免 finish 掉新的 stream）
+        if self.is_cancelled:
+            return
+        output = DataBundle(self.output_definition)
+        output.set_main_data(np.zeros(shape=(1, 240), dtype=np.float32))
+        self.context.submit_data(output, finish_stream=True)
+
     def on_data(self, data: bytes) -> None:
+        if self.is_cancelled:
+            return
         self.temp_bytes += data
         if len(self.temp_bytes) > 24000:
-            # 实现接收合成二进制音频结果的逻辑
             output_audio = np.array(np.frombuffer(self.temp_bytes, dtype=np.int16)).astype(
-                np.float32)/32767  # librosa.load(io.BytesIO(self.temp_bytes), sr=None)[0]
+                np.float32) / 32767
             output_audio = output_audio[np.newaxis, ...]
             output = DataBundle(self.output_definition)
             output.set_main_data(output_audio)
-            output.add_meta("avatar_speech_end", False)
-            output.add_meta("speech_id", self.speech_id)
             self.context.submit_data(output)
             self.temp_bytes = b''
 
     def on_complete(self) -> None:
+        if self.is_cancelled:
+            self.temp_bytes = b''
+            logger.info('TTS: Synthesis cancelled, skipping output in on_complete')
+            return
         if len(self.temp_bytes) > 0:
-            output_audio = np.array(np.frombuffer(self.temp_bytes, dtype=np.int16)).astype(np.float32)/32767
+            output_audio = np.array(np.frombuffer(self.temp_bytes, dtype=np.int16)).astype(np.float32) / 32767
             output_audio = output_audio[np.newaxis, ...]
             output = DataBundle(self.output_definition)
             output.set_main_data(output_audio)
-            output.add_meta("avatar_speech_end", False)
-            output.add_meta("speech_id", self.speech_id)
             self.context.submit_data(output)
             self.temp_bytes = b''
-        output = DataBundle(self.output_definition)
-        output.set_main_data(np.zeros(shape=(1, 240), dtype=np.float32))
-        output.add_meta("avatar_speech_end", True)
-        output.add_meta("speech_id", self.speech_id)
-        self.context.submit_data(output)
-        logger.info(f"speech end")
-        logger.info('合成完成')
+        self._submit_end_frame()
+        logger.info('TTS: Synthesis complete')
 
     def on_error(self, message) -> None:
-        logger.error(f'bailian tts 服务出现异常,请确保参数正确：${message}')
-        output = DataBundle(self.output_definition)
-        output.set_main_data(np.zeros(shape=(1, 240), dtype=np.float32))
-        output.add_meta("avatar_speech_end", True)
-        output.add_meta("speech_id", self.speech_id)
-        self.context.submit_data(output)
-        logger.info(f"speech end")
+        if self.is_cancelled:
+            logger.info(f'TTS: Synthesis error after cancel (expected): {message}')
+            return
+        logger.error(f'TTS: Service error: {message}')
+        self._submit_end_frame()
 
     def on_close(self) -> None:
-        logger.info('连接关闭')
+        if self.is_cancelled:
+            self.temp_bytes = b''
+            logger.info('TTS: Synthesis cancelled, skipping output in on_close')
+            return
+        logger.info('TTS: WebSocket closed')

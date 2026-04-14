@@ -2,92 +2,32 @@ import asyncio
 import queue
 import threading
 import time
-from dataclasses import dataclass
-from typing import Optional, Dict, List, Tuple, Iterable
-from uuid import uuid4
+import typing
+from typing import Dict, List, Iterable
 
-import numpy as np
 from loguru import logger
 
+from chat_engine.core.signal_manager import SignalManager
+from chat_engine.core.stream_manager import StreamManager, ChatDataSubmitter
+from chat_engine.data_models.chat_stream_status import ChatStreamStatus
+
+from chat_engine.common.logic_base import LogicBase
+from chat_engine.common.handler_base import HandlerBase
+
+from chat_engine.data_models.internal.chat_data_endpoints import DataSink
+from chat_engine.data_models.internal.handler_definition_data import HandlerBaseInfo
+from chat_engine.data_models.internal.handler_session_data import HandlerRegistry, HandlerRecord, HandlerEnv
+from chat_engine.data_models.internal.logic_definition_data import LogicBaseInfo
+from chat_engine.data_models.internal.logic_session_data import LogicEnv
+
 from chat_engine.data_models.chat_data_type import ChatDataType
-from chat_engine.common.engine_channel_type import EngineChannelType
-from chat_engine.common.handler_base import HandlerBase, HandlerBaseInfo, HandlerDataInfo, ChatDataConsumeMode
-from chat_engine.contexts.handler_context import HandlerContext, HandlerResultType
-from chat_engine.contexts.session_context import SessionContext
-from chat_engine.data_models.chat_data.chat_data_model import ChatData
-from chat_engine.data_models.chat_engine_config_data import HandlerBaseConfigModel, ChatEngineConfigModel
-from chat_engine.data_models.chat_signal import ChatSignal
+from chat_engine.data_models.engine_channel_type import EngineChannelType
+from chat_engine.data_models.chat_engine_config_data import (HandlerBaseConfigModel, ChatEngineConfigModel,
+                                                             LogicBaseConfigModel)
+from chat_engine.data_models.chat_signal import ChatSignal, SignalFilterRule
 from chat_engine.data_models.chat_signal_type import ChatSignalSourceType, ChatSignalType
-from chat_engine.data_models.runtime_data.data_bundle import DataBundle
-from chat_engine.data_models.session_info_data import IOQueueType
 
-
-@dataclass
-class HandlerEnv:
-    handler_info: HandlerBaseInfo
-    handler: HandlerBase
-    config: HandlerBaseConfigModel
-    context: Optional[HandlerContext] = None
-    input_queue: Optional[queue.Queue] = None
-    output_info: Optional[Dict[ChatDataType, HandlerDataInfo]] = None
-
-
-@dataclass
-class HandlerRecord:
-    env: HandlerEnv
-    pump_thread: Optional[threading.Thread] = None
-
-
-@dataclass
-class DataSource:
-    owner: str = ""
-    source_queue: IOQueueType = None
-    target_types: List[ChatDataType] = None
-
-
-@dataclass
-class DataSink:
-    owner: str = ""
-    sink_queue: queue.Queue = None
-    consume_info: Optional[HandlerDataInfo] = None
-
-
-class ChatDataSubmitter:
-    def __init__(self, handler_name: str, output_info, session_context, sinks, outputs):
-        self.handler_name = handler_name
-        self.output_info = output_info
-        self.session_context = session_context
-        self.sinks = sinks
-        self.outputs = outputs
-
-    def submit(self, data: HandlerResultType):
-        ChatSession.submit_data(
-            data,
-            self.handler_name,
-            self.output_info,
-            self.session_context,
-            self.sinks,
-            self.outputs
-        )
-
-
-class ChatDataSubmitter:
-    def __init__(self, handler_name: str, output_info, session_context, sinks, outputs):
-        self.handler_name = handler_name
-        self.output_info = output_info
-        self.session_context = session_context
-        self.sinks = sinks
-        self.outputs = outputs
-
-    def submit(self, data: HandlerResultType):
-        ChatSession.submit_data(
-            data,
-            self.handler_name,
-            self.output_info,
-            self.session_context,
-            self.sinks,
-            self.outputs
-        )
+from chat_engine.contexts.session_context import SessionContext
 
 
 class ChatSession:
@@ -97,234 +37,181 @@ class ChatSession:
         EngineChannelType.TEXT: [ChatDataType.HUMAN_TEXT]
     }
 
-    def __init__(self, session_context: SessionContext, engine_config: ChatEngineConfigModel):
+    def __init__(self, session_context: SessionContext, _engine_config: ChatEngineConfigModel):
         self.session_context = session_context
-
+        self.signal_manager = SignalManager(self.session_context.session_clock)
+        self.signal_manager.init()
+        self.stream_manager = StreamManager(self.signal_manager)
+        self.stream_manager.enable_debug_logging(True)
         self.data_sinks: Dict[ChatDataType, List[DataSink]] = {}
-        self.inputs: List[DataSource] = []
-        self.outputs: Dict[Tuple[str, ChatDataType], DataSink] = {}
-
         self.handlers: Dict[str, HandlerRecord] = {}
-        self.input_pump_thread: Optional[threading.Thread] = None
-
-        for channel_type, input_queue in session_context.input_queues.items():
-            target_types = self.input_type_mapping.get(channel_type, None)
-            if target_types is None:
-                logger.warning(f"Channel type of {channel_type} is not supported, ignored.")
-                continue
-            self.inputs.append(DataSource(
-                owner="",
-                source_queue=input_queue,
-                target_types=target_types
-            ))
-
-        for output_type, output_info in engine_config.outputs.items():
-            engine_channel_type = output_info.type.channel_type
-            if engine_channel_type not in session_context.output_queues:
-                logger.warning(f"Channel type of {engine_channel_type} not found in engine outputs, "
-                               f"configured output {output_info} will be ignored.")
-                continue
-            if isinstance(output_info.handler, List):
-                handler_names = output_info.handler
-            else:
-                handler_names = [output_info.handler]
-            for handler_name in handler_names:
-                output_key = (handler_name, output_info.type)
-                if output_key in self.outputs:
-                    logger.warning(f"Duplicate output {output_key} to {output_type} found, ignored.")
-                    continue
-                output_queue = session_context.output_queues[engine_channel_type]
-                self.outputs[output_key] = DataSink(
-                    owner="",
-                    sink_queue=output_queue,
-                    consume_info = HandlerDataInfo(type=output_info.type),
-                )
+        self._playback_begin_event_ids: Dict[str, str] = {}
+        self._register_playback_auto_recorder()
 
     @classmethod
-    def packet_audio_data(cls, session_context: SessionContext, audio_data: Tuple[int, np.ndarray],
-                          _target_type: ChatDataType):
-        sr, audio_array = audio_data
-        definition = session_context.get_input_audio_definition(sr, 1)
-        data_bundle = DataBundle(definition)
-        audio_array = audio_array.squeeze()[np.newaxis, ...]
-        data_bundle.set_main_data(audio_array)
-        return data_bundle
-
-    @classmethod
-    def packet_video_data(cls, session_context: SessionContext, video_data: np.ndarray,
-                           _target_type: ChatDataType):
-        frame_rate, image = video_data
-        image = image.squeeze()
-        definition = session_context.get_input_video_definition(
-            list(image.shape), frame_rate,
-            allow_shape_change=True
-        )
-        data_bundle = DataBundle(definition)
-        input_image = image[np.newaxis, ...]
-        data_bundle.set_main_data(input_image)
-        return data_bundle
-    
-    @classmethod
-    def packet_text_data(cls, session_context: SessionContext, text_data: Tuple,
-                           _target_type: ChatDataType):
-        _, text = text_data 
-        definition = session_context.get_input_text_definition()
-        data_bundle = DataBundle(definition)
-        data_bundle.set_main_data(text)
-        data_bundle.add_meta('speech_id', str(uuid4()))
-        data_bundle.add_meta('human_text_end', True)
-        return data_bundle
-
-    @classmethod
-    def packet_input_data(cls, session_context: SessionContext, input_data, target_type: ChatDataType):
-        chat_data = ChatData(
-            type=target_type,
-        )
-        data_bundle = None
-        timestamp = None
-        if len(input_data) > 2:
-            timestamp = input_data[2]
-            input_data = input_data[:2]
-        if target_type.channel_type == EngineChannelType.AUDIO:
-            data_bundle = cls.packet_audio_data(session_context, input_data, target_type)
-        elif target_type.channel_type == EngineChannelType.VIDEO:
-            data_bundle = cls.packet_video_data(session_context, input_data, target_type)
-        elif target_type.channel_type == EngineChannelType.TEXT:
-            data_bundle = cls.packet_text_data(session_context, input_data, target_type)
-        if data_bundle is None:
-            logger.warning(f"Unsupported target type {target_type}")
-            return None
-        chat_data.data = data_bundle
-        if timestamp is not None:
-            chat_data.timestamp = timestamp
-        return chat_data
-
-    @classmethod
-    def inputs_pumper(cls, session_context: SessionContext, inputs: List[DataSource],
-                    sinks: Dict[ChatDataType, List[DataSink]],
-                    outputs: Dict[Tuple[str, ChatDataType], DataSink]):
-        shared_states = session_context.shared_states
-        while shared_states.active:
-            input_data_list = []
-            timestamp = session_context.get_timestamp()
-
-            for input_source in inputs:
-                input_queue = input_source.source_queue
-                try:
-                    input_data = input_queue.get_nowait()
-                    input_data_list.append((input_source, input_data))
-                except (queue.Empty, asyncio.QueueEmpty):
-                    continue
-            if len(input_data_list) == 0:
-                time.sleep(0.03)
-                continue
-            for input_source, input_data in input_data_list:
-                for target_type in input_source.target_types:
-                    chat_data = cls.packet_input_data(session_context, input_data, target_type)
-                    if chat_data is None:
-                        continue
-                    if not chat_data.is_timestamp_valid():
-                        chat_data.timestamp = timestamp
-                    chat_data.source = input_source.owner
-                    cls.distribute_data(chat_data, sinks, outputs)
-
-    @classmethod
-    def _packet_chat_data(cls, handler_name: str, output_info, session_context: SessionContext,
-                          data: HandlerResultType):
-        if data is None:
-            return None
-        timestamp = session_context.get_timestamp()
-        single_output = None
-        if len(output_info) == 1:
-            single_output = list(output_info.keys())[0]
-
-        if isinstance(data, ChatData):
-            chat_data = data
-        elif isinstance(data, DataBundle):
-            if single_output is None:
-                msg = f"Bare DataBundle is supported only if handler outputs single chat data type."
-                raise ValueError(msg)
-            chat_data = ChatData(
-                data=data,
-                type=single_output,
-                timestamp=timestamp,
-            )
-        elif isinstance(data, Tuple) and len(data) == 2:
-            chat_data_type, raw_data = data
-            if not isinstance(chat_data_type, ChatDataType) or not isinstance(raw_data, np.ndarray):
-                msg = f"Unsupported handler output type {type(data)}"
-                raise ValueError(msg)
-            if chat_data_type not in output_info:
-                msg = f"Handler output type {chat_data_type} is not configured in outputs declaration."
-                raise ValueError(msg)
-            data_bundle = DataBundle(definition=output_info[chat_data_type].definition)
-            data_bundle.set_main_data(raw_data)
-            chat_data = ChatData(
-                data=data_bundle,
-                type=chat_data_type,
-                timestamp=timestamp,
-            )
-        else:
-            msg = f"Unsupported handler output type {type(data)}"
-            raise ValueError(msg)
-        if not chat_data.is_timestamp_valid():
-            chat_data.timestamp = timestamp
-        chat_data.source = handler_name
-        return chat_data
-
-    @classmethod
-    def distribute_data(cls, data: ChatData, sinks: Dict[ChatDataType, List[DataSink]],
-                       outputs: Dict[Tuple[str, ChatDataType], DataSink]):
-        source_key = (data.source, data.type)
-        data_sink = outputs.get(source_key, None)
-        if data_sink is not None:
-            data_sink.sink_queue.put_nowait(data)
-        sink_list = sinks.get(data.type, [])
-        for sink in sink_list:
-            if sink.owner == data.source:
-                continue
-            sink.sink_queue.put_nowait(data)
-            if sink.consume_info.input_consume_mode == ChatDataConsumeMode.ONCE:
-                break
-
-    @classmethod
-    def submit_data(cls, data: HandlerResultType, handler_name: str, output_info, session_context: SessionContext,
-                    sinks: Dict[ChatDataType, List[DataSink]], outputs: Dict[Tuple[str, ChatDataType], DataSink]):
-        chat_data = cls._packet_chat_data(handler_name, output_info, session_context, data)
-        if chat_data is not None:
-            cls.distribute_data(chat_data, sinks, outputs)
-
-    @classmethod
-    def handler_pumper(cls, session_context: SessionContext, handler_env: HandlerEnv,
-                       sinks: Dict[ChatDataType, List[DataSink]],
-                       outputs: Dict[Tuple[str, ChatDataType], DataSink]):
+    def handler_pumper(cls, session_context: SessionContext, handler_env: HandlerEnv):
         shared_states = session_context.shared_states
         input_queue = handler_env.input_queue
         handler = handler_env.handler
+        context = handler_env.context
         output_info = handler_env.output_info
+        # Use handler_output_info (with original type keys) if available,
+        # so handler code can use its declared types even with output_type_override
+        handler_visible_output_info = handler_env.handler_output_info or output_info
         if output_info is None:
             output_info = {}
+        if handler_visible_output_info is None:
+            handler_visible_output_info = {}
+        handler.warmup_context(session_context, context)
+        
+        # Track stream begin events for auto history recording
+        stream_begin_events: Dict[str, str] = {}  # stream_key -> event_id
+        
         while shared_states.active:
             try:
                 input_data = input_queue.get_nowait()
             except (queue.Empty, asyncio.QueueEmpty):
                 time.sleep(0.03)
                 continue
-            handler_result = handler.handle(handler_env.context, input_data, output_info)
+            
+            context.data_submitter.update_input_stream(input_data)
+
+            # Consumer-side cancel guard: drop data from cancelled streams.
+            # The production-side guard in stream_data() blocks new data, but residual
+            # data may already be in the queue from before cancel(). This check ensures
+            # the handler never processes data after a stream has been cancelled.
+            if input_data.stream_id is not None:
+                _sm = getattr(context, 'stream_manager', None)
+                if _sm is not None:
+                    _stream = _sm.find_stream(input_data.stream_id)
+                    if _stream is not None and _stream.status == ChatStreamStatus.CANCELLED:
+                        continue
+
+            # Auto-record STREAM_BEGIN to history
+            if (input_data.is_first_data 
+                and handler.should_auto_record_history(input_data.type)
+                and input_data.stream_id is not None):
+                stream_key_obj = input_data.stream_id.key
+                stream_key_str = str(stream_key_obj) if stream_key_obj else None
+                event_id = handler.on_history_record(
+                    context,
+                    signal_type=ChatSignalType.STREAM_BEGIN,
+                    data_type=input_data.type,
+                    source_stream_key=stream_key_str,
+                )
+                if event_id and stream_key_str:
+                    stream_begin_events[stream_key_str] = event_id
+            
+            # Accumulate streaming text data for TEXT types
+            # Use timestamp as chunk_id for deduplication across multiple handlers
+            if (handler.should_auto_record_history(input_data.type)
+                and input_data.stream_id is not None
+                and input_data.data is not None
+                and context.session_history is not None):
+                try:
+                    text_data = input_data.data.get_main_data()
+                    if text_data and isinstance(text_data, str):
+                        stream_key_obj = input_data.stream_id.key
+                        stream_key_str = str(stream_key_obj) if stream_key_obj else None
+                        if stream_key_str:
+                            # Use timestamp as unique chunk identifier for deduplication
+                            chunk_id = f"{input_data.timestamp[0]}:{input_data.timestamp[1]}"
+                            context.session_history.accumulate_stream_data(stream_key_str, text_data, chunk_id)
+                except Exception:
+                    pass
+            
+            # Map input type back to original type if there's a reverse mapping
+            # This allows handler code to check against its declared input types
+            actual_type = input_data.type
+            if handler_env.input_type_reverse_mapping:
+                original_type = handler_env.input_type_reverse_mapping.get(actual_type)
+                if original_type:
+                    input_data.type = original_type
+            
+            # 使用 try-except 包裹 handler.handle()，防止单次处理失败导致整个 pumper 线程退出
+            try:
+                handler_result = handler.handle(context, input_data, handler_visible_output_info)
+            except Exception as e:
+                handler_name = handler_env.handler_info.name if handler_env.handler_info else "Unknown"
+                logger.opt(exception=e).error(f"Handler {handler_name} raised exception during handle(), "
+                                              f"input type: {input_data.type}, stream: {input_data.stream_id}")
+                # 重置 input_data.type 然后继续处理下一个数据
+                input_data.type = actual_type
+                continue
+            
+            # Restore the actual type after handle() call
+            input_data.type = actual_type
+            
+            # Auto-record STREAM_END to history with accumulated data content
+            if (input_data.is_last_data 
+                and handler.should_auto_record_history(input_data.type)
+                and input_data.stream_id is not None):
+                stream_key_obj = input_data.stream_id.key
+                stream_key_str = str(stream_key_obj) if stream_key_obj else None
+                begin_event_id = stream_begin_events.pop(stream_key_str, None) if stream_key_str else None
+                # Use accumulated data instead of just the last chunk
+                data_content = None
+                if context.session_history is not None and stream_key_str:
+                    data_content = context.session_history.finalize_stream_accumulator(stream_key_str)
+                # Fallback to last chunk data if no accumulator
+                if not data_content and input_data.data is not None:
+                    try:
+                        data_content = input_data.data.get_main_data()
+                    except Exception:
+                        pass
+                handler.on_history_record(
+                    context,
+                    signal_type=ChatSignalType.STREAM_END,
+                    data_type=input_data.type,
+                    data=data_content,
+                    related_event_id=begin_event_id,
+                    source_stream_key=stream_key_str,
+                )
+            
             if not isinstance(handler_result, Iterable):
                 handler_result = [handler_result]
             for handler_output in handler_result:
-                if handler_result is None:
+                if context.data_submitter is None:
                     continue
-                chat_data = cls._packet_chat_data(
-                    handler_env.handler_info.name,
-                    output_info,
-                    session_context,
-                    handler_output
-                )
-                if chat_data is None:
-                    continue
-                cls.distribute_data(chat_data, sinks, outputs)
+                context.data_submitter.submit(handler_output)
+
+    def _register_playback_auto_recorder(self):
+        """Register signal listeners to auto-record CLIENT_PLAYBACK stream lifecycle to SessionHistory."""
+        for signal_type in (ChatSignalType.STREAM_BEGIN, ChatSignalType.STREAM_END, ChatSignalType.STREAM_CANCEL):
+            self.signal_manager.register_listener(
+                listener=self._on_playback_stream_signal,
+                signal_filter=SignalFilterRule(signal_type, None, ChatDataType.CLIENT_PLAYBACK),
+            )
+
+    def _on_playback_stream_signal(self, signal: ChatSignal):
+        """Auto-record CLIENT_PLAYBACK stream lifecycle events to SessionHistory.
+        
+        Parent stream ancestry (AVATAR_AUDIO etc.) is navigable through StreamManager
+        at query time — no need to denormalize into history events.
+        """
+        session_history = self.session_context.session_history
+        if session_history is None or signal.related_stream is None:
+            return
+        stream_key_str = signal.related_stream.stream_key_str
+
+        if signal.type == ChatSignalType.STREAM_BEGIN:
+            event_id = session_history.create_and_add_event(
+                data_type=ChatDataType.CLIENT_PLAYBACK,
+                signal_type=ChatSignalType.STREAM_BEGIN,
+                source_stream_key=stream_key_str,
+                owner=signal.source_name,
+            )
+            if event_id and stream_key_str:
+                self._playback_begin_event_ids[stream_key_str] = event_id
+        elif signal.type in (ChatSignalType.STREAM_END, ChatSignalType.STREAM_CANCEL):
+            begin_event_id = self._playback_begin_event_ids.pop(stream_key_str, None) if stream_key_str else None
+            session_history.create_and_add_event(
+                data_type=ChatDataType.CLIENT_PLAYBACK,
+                signal_type=signal.type,
+                source_stream_key=stream_key_str,
+                owner=signal.source_name,
+                parent_event_id=begin_event_id,
+            )
 
     def prepare_handler(self, handler: HandlerBase, handler_info: HandlerBaseInfo,
                         handler_config: HandlerBaseConfigModel):
@@ -333,15 +220,112 @@ class ChatSession:
         handler_env.context.owner = handler_info.name
         handler_env.input_queue = queue.Queue()
         io_detail = handler.get_handler_detail(self.session_context, handler_env.context)
+        io_detail.validate()
+        
+        # Type override mappings: original_type -> actual_type
+        input_type_mapping: Dict[ChatDataType, ChatDataType] = {}
+        output_type_mapping: Dict[ChatDataType, ChatDataType] = {}
+        
+        # Apply input type overrides from configuration
+        if handler_config.input_type_override:
+            logger.info(f"Handler {handler_info.name}: processing input_type_override {handler_config.input_type_override}, current inputs: {list(io_detail.inputs.keys())}")
+            for orig_type_name, target_type_name in handler_config.input_type_override.items():
+                try:
+                    orig_type = ChatDataType[orig_type_name]
+                    target_type = ChatDataType[target_type_name]
+                    if orig_type in io_detail.inputs:
+                        input_info = io_detail.inputs.pop(orig_type)
+                        input_info.type = target_type
+                        io_detail.inputs[target_type] = input_info
+                        input_type_mapping[orig_type] = target_type
+                        logger.info(f"Handler {handler_info.name}: input type override {orig_type_name} -> {target_type_name}")
+                    else:
+                        logger.warning(f"Handler {handler_info.name}: input type {orig_type_name} not in handler's declared inputs, skipping override")
+                except KeyError as e:
+                    logger.warning(f"Handler {handler_info.name}: invalid type override - {e}")
+        
+        # Apply output type overrides from configuration
+        # Note: We only create streamer for the target type, not the original type.
+        # Handler code can still use original type names because _output_type_mapping
+        # handles the translation in ChatDataSubmitter.get_streamer()
+        if handler_config.output_type_override:
+            for orig_type_name, target_type_name in handler_config.output_type_override.items():
+                try:
+                    orig_type = ChatDataType[orig_type_name]
+                    target_type = ChatDataType[target_type_name]
+                    if orig_type in io_detail.outputs:
+                        output_info = io_detail.outputs.pop(orig_type)
+                        output_info.type = target_type
+                        io_detail.outputs[target_type] = output_info
+                        # Record mapping so handler can use original type names via get_streamer()
+                        output_type_mapping[orig_type] = target_type
+                        logger.debug(f"Handler {handler_info.name}: output type override {orig_type_name} -> {target_type_name}")
+                except KeyError as e:
+                    logger.warning(f"Handler {handler_info.name}: invalid type override - {e}")
+        
         inputs = io_detail.inputs
         for input_type, input_info in inputs.items():
             sink_list = self.data_sinks.setdefault(input_type, [])
             data_sink = DataSink(owner=handler_info.name, sink_queue=handler_env.input_queue, consume_info=input_info)
             sink_list.append(data_sink)
         handler_env.output_info = io_detail.outputs
+        
+        # Build reverse mapping: actual_type -> original_type
+        # This allows handler code to check against its originally declared types
+        if input_type_mapping:
+            handler_env.input_type_reverse_mapping = {v: k for k, v in input_type_mapping.items()}
 
+        # Build handler-visible output_info with original type keys
+        # so handler code can use its declared types (e.g. HUMAN_TEXT instead of HUMAN_DUPLEX_TEXT)
+        if output_type_mapping:
+            output_type_reverse = {v: k for k, v in output_type_mapping.items()}
+            handler_output_info = {}
+            for key, value in io_detail.outputs.items():
+                orig_key = output_type_reverse.get(key, key)
+                handler_output_info[orig_key] = value
+            handler_env.handler_output_info = handler_output_info
+
+        handler_context = handler_env.context
+
+        filters = io_detail.signal_filters
+        if filters is None or len(filters) == 0:
+            filters = [SignalFilterRule(None, None, None)]
+        # TODO multiple signal filter should be merged.
+        for signal_filter in filters:
+            self.signal_manager.register_listener(
+                listener=lambda signal: handler.on_signal(handler_env.context, signal),
+                signal_filter=signal_filter
+            )
+        handler_context.signal_emitter = self.signal_manager.get_emitter(handler_info.name)
+        handler_context.data_submitter = ChatDataSubmitter()
+        # Set type mapping for override support - handlers can use original type names
+        if output_type_mapping:
+            handler_context.data_submitter.set_output_type_mapping(output_type_mapping)
+        # Inject session history for duplex conversation support
+        handler_context.session_history = self.session_context.session_history
+        # Inject stream_manager so handlers can query stream graph and create lifecycle streams
+        handler_context.stream_manager = self.stream_manager
+
+        for output_type, output_data_info in handler_env.output_info.items():
+            streamer = self.stream_manager.create_streamer(
+                data_info=output_data_info,
+                data_sinks=self.data_sinks,
+                producer_name=handler_info.name,
+                data_name=output_data_info.data_name,
+                config=output_data_info.output_stream_config,
+                )
+            handler_context.data_submitter.register_streamer(streamer)
         self.handlers[handler_info.name] = HandlerRecord(env=handler_env)
         return handler_env
+
+    def create_logic_context(self, handler_registries: List[HandlerRegistry], logic: LogicBase,
+                             logic_info: LogicBaseInfo, logic_config: LogicBaseConfigModel):
+        logic_env = LogicEnv(logic_info=logic_info, logic=logic, config=logic_config)
+        logic_env.context = logic.create_context(handler_registries, self.session_context, logic_env.config)
+        logic_env.context.owner = logic_info.name
+        logic_detail = logic.get_logic_detail(self.session_context, logic_env.context)
+        logic_detail.validate()
+        inputs = logic_detail.inspected_streamers
 
     def sort_sinks(self):
         for input_type, sink_list in self.data_sinks.items():
@@ -350,45 +334,29 @@ class ChatSession:
     def start(self):
         if self.session_context.shared_states.active:
             return
-        self.session_context.shared_states.active = True
         self.sort_sinks()
+        self.session_context.shared_states.active = True
         for handler_name, handler_record in self.handlers.items():
-            start_args = (self.session_context, handler_record.env,
-                          self.data_sinks, self.outputs)
-            handler_submitter = ChatDataSubmitter(
-                handler_name,
-                handler_record.env.output_info,
-                self.session_context,
-                self.data_sinks,
-                self.outputs,
-            )
-            handler_record.env.context.data_submitter = handler_submitter
+            start_args = (self.session_context, handler_record.env)
             handler_record.env.handler.start_context(self.session_context, handler_record.env.context)
             handler_record.pump_thread = threading.Thread(target=self.handler_pumper, args=start_args)
             handler_record.pump_thread.start()
-        input_pumper_args = (self.session_context, self.inputs, self.data_sinks, self.outputs)
-        self.input_pump_thread = threading.Thread(target=self.inputs_pumper, args=input_pumper_args)
-        self.input_pump_thread.start()
-        self.session_context.set_input_start()
+        self.session_context.get_clock().start()
 
     def stop(self):
         self.session_context.shared_states.active = False
-        if self.input_pump_thread:
-            self.input_pump_thread.join()
-            self.input_pump_thread = None
         for handler_name, handler_record in self.handlers.items():
             if handler_record.pump_thread:
                 handler_record.pump_thread.join()
                 handler_record.pump_thread = None
             handler_record.env.handler.destroy_context(handler_record.env.context)
+        self.signal_manager.shutdown()
         self.handlers.clear()
         self.session_context.cleanup()
         logger.info("chat session stopped")
 
     def get_timestamp(self):
-        return self.session_context.get_timestamp()
+        return self.session_context.get_clock().get_timestamp()
 
     def emit_signal(self, signal: ChatSignal):
-        # TODO this is temp implementation a full signal infrastructure is needed.
-        if signal.source_type == ChatSignalSourceType.CLIENT and signal.type == ChatSignalType.END:
-            self.session_context.shared_states.enable_vad = True
+        self.signal_manager.get_emitter("chat_session").emit(signal)

@@ -24,14 +24,14 @@ services:
     command: >
       --config=/root/open-avatar-chat/config/chat_with_openai_compatible_bailian_cosyvoice.yaml
     volumes:
-      - ./build:/root/open-avatar-chat/build \
-      - ./models:/root/open-avatar-chat/models \
-      - ./ssl_certs:/root/open-avatar-chat/ssl_certs \
-      - ./config:/root/open-avatar-chat/config \
-      - ./.env:/root/open-avatar-chat/.env \
-      - ./models/musetalk/s3fd-619a316812/:/root/.cache/torch/hub/checkpoints/ \
-      - ./exp:/root/open-avatar-chat/exp \
-      - ./resource:/root/open-avatar-chat/resource \
+      - ./build:/root/open-avatar-chat/build
+      - ./models:/root/open-avatar-chat/models
+      - ./ssl_certs:/root/open-avatar-chat/ssl_certs
+      - ./config:/root/open-avatar-chat/config
+      - ./.env:/root/open-avatar-chat/.env
+      - ./models/musetalk/s3fd-619a316812/:/root/.cache/torch/hub/checkpoints/
+      - ./exp:/root/open-avatar-chat/exp
+      - ./resource:/root/open-avatar-chat/resource
     ports:
       - "8282:8282"
     networks:

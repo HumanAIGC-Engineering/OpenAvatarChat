@@ -23,7 +23,8 @@ from engine_utils.directory_info import DirectoryInfo
 #     ref_audio_text: str = field(default=None)
 #     ref_audio_buffer: np.ndarray = None
 #     sample_rate: int = field(default=24000)
-spawn_context = mp.get_context('spawn')   
+spawn_context = mp.get_context('spawn')
+
 
 class TTSCosyVoiceProcessor(spawn_context.Process):
     def __init__(self, handler_root: str, config: any, input_queue: Queue, output_queue: Queue):
@@ -48,7 +49,7 @@ class TTSCosyVoiceProcessor(spawn_context.Process):
         logger.add(sys.stdout, level='INFO')
         if self.dump_audio:
             dump_file_path = os.path.join(DirectoryInfo.get_project_dir(),
-                                            "dump_avatar_audio.pcm")
+                                          "dump_avatar_audio.pcm")
             self.audio_dump_file = open(dump_file_path, "wb")
         logger.info('start tts processor')
         # use local model
@@ -114,7 +115,7 @@ class TTSCosyVoiceProcessor(spawn_context.Process):
                 tts_audio = b''
                 for r in response.iter_content(chunk_size=16000):
                     tts_audio = r
-                    tts_speech = np.array(np.frombuffer(tts_audio, dtype=np.int16)).astype(np.float32)/32767
+                    tts_speech = np.array(np.frombuffer(tts_audio, dtype=np.int16)).astype(np.float32) / 32767
                     logger.debug(f'audio response {tts_speech.shape}')
 
                     output_audio = librosa.resample(tts_speech, orig_sr=22050, target_sr=self.sample_rate)
@@ -151,7 +152,8 @@ class TTSCosyVoiceProcessor(spawn_context.Process):
                 for tts_speech in response:
                     tts_audio = tts_speech['tts_speech'].numpy()
                     logger.debug(f'tts sample rate {self.model.sample_rate}')
-                    tts_audio = tts_audio  # librosa.resample(tts_audio, orig_sr=self.model.sample_rate, target_sr=24000)
+                    # librosa.resample(tts_audio, orig_sr=self.model.sample_rate, target_sr=24000)
+                    tts_audio = tts_audio
                     # tts_audio = torchaudio.transforms.Resample(orig_freq=22050, new_freq=24000)(tts_audio)
                     if self.dump_audio:
                         dump_audio = tts_audio

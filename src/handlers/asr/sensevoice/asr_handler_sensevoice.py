@@ -43,7 +43,6 @@ class ASRContext(HandlerContext):
             dump_file_path = os.path.join(DirectoryInfo.get_project_dir(),
                                           "dump_talk_audio.pcm")
             self.audio_dump_file = open(dump_file_path, "wb")
-        self.shared_states = None
 
 
 class HandlerASR(HandlerBase, ABC):
@@ -86,7 +85,7 @@ class HandlerASR(HandlerBase, ABC):
 
     def load(self, engine_config: ChatEngineConfigModel, handler_config: Optional[BaseModel] = None):
         if isinstance(handler_config, ASRConfig):
-            self.model_name = handler_config.model_name       
+            self.model_name = handler_config.model_name
             model_path = os.path.join(DirectoryInfo.get_models_dir(), handler_config.model_name)
             if os.path.exists(model_path):
                 self.model_name = model_path
@@ -97,9 +96,8 @@ class HandlerASR(HandlerBase, ABC):
         if not isinstance(handler_config, ASRConfig):
             handler_config = ASRConfig()
         context = ASRContext(session_context.session_info.session_id)
-        context.shared_states = session_context.shared_states
         return context
-    
+
     def start_context(self, session_context, handler_context):
         pass
 
@@ -112,9 +110,6 @@ class HandlerASR(HandlerBase, ABC):
             audio = inputs.data.get_main_data()
         else:
             return
-        speech_id = inputs.data.get_meta("speech_id")
-        if (speech_id is None):
-            speech_id = context.session_id
 
         if audio is not None:
             audio = audio.squeeze()
@@ -125,7 +120,7 @@ class HandlerASR(HandlerBase, ABC):
                     continue
                 context.output_audios.append(audio_segment)
 
-        speech_end = inputs.data.get_meta("human_speech_end", False)
+        speech_end = inputs.is_last_data
         if not speech_end:
             return
 
@@ -147,20 +142,10 @@ class HandlerASR(HandlerBase, ABC):
         context.output_audios.clear()
         output_text = re.sub(r"<\|.*?\|>", "", res[0]['text'])
         if len(output_text) == 0:
-            # 如果 ASR 识别结果为空，则需要重新开启vad
-            context.shared_states.enable_vad = True
             return
         output = DataBundle(output_definition)
         output.set_main_data(output_text)
-        output.add_meta('human_text_end', False)
-        output.add_meta('speech_id', speech_id)
-        yield output
-
-        end_output = DataBundle(output_definition)
-        end_output.set_main_data('')
-        end_output.add_meta("human_text_end", True)
-        end_output.add_meta("speech_id", speech_id)
-        yield end_output
+        context.submit_data(output, finish_stream=True)
 
     def destroy_context(self, context: HandlerContext):
         pass

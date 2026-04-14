@@ -2,7 +2,7 @@
 
 import os
 import re
-from typing import Dict, Optional, cast
+from typing import Dict, Optional, Set, cast
 from loguru import logger
 from pydantic import BaseModel, Field
 from abc import ABC
@@ -12,9 +12,13 @@ from chat_engine.data_models.chat_engine_config_data import ChatEngineConfigMode
 from chat_engine.common.handler_base import HandlerBase, HandlerBaseInfo, HandlerDataInfo, HandlerDetail
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_data_type import ChatDataType
+from chat_engine.data_models.chat_signal import ChatSignal, SignalFilterRule
+from chat_engine.data_models.chat_signal_type import ChatSignalType
+from chat_engine.data_models.chat_stream import StreamKey
 from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBundleDefinition, DataBundleEntry
 from handlers.llm.openai_compatible.chat_history_manager import ChatHistory, HistoryMessage
+from chat_engine.data_models.chat_stream_config import ChatStreamConfig
 
 
 class LLMConfig(HandlerBaseConfigModel, BaseModel):
@@ -41,6 +45,7 @@ class LLMContext(HandlerContext):
         self.current_image = None
         self.history = None
         self.enable_video_input = False
+        self.active_stream_keys: Set[StreamKey] = set()
 
 
 class HandlerLLM(HandlerBase, ABC):
@@ -71,7 +76,11 @@ class HandlerLLM(HandlerBase, ABC):
             )
         }
         return HandlerDetail(
-            inputs=inputs, outputs=outputs,
+            inputs=inputs, 
+            outputs=outputs,
+            signal_filters=[
+                SignalFilterRule(ChatSignalType.STREAM_CANCEL, None, None)
+            ]
         )
 
     def load(self, engine_config: ChatEngineConfigModel, handler_config: Optional[BaseModel] = None):
@@ -91,10 +100,11 @@ class HandlerLLM(HandlerBase, ABC):
         context.api_url = handler_config.api_url
         context.enable_video_input = handler_config.enable_video_input
         context.history = ChatHistory(history_length=handler_config.history_length)
-        context.client = OpenAI(
+        context.client =    OpenAI(  
             # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx",
             api_key=context.api_key,
             base_url=context.api_url,
+            timeout=5.0,  # 30秒超时，避免 API 无响应时阻塞整个系统
         )
         return context
     
@@ -105,7 +115,8 @@ class HandlerLLM(HandlerBase, ABC):
                output_definitions: Dict[ChatDataType, HandlerDataInfo]):
         output_definition = output_definitions.get(ChatDataType.AVATAR_TEXT).definition
         context = cast(LLMContext, context)
-        text = None
+
+        streamer = context.data_submitter.get_streamer(ChatDataType.AVATAR_TEXT)
         if inputs.type == ChatDataType.CAMERA_VIDEO and context.enable_video_input:
             context.current_image = inputs.data.get_main_data()
             return
@@ -113,25 +124,33 @@ class HandlerLLM(HandlerBase, ABC):
             text = inputs.data.get_main_data()
         else:
             return
-        speech_id = inputs.data.get_meta("speech_id")
-        if (speech_id is None):
-            speech_id = context.session_id
+
+        stream_key = streamer.current_stream.identity.stream_key_str if streamer.current_stream is not None else None
+        if stream_key is None:
+            stream = streamer.new_stream(sources=[inputs.stream_id], name="openai_compatible", config=ChatStreamConfig(cancelable=True))
+            stream_key = stream.stream_key_str
 
         if text is not None:
             context.input_texts += text
 
-        text_end = inputs.data.get_meta("human_text_end", False)
+        text_end = inputs.is_last_data
         if not text_end:
             return
 
         chat_text = context.input_texts
         chat_text = re.sub(r"<\|.*?\|>", "", chat_text)
         if len(chat_text) < 1:
+            logger.warning("LLM got empty query, return emtpy response.")
+            end_output = DataBundle(output_definition)
+            end_output.set_main_data('')
+            streamer.stream_data(end_output, name="openai_compatible", config=ChatStreamConfig(cancelable=True), finish_stream=True)
             return
         logger.info(f'llm input {context.model_name} {chat_text} ')
         current_content = context.history.generate_next_messages(chat_text, 
                                                                  [context.current_image] if context.current_image is not None else [])
         logger.debug(f'llm input {context.model_name} {current_content} ')
+        if stream_key:
+            context.active_stream_keys.add(stream_key)
         try:
             completion = context.client.chat.completions.create(
                 model=context.model_name,  # 此处以qwen-plus为例，可按需更换模型名称。模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
@@ -144,39 +163,63 @@ class HandlerLLM(HandlerBase, ABC):
             context.current_image = None
             context.input_texts = ''
             context.output_texts = ''
+            cancelled = False
             for chunk in completion:
+                if stream_key and stream_key not in context.active_stream_keys:
+                        cancelled = True
+                        try:
+                            completion.close()
+                        except Exception:
+                            pass
+                        break
                 if (chunk and chunk.choices and chunk.choices[0] and chunk.choices[0].delta.content):
                     output_text = chunk.choices[0].delta.content
                     context.output_texts += output_text
                     logger.info(output_text)
                     output = DataBundle(output_definition)
                     output.set_main_data(output_text)
-                    output.add_meta("avatar_text_end", False)
-                    output.add_meta("speech_id", speech_id)
-                    yield output
-            context.history.add_message(HistoryMessage(role="human", content=chat_text))
-            context.history.add_message(HistoryMessage(role="avatar", content=context.output_texts))
+                    streamer.stream_data(output)
+            if not cancelled:
+                context.history.add_message(HistoryMessage(role="human", content=chat_text))
+                context.history.add_message(HistoryMessage(role="avatar", content=context.output_texts))
         except Exception as e:
             logger.error(e)
-            if (isinstance(e, APIStatusError)):
+            if isinstance(e, APIStatusError):
                 response = e.body
                 if isinstance(response, dict) and "message" in response:
-                    response = f"{response['message']}"
-            output_text = response 
+                    error_text = f"{response['message']}"
+                else:
+                    error_text = str(response) if response else str(e)
+            else:
+                # Handle APIConnectionError and other exceptions
+                error_text = f"连接错误: {e}"
             output = DataBundle(output_definition)
-            output.set_main_data(output_text)
-            output.add_meta("avatar_text_end", False)
-            output.add_meta("speech_id", speech_id)
-            yield output
+            output.set_main_data(error_text)
+            streamer.stream_data(output, finish_stream=True)
         context.input_texts = ''
         context.output_texts = ''
-        logger.info('avatar text end')
+        if cancelled:
+            return
+        if stream_key:
+            context.active_stream_keys.discard(stream_key)
         end_output = DataBundle(output_definition)
         end_output.set_main_data('')
-        end_output.add_meta("avatar_text_end", True)
-        end_output.add_meta("speech_id", speech_id)
-        yield end_output
+        streamer.stream_data(end_output, finish_stream=True)
+
+    def on_signal(self, context: HandlerContext, signal: ChatSignal):
+        context = cast(LLMContext, context)
+        if signal.type == ChatSignalType.STREAM_CANCEL and signal.related_stream:
+            stream_key = signal.related_stream.stream_key_str
+            if stream_key is not None and stream_key in context.active_stream_keys:
+                context.active_stream_keys.discard(stream_key)
+                logger.info(f"LLM: Removed stream {stream_key} from active set")
 
     def destroy_context(self, context: HandlerContext):
-        pass
+        context = cast(LLMContext, context)
+        if context.client is not None:
+            try:
+                context.client.close()
+            except Exception:
+                pass
+            context.client = None
 

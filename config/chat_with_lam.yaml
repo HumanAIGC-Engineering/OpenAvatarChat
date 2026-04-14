@@ -13,17 +13,22 @@ default:
       - "src/handlers"
     handler_configs:
       LamClient:
-        module: client/h5_rendering_client/client_handler_lam
+        module: client/ws_lam_client/ws_lam_client_handler
         asset_path: "lam_samples/barbara.zip"
         # max time a session will last for
         connection_ttl: 900
+        upstream_mode: 'ws'
+      # === 打断处理器 - 接收 INTERRUPT 信号并执行流取消 ===
+      InterruptHandler:
+        module: logic/interrupt/interrupt_handler
       SileroVad:
         module: vad/silerovad/vad_handler_silero
-        speaking_threshold: 0.5
+        speaking_threshold: 0.15
         start_delay: 2048
         end_delay: 5000
         buffer_look_back: 5000
         speech_padding: 512
+        volume_threshold: -30
       SenseVoice:
         enabled: True
         module: asr/sensevoice/asr_handler_sensevoice

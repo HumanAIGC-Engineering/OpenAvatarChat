@@ -1,0 +1,230 @@
+default:
+  logger:
+    log_level: "DEBUG"
+  service:
+    host: "0.0.0.0"
+    port: 8283
+    cert_file: "ssl_certs/localhost.crt"
+    cert_key: "ssl_certs/localhost.key"
+
+  # History module configuration (required for duplex interrupt detection)
+  history:
+    retention_mode: "by_both"
+    max_events: 1000
+    max_age_seconds: 3600
+    cleanup_interval_seconds: 30
+
+  chat_engine:
+    model_root: "models"
+    concurrent_limit: 1
+    handler_search_path:
+      - "src/handlers"
+    handler_configs:
+      RtcClient:
+        module: client/rtc_client/client_handler_rtc
+        connection_ttl: 900
+        output_video_fps: 25  # Must match FlashHead fps (25) for correct A/V sync
+
+      # === 打断处理器 - 接收 INTERRUPT 信号并执行流取消 ===
+      InterruptHandler:
+        module: logic/interrupt/interrupt_handler
+
+      # === 双工 VAD - 始终处理音频，不受 INPUT_DISABLE 控制 ===
+      SileroVad:
+        module: vad/silerovad/duplex_vad_handler
+        speaking_threshold: 0.25
+        start_delay: 1024
+        end_delay: 32000
+        early_end_delay: 5000
+        early_end_repeat_delay: 1000
+        buffer_look_back: 2048
+        speech_padding: 512
+        volume_threshold: -50
+        post_end_monitor_samples: 32000
+        reconnect_threshold_samples: 32000
+        post_end_energy_threshold: -5
+
+      # === ASR - 使用类型覆盖接收双工音频 ===
+      SenseVoice:
+        enabled: True
+        module: asr/sensevoice/asr_handler_sensevoice
+        model_name: "iic/SenseVoiceSmall"
+        input_type_override:
+          HUMAN_AUDIO: HUMAN_DUPLEX_AUDIO
+        output_type_override:
+          HUMAN_TEXT: HUMAN_DUPLEX_TEXT
+
+      # === Smart Turn EOU - 基于 ONNX 模型的端点检测 ===
+      SmartTurnEOU:
+        enabled: true
+        module: vad/smart_turn_eou/eou_handler_smart_turn
+        threshold: 0.8
+        max_buffer_seconds: 300.0
+        sample_rate: 16000
+        model_path: "models/smart_turn/smart-turn-v3.1-cpu.onnx"
+        input_type_override:
+          HUMAN_AUDIO: HUMAN_DUPLEX_AUDIO
+
+      # === 语义轮次检测器 - 负责打断检测和话语完成检测 ===
+      SemanticTurnDetector:
+        enabled: true
+        module: llm/semantic_turn_detector/semantic_turn_detector_handler
+        duplex_mode: true
+        # 语义打断判断主 LLM
+        api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        # api_key: ""  # default=os.getenv("SEMANTIC_LLM_EAS_TOKEN") or DASHSCOPE_API_KEY
+        model_name: "qwen-plus"
+        # 打断检测配置
+        enable_interrupt_detection: true
+        interrupt_on_any_speech: false
+        min_text_length_for_interrupt: 2
+        # 话语完成检测
+        enable_completion_detection: false
+        min_text_length_for_completion: 1
+        # 打断意图判断 LLM
+        interrupt_judge_api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        # interrupt_judge_api_key: ""  # default=os.getenv("INTERRUPT_JUDGE_LLM_EAS_TOKEN") or DASHSCOPE_API_KEY
+        interrupt_judge_model_name: "qwen-plus"
+        request_timeout: 3.0
+        max_context_turns: 3
+
+      # === TTS ===
+      CosyVoice:
+        enabled: True
+        module: tts/bailian_tts/tts_handler_cosyvoice_bailian
+        voice: "longxing_v3"
+        model_name: "cosyvoice-v3-flash"
+        # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
+
+      # ========== 多模态 Agent 系统 ==========
+      
+      # 视觉感知 Agent
+      PerceptionAgent:
+        enabled: True
+        module: agent/perception/perception_handler
+        summary_interval: 5.0
+        max_buffer_frames: 30
+        key_frame_strategy: "interval"
+        key_frame_interval: 10
+        vision_model_type: "openai"
+        llm_model: "qwen3-vl-flash"
+        # api_key: ""  # 默认从 DASHSCOPE_API_KEY 环境变量获取
+        api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        max_frames: 8
+        enable_event_detection: True
+        event_detection_interval: 5
+        max_concurrent_requests: 3
+      
+      # Chat Agent — 统一的对话主 Agent（合并原 Manager + Persona）
+      ChatAgent:
+        enabled: True
+        module: agent/chat_agent_handler
+        llm_model: "qwen3.6-plus"
+        # api_key: ""  # 默认从 DASHSCOPE_API_KEY 环境变量获取
+        api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        # L1 Stable Core — OAC 自身的实时规则 + 工具使用引导 + 结构化标签解读
+        stable_core: |
+          你是一个具有视觉能力的实时数字人助手，正在通过摄像头与用户进行面对面对话。
+
+          ## 输出约束
+          - 用口语化的自然语言回答，语气亲切
+          - 保持简短（通常 2-3 句），除非用户明确要求详细说明
+          - 不要输出 Markdown 格式、代码块或列表符号
+          - 不要自称"AI"或"语言模型"，你就是这个数字人角色本身
+
+          ## 视觉规则
+          - <environment-state> 标签描述的是你当前看到的持续性环境状态
+          - 可以自然地提及观察到的内容，但不要每句都提
+          - 当用户问"你能看到我吗"且有环境描述时，肯定回答并描述
+
+          ## 工具使用
+          你拥有以下能力，在合适时机主动使用：
+          - 当用户提到过去的事、偏好、之前的约定时 → 用 memory_search 搜索长期记忆
+          - 当用户问"给你布置过什么任务"、定时提醒、日程时 → 用 list_scheduled_tasks 查看
+          - 当不确定用户称呼或自身角色设定时 → 用 get_agent_profile 获取
+          - 当用户的问题需要实时数据（如时间、天气）时 → 使用对应工具
+          - 某些工具是异步的，调用后你会收到 {"status": "submitted"} 状态，请据此自行决定回复
+          - 工具返回结果后，用自然口语将结果融入回复，不要原样复述 JSON
+
+          ## 结构化标签说明
+          你会在对话中收到以下结构化标签：
+          - <environment-state>: 当前环境的持续状态描述，作为背景知识理解，不要当作刚发生的事。
+          - <observation event="true">: 刚发生的环境事件，你应考虑是否需要回应。
+          - <observation compact="true">: 历史感知摘要，仅供参考。
+          - <background-results>: 后台任务完成通知，你可自主决定是否告知用户。
+          - <dialogue-summary>: 之前对话的压缩摘要，帮助你延续上下文。
+        # L2 Persona Snapshot — 本地默认；若启用 oc_bridge，会优先用 ~/.openclaw/workspace 下 IDENTITY.md/SOUL.md
+        persona_snapshot: |
+          性格：友善亲切，像朋友一样交流。观察细致，能注意到用户状态变化。
+          口吻：轻松自然，适当关心用户情绪。
+        # 各层最大字符数
+        persona_max_chars: 2500  # L2: IDENTITY.md + SOUL.md + USER.md 合计 ~2400 chars
+        perception_max_chars: 800  # L3: Environment State
+        # 记忆配置
+        perception_max_entries: 100
+        perception_decay_rate: 0.1
+        max_dialogue_turns: 20
+        # 对话上下文自动压缩（Phase 2.5 / 3.3）
+        context_compact:
+          enabled: true
+          compact_threshold: 15
+          keep_recent: 5
+          save_transcript: true
+          rehydrate_task_brief: true
+          rehydrate_env_state: true
+          # compact_model: "qwen-plus"  # 默认使用主模型
+        # 工具调用（Phase 3.1）；与 OC 无关时仍有 demo 工具
+        tool_use:
+          enabled: true
+          max_tool_rounds: 5
+          register_demo_tools: true
+        # OpenClaw Bridge — Plugin Tools MCP + oac-bridge HTTP 通道
+        oc_bridge:
+          enabled: true
+          plugin_tools_cmd: "node /home/luyi/Code/openclaw/dist/mcp/plugin-tools-serve.js"
+          gateway_http_url: "http://localhost:18789"
+          callback_port: 8011
+        # 主动消息触发配置
+        proactive:
+          enabled: true
+          event_triggers:
+            waving:
+              enabled: true
+              cooldown: 30.0
+              hint: "请友好地回应用户的招呼，可以适当询问有什么可以帮助的。"
+            showing_object:
+              enabled: true
+              cooldown: 30.0
+              hint: "用户正在展示物品，请主动询问或评论用户展示的物品。"
+            asking_for_attention:
+              enabled: true
+              cooldown: 30.0
+              hint: "用户在寻求你的注意，请积极回应并询问需要什么帮助。"
+            arriving:
+              enabled: true
+              cooldown: 60.0
+              hint: "有人进入画面，可以适当欢迎。"
+            leaving:
+              enabled: true
+              cooldown: 60.0
+              hint: "用户似乎要离开，可以适当道别。"
+          idle_trigger:
+            enabled: false
+            idle_seconds: 60.0
+            hint: "用户已经安静了一会儿，可以适当关心一下或轻松地聊点什么。"
+            mode_overrides:
+              companion: 120.0
+              office: 300.0
+
+      # === FlashHead 数字人 Avatar (Lite 模式) ===
+      FlashHead:
+        module: avatar/flashhead/avatar_handler_flashhead
+        ckpt_dir: "models/SoulX-FlashHead-1_3B"
+        wav2vec_dir: "models/wav2vec2-base-960h"
+        model_type: "lite"
+        cond_image_path: "resource/avatar/flashhead/girl.png"  # 替换为你的图像
+        fps: 25
+        base_seed: 42
+        use_face_crop: false
+        debug: true
+        idle_noise_amplitude: 0.003

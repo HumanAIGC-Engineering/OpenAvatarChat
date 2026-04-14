@@ -106,10 +106,6 @@ class HandlerTTS(HandlerBase, ABC):
             text = inputs.data.get_main_data()
         else:
             return
-        speech_id = inputs.data.get_meta("speech_id")
-        if (speech_id is None):
-            speech_id = context.session_id
-
         if text is not None:
             text = re.sub(r"<\|.*?\|>", "", text)
             context.input_text += self.filter_text(text)
@@ -139,8 +135,6 @@ class HandlerTTS(HandlerBase, ABC):
                     output_audio = output_audio[np.newaxis, ...]
                     output = DataBundle(output_definition)
                     output.set_main_data(output_audio)
-                    output.add_meta("avatar_speech_end", False)
-                    output.add_meta("speech_id", speech_id)
                     context.submit_data(output)
         else:
             logger.info('last sentence' + context.input_text)
@@ -156,15 +150,11 @@ class HandlerTTS(HandlerBase, ABC):
                     output_audio = output_audio[np.newaxis, ...]
                     output = DataBundle(output_definition)
                     output.set_main_data(output_audio)
-                    output.add_meta("avatar_speech_end", False)
-                    output.add_meta("speech_id", speech_id)
                     context.submit_data(output)
             context.input_text = ''
             output = DataBundle(output_definition)
             output.set_main_data(np.zeros(shape=(1, 240), dtype=np.float32))
-            output.add_meta("avatar_speech_end", True)
-            output.add_meta("speech_id", speech_id)
-            context.submit_data(output)
+            context.submit_data(output, finish_stream=True)
             logger.info(f"speech end")
 
     def destroy_context(self, context: HandlerContext):

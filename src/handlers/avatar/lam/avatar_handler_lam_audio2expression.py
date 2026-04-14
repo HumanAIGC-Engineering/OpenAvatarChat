@@ -2,22 +2,27 @@ import os
 import queue
 import sys
 import time
-from typing import Dict, Optional, cast, List
+from typing import Dict, Optional, Set, cast, List
 
 import numpy as np
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from chat_engine.data_models.chat_data_type import ChatDataType
-from chat_engine.common.handler_base import HandlerBase, HandlerBaseInfo, HandlerDataInfo, HandlerDetail, \
-    ChatDataConsumeMode
+from chat_engine.common.handler_base import HandlerBase
 from chat_engine.contexts.handler_context import HandlerContext
 from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_engine_config_data import HandlerBaseConfigModel, ChatEngineConfigModel
 from chat_engine.data_models.runtime_data.data_bundle import DataBundleDefinition, DataBundleEntry, DataBundle
+from chat_engine.data_models.internal.handler_definition_data import HandlerBaseInfo, HandlerDetail, HandlerDataInfo, \
+    ChatDataConsumeMode
+from chat_engine.data_models.chat_signal import ChatSignal
+from chat_engine.data_models.chat_signal_type import ChatSignalType
+from chat_engine.data_models.chat_stream import StreamKey
 from engine_utils.directory_info import DirectoryInfo
 from engine_utils.general_slicer import SliceContext, slice_data
+from chat_engine.data_models.chat_stream_config import ChatStreamConfig
 
 
 class AvatarLAMConfig(HandlerBaseConfigModel, BaseModel):
@@ -32,7 +37,7 @@ class AvatarLAMContext(HandlerContext):
         self.config: Optional[AvatarLAMConfig] = None
         self.inference_context = None
         self.input_slice_context: Optional[SliceContext] = None
-        self.last_speech_id: Optional[str] = None
+        self.active_stream_keys: Set[StreamKey] = set()
 
 
 class HandlerAvatarLAM(HandlerBase):
@@ -63,7 +68,7 @@ class HandlerAvatarLAM(HandlerBase):
         config_file = os.path.join(self.handler_root, "LAM_Audio2Expression",
                                    "configs", "lam_audio2exp_config_streaming.py")
         wav2vec_config_file = os.path.join(self.handler_root, "LAM_Audio2Expression",
-                                   "configs", "wav2vec2_config.json")
+                                           "configs", "wav2vec2_config.json")
         weight_path = os.path.join(model_path, "pretrained_models", "lam_audio2exp_streaming.tar")
 
         weight_path = weight_path.replace("\\", "/")
@@ -152,21 +157,34 @@ class HandlerAvatarLAM(HandlerBase):
                output_definitions: Dict[ChatDataType, HandlerDataInfo]):
         output_definition = output_definitions.get(ChatDataType.AVATAR_MOTION_DATA).definition
         context = cast(AvatarLAMContext, context)
-        speech_id = inputs.data.get_meta("speech_id")
-        speech_end = inputs.data.get_meta("avatar_speech_end", False)
+        streamer = context.data_submitter.get_streamer(ChatDataType.AVATAR_MOTION_DATA)
+        stream = streamer.current_stream
+        stream_key = stream.identity.stream_key_str if stream is not None else None
+        if stream_key is None:
+            stream = streamer.new_stream(sources=[inputs.stream_id],
+                                         name="lam_audio2expression", config=ChatStreamConfig(cancelable=True))
+            stream_key = stream.stream_key_str
+        is_last = inputs.is_last_data
         speech_text = inputs.data.get_meta("avatar_speech_text")
+
+        if stream_key:
+            context.active_stream_keys.add(stream_key)
 
         audio = inputs.data.get_main_data()
         audio_segments = queue.Queue()
         for audio_segment in slice_data(context.input_slice_context, audio.squeeze()):
             audio_segments.put_nowait(audio_segment)
-        if speech_end:
+        if is_last:
             end_segment = context.input_slice_context.flush()
             if end_segment is not None:
                 audio_segments.put_nowait(end_segment)
-        if audio_segments.empty() and speech_end:
+        if audio_segments.empty() and is_last:
             audio_segments.put_nowait(np.zeros([50], dtype=np.float32))
         while not audio_segments.empty():
+            if stream_key and stream_key not in context.active_stream_keys:
+                logger.info(f"LAM: Stream {stream_key} no longer active, stopping inference")
+                context.inference_context = None
+                break
             t_start = time.monotonic()
             audio_segment = audio_segments.get_nowait()
             result, context_update = self.infer.infer_streaming_audio(
@@ -175,7 +193,7 @@ class HandlerAvatarLAM(HandlerBase):
                 context=context.inference_context,
             )
             context.inference_context = context_update
-            need_flush = speech_end and audio_segments.empty()
+            need_flush = is_last and audio_segments.empty()
             if need_flush:
                 context.inference_context = None
             output = DataBundle(output_definition)
@@ -183,24 +201,25 @@ class HandlerAvatarLAM(HandlerBase):
             if arkit_data is None:
                 continue
 
-            start_of_stream = speech_id != context.last_speech_id
-
             output.set_main_data(arkit_data.astype(np.float32))
             output.set_data("avatar_audio", audio_segment[np.newaxis, ...])
-            output.add_meta("speech_id", speech_id)
-            output.add_meta("avatar_speech_end", need_flush)
-            output.start_of_stream = start_of_stream
-            output.end_of_stream = need_flush
+            output.add_meta("stream_key", inputs.stream_id.stream_key_str if inputs.stream_id else None)
             if speech_text is not None:
                 output.add_meta("avatar_speech_text", speech_text)
             dur_inference = time.monotonic() - t_start
             logger.info(f"Inference on {audio_segment.shape[-1] / context.config.audio_sample_rate:.2f} second audio "
                         f"finished in {dur_inference * 1000} milliseconds. Got output: {str(output)}")
-            context.submit_data(output)
+            streamer.stream_data(output, finish_stream=is_last)
+        if stream_key and is_last:
+            context.active_stream_keys.discard(stream_key)
 
-            context.last_speech_id = speech_id
-            if need_flush:
-                context.last_speech_id = None
+    def on_signal(self, context: HandlerContext, signal: ChatSignal):
+        context = cast(AvatarLAMContext, context)
+        if signal.type == ChatSignalType.STREAM_CANCEL and signal.related_stream:
+            stream_key = signal.related_stream.stream_key_str
+            if stream_key is not None and stream_key in context.active_stream_keys:
+                context.active_stream_keys.discard(stream_key)
+                logger.info(f"LAM: Removed stream {stream_key} from active set")
 
     def destroy_context(self, context: HandlerContext):
         pass

@@ -5,7 +5,7 @@ from typing import List, Dict, Optional, Sequence, Any, Union
 import numpy as np
 
 from chat_engine.data_models.runtime_data.data_store import DataStore, DataStoreType
-from chat_engine.data_models.runtime_data.event_model import EventData
+from chat_engine.data_models.runtime_data.event_model import EventData, EventType
 from chat_engine.data_models.runtime_data.time_unit_type import TimeUnitType
 
 
@@ -206,8 +206,6 @@ class DataBundle:
         self.events: List[EventData] = []
         self._data_entries: List[DataBundleEntry] = []
         self.data: List[DataStore] = []
-        self.start_of_stream: bool = False
-        self.end_of_stream: bool = False
         for entry_name, entry in self._definition.entries.items():
             self._data_entries.append(entry)
             self.data.append(DataStore(None, DataStoreType.INVALID))
@@ -322,3 +320,21 @@ class DataBundle:
 
     def get_meta(self, name, default=None):
         return self.metadata.get(name, default)
+
+    def add_event(self, event: EventData):
+        """添加事件"""
+        self.events.append(event)
+
+    def add_event_by_type(self, event_type: EventType, subtype: Optional[str] = None,
+                         event_data: Optional[str] = None):
+        """通过类型快速添加事件"""
+        event = EventData(event_type=event_type, event_subtype=subtype, event_data=event_data)
+        self.events.append(event)
+
+    def has_event(self, event_type: EventType) -> bool:
+        """检查是否存在特定类型的事件"""
+        return any(e.event_type == event_type for e in self.events)
+
+    def get_events_by_type(self, event_type: EventType) -> List[EventData]:
+        """获取特定类型的所有事件"""
+        return [e for e in self.events if e.event_type == event_type]

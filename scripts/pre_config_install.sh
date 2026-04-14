@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# =============================================================================
+# DEPRECATED: This script's functionality has been integrated into install.py.
+# Use `uv run install.py --config <config>.yaml` instead.
+# This file is kept for backward compatibility only.
+# =============================================================================
+
 # Initialize variables
 CONFIG_FILE=""
 

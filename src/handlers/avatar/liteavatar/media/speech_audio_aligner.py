@@ -24,6 +24,13 @@ class SpeechAudioAligner:
                 self._audio_data = bytearray()
                 self._audio_start_idx = 0
             self._audio_data += audio_data
+
+    def reset(self):
+        """清除缓存的音频数据，用于打断场景"""
+        with self._audio_lock:
+            self._speech_id = ""
+            self._audio_data = bytearray()
+            self._audio_start_idx = 0
     
     def get_speech_level_algined_audio(self, video_frame_count = 1, end_of_speech = False) -> AudioSlice:
         audio_duration = int(video_frame_count * self._audio_length_per_frame)

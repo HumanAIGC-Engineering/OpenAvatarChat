@@ -1,0 +1,121 @@
+default:
+  logger:
+    log_level: "INFO"
+  service:
+    host: "0.0.0.0"
+    port: 8282
+    cert_file: "ssl_certs/localhost.crt"
+    cert_key: "ssl_certs/localhost.key"
+  chat_engine:
+    model_root: "models"
+    concurrent_limit: 5
+    handler_search_path:
+      - "src/handlers"
+    handler_configs:
+      # WsClient:
+      #   module: client/ws_client/ws_client_handler
+      #   # max time a session will last for
+      #   connection_ttl: 900
+      LamClient:
+        module: client/ws_lam_client/ws_lam_client_handler
+        asset_path: "lam_samples/barbara.zip"
+        # max time a session will last for
+        connection_ttl: 900
+        upstream_mode: 'ws'
+      # === 打断处理器 - 接收 INTERRUPT 信号并执行流取消 ===
+      InterruptHandler:
+        module: logic/interrupt/interrupt_handler
+      # === 双工 VAD - 始终处理音频，不受 CLIENT_PLAYBACK 流生命周期控制 ===
+      SileroVad:
+        module: vad/silerovad/duplex_vad_handler
+        speaking_threshold: 0.25
+        start_delay: 1024
+        end_delay: 32000
+        early_end_delay: 5000
+        early_end_repeat_delay: 1000
+        buffer_look_back: 2048
+        speech_padding: 512
+        volume_threshold: -50
+        post_end_monitor_samples: 32000
+        reconnect_threshold_samples: 32000
+        post_end_energy_threshold: -5
+
+      # === ASR - 使用百炼 Fun-ASR 实时语音识别，类型覆盖接收双工音频 ===
+      BailianASR:
+        enabled: True
+        module: asr/bailian_asr/asr_handler_bailian
+        model_name: "fun-asr-realtime"
+        sample_rate: 16000
+        format: "pcm"
+        semantic_punctuation_enabled: False
+        # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
+        # 北京地域url，若使用新加坡地域的模型，需替换为：wss://dashscope-intl.aliyuncs.com/api-ws/v1/inference
+        base_websocket_url: "wss://dashscope.aliyuncs.com/api-ws/v1/inference"
+        input_type_override:
+          HUMAN_AUDIO: HUMAN_DUPLEX_AUDIO
+        output_type_override:
+          HUMAN_TEXT: HUMAN_DUPLEX_TEXT
+
+      # === Smart Turn EOU - 基于 ONNX 模型的端点检测 ===
+      SmartTurnEOU:
+        enabled: true
+        module: vad/smart_turn_eou/eou_handler_smart_turn
+        threshold: 0.8
+        max_buffer_seconds: 300.0
+        sample_rate: 16000
+        model_path: "models/smart_turn/smart-turn-v3.1-cpu.onnx"
+        input_type_override:
+          HUMAN_AUDIO: HUMAN_DUPLEX_AUDIO
+
+      # === 语义轮次检测器 - 负责打断检测和话语完成检测 ===
+      SemanticTurnDetector:
+        enabled: true
+        module: llm/semantic_turn_detector/semantic_turn_detector_handler
+        duplex_mode: true
+        # 语义打断判断主 LLM（判断用户说话是否为"打断"还是"不打断"）
+        api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        # api_key: ""  # default=os.getenv("SEMANTIC_LLM_EAS_TOKEN") or DASHSCOPE_API_KEY
+        model_name: "qwen-plus"
+        # 打断检测配置
+        enable_interrupt_detection: true
+        interrupt_on_any_speech: false  # 不直接打断，使用语义判断是否为有效打断
+        min_text_length_for_interrupt: 2
+        # 话语完成检测（关闭，依赖 VAD end_delay + SmartTurnEOU 判断结束）
+        enable_completion_detection: false
+        min_text_length_for_completion: 1
+        # 打断意图判断 LLM（判断用户是否真的在打断，以及是否有新话题）
+        interrupt_judge_api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        # interrupt_judge_api_key: ""  # default=os.getenv("INTERRUPT_JUDGE_LLM_EAS_TOKEN") or DASHSCOPE_API_KEY
+        interrupt_judge_model_name: "qwen-plus"
+        request_timeout: 3.0
+        max_context_turns: 3
+
+      CosyVoice:
+        enabled: True
+        module: tts/bailian_tts/tts_handler_cosyvoice_bailian
+        voice: "longxiaocheng"
+        model_name: "cosyvoice-v1"
+        # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
+      LLMOpenAICompatible:
+        enabled: True
+        module: llm/openai_compatible/llm_handler_openai_compatible
+        model_name: "qwen-plus"
+        enable_video_input: False # ensure your llm support video input
+        history_length: 20
+        # model_name: "gemini-2.0-flash"
+        system_prompt: "请你扮演一个 AI 助手，用简短的两三句对话来回答用户的问题，并在对话内容中加入合适的标点符号，不需要讨论标点符号相关的内容"
+        api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        # api_url: 'http://127.0.0.1:11434/v1' # ollama
+        # api_url: 'https://generativelanguage.googleapis.com/v1beta/openai/'
+        # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
+      # Dify:
+      #   enabled: True
+      #   module: llm/dify/llm_handler_dify
+      #   api_key: app-J3LiQRqh4MrOOvS6vpyrgIOW
+      #   api_url: 'http://localhost/v1'
+      # WithOutAvatar:
+      #   module: avatar/without_avatar/avatar_handler_without_avatar
+      Manager:
+        module: manager/handler_data_tool
+      LAM_Driver:
+        module: avatar/lam/avatar_handler_lam_audio2expression

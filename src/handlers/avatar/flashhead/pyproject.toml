@@ -1,0 +1,20 @@
+[project]
+name = "flashhead"
+version = "0.1.0"
+requires-python = ">=3.10, <3.12"
+dependencies = [
+    "diffusers>=0.34.0",
+    "transformers>=4.44.1",
+    "accelerate>=1.8.1",
+    "imageio",
+    "imageio-ffmpeg",
+    "easydict",
+    "ftfy",
+    "scikit-image",
+    "xfuser>=0.4.3",
+    "pyloudnorm",
+    "xformers",
+    "librosa~=0.10.2",
+    "mediapipe>=0.10.14",
+    "flash-attn>=2.6.0",
+]

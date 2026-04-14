@@ -6,7 +6,7 @@ import json
 import PIL
 import numpy as np
 import requests
-from typing import Dict, Optional, cast
+from typing import Dict, Optional, Set, cast
 from loguru import logger
 from pydantic import BaseModel, Field
 from abc import ABC
@@ -15,6 +15,10 @@ from chat_engine.data_models.chat_engine_config_data import ChatEngineConfigMode
 from chat_engine.common.handler_base import HandlerBase, HandlerBaseInfo, HandlerDataInfo, HandlerDetail
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_data_type import ChatDataType
+from chat_engine.data_models.chat_signal import ChatSignal, SignalFilterRule
+from chat_engine.data_models.chat_signal_type import ChatSignalType
+from chat_engine.data_models.chat_stream import StreamKey
+from chat_engine.data_models.chat_stream_config import ChatStreamConfig
 from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBundleDefinition, DataBundleEntry
 
@@ -40,6 +44,7 @@ class DifyContext(HandlerContext):
         self.current_image = None
         self.enable_video_input = False
         self.conversation_id = None  # Dify 特有的对话ID
+        self.active_stream_keys: Set[StreamKey] = set()
 
 
 class HandlerDify(HandlerBase, ABC):
@@ -71,6 +76,9 @@ class HandlerDify(HandlerBase, ABC):
         }
         return HandlerDetail(
             inputs=inputs, outputs=outputs,
+            signal_filters=[
+                SignalFilterRule(ChatSignalType.STREAM_CANCEL, None, None)
+            ]
         )
 
     def load(self, engine_config: ChatEngineConfigModel, handler_config: Optional[BaseModel] = None):
@@ -215,6 +223,10 @@ class HandlerDify(HandlerBase, ABC):
                output_definitions: Dict[ChatDataType, HandlerDataInfo]):
         output_definition = output_definitions.get(ChatDataType.AVATAR_TEXT).definition
         context = cast(DifyContext, context)
+        streamer = context.data_submitter.get_streamer(ChatDataType.AVATAR_TEXT)
+        stream = streamer.new_stream(
+            sources=[inputs.stream_id], name="dify", config=ChatStreamConfig(cancelable=True))
+        stream_key = stream.stream_key_str
         text = None
         if inputs.type == ChatDataType.CAMERA_VIDEO and context.enable_video_input:
             context.current_image = inputs.data.get_main_data()
@@ -224,53 +236,66 @@ class HandlerDify(HandlerBase, ABC):
         else:
             return
 
-        speech_id = inputs.data.get_meta("speech_id")
-        if (speech_id is None):
-            speech_id = context.session_id
-
         if text is not None:
             context.input_texts += text
 
-        text_end = inputs.data.get_meta("human_text_end", False)
+        text_end = inputs.is_last_data
         if not text_end:
             return
 
         chat_text = context.input_texts
         chat_text = re.sub(r"<\|.*?\|>", "", chat_text)
         if len(chat_text) < 1:
+            end_output = DataBundle(output_definition)
+            end_output.set_main_data('')
+            streamer.stream_data(end_output, finish_stream=True)
             return
 
         logger.info(f'Dify input: {chat_text}')
+        if stream_key:
+            context.active_stream_keys.add(stream_key)
 
         try:
             context.output_texts = ''
+            cancelled = False
             for output_text in self._send_dify_request(context, chat_text,
                                                        [context.current_image] if context.current_image is not None else []):
+                if stream_key and stream_key not in context.active_stream_keys:
+                    logger.info(f"Dify: Stream {stream_key} no longer active, stopping output")
+                    cancelled = True
+                    break
                 if output_text:
                     context.output_texts += output_text
                     logger.info(output_text)
                     output = DataBundle(output_definition)
                     output.set_main_data(output_text)
-                    output.add_meta("avatar_text_end", False)
-                    output.add_meta("speech_id", speech_id)
-                    yield output
+                    streamer.stream_data(output)
         except Exception as e:
             logger.error(f"Error processing Dify response: {str(e)}")
             error_message = f"Error: {str(e)}"
             output = DataBundle(output_definition)
             output.set_main_data(error_message)
-            output.add_meta("avatar_text_end", False)
-            output.add_meta("speech_id", speech_id)
-            yield output
+            streamer.stream_data(output, finish_stream=True)
+            cancelled = False
 
         context.input_texts = ''
         context.current_image = None
+        if cancelled:
+            return
+        if stream_key:
+            context.active_stream_keys.discard(stream_key)
         logger.info('avatar text end')
         end_output = DataBundle(output_definition)
         end_output.set_main_data('')
-        end_output.add_meta("avatar_text_end", True)
-        end_output.add_meta("speech_id", speech_id)
-        yield end_output
+        streamer.stream_data(end_output, finish_stream=True)
+
+    def on_signal(self, context: HandlerContext, signal: ChatSignal):
+        context = cast(DifyContext, context)
+        if signal.type == ChatSignalType.STREAM_CANCEL and signal.related_stream:
+            stream_key = signal.related_stream.stream_key_str
+            if stream_key is not None and stream_key in context.active_stream_keys:
+                context.active_stream_keys.discard(stream_key)
+                logger.info(f"Dify: Removed stream {stream_key} from active set")
 
     def destroy_context(self, context: HandlerContext):
         pass

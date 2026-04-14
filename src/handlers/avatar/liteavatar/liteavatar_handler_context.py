@@ -1,6 +1,6 @@
 import threading
 import time
-from typing import Dict
+from typing import Dict, Optional
 from loguru import logger
 import numpy as np
 from multiprocessing import shared_memory
@@ -10,7 +10,8 @@ from chat_engine.contexts.session_context import SharedStates
 from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBundleDefinition
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
-from chat_engine.common.engine_channel_type import EngineChannelType
+from chat_engine.data_models.engine_channel_type import EngineChannelType
+from chat_engine.data_models.chat_stream_config import ChatStreamConfig
 from handlers.avatar.liteavatar.liteavatar_worker import LiteAvatarWorker, Tts2FaceEvent
 from handlers.avatar.liteavatar.shared_memory_buffer_pool import SharedMemoryDataPacket
 
@@ -29,11 +30,24 @@ class HandlerTts2FaceContext(HandlerContext):
         self.media_out_thread: threading.Thread = None
         self.event_out_thread: threading.Thread = None
 
+        self._current_tts_stream_key: str = None
+        self._playback_streamer = None
+
         self.loop_running = True
         self.media_out_thread = threading.Thread(target=self._media_out_loop)
         self.media_out_thread.start()
         self.event_out_thread = threading.Thread(target=self._event_out_loop)
         self.event_out_thread.start()
+
+    def get_playback_streamer(self):
+        """Lazily create a CLIENT_PLAYBACK lifecycle streamer."""
+        if self._playback_streamer is None and self.stream_manager is not None:
+            self._playback_streamer = self.stream_manager.create_lifecycle_streamer(
+                data_type=ChatDataType.CLIENT_PLAYBACK,
+                producer_name="LiteAvatar",
+                config=ChatStreamConfig(cancelable=False),
+            )
+        return self._playback_streamer
 
     def return_data(self, data, chat_data_type: ChatDataType):
         definition = self.output_data_definitions.get(chat_data_type)
@@ -132,11 +146,46 @@ class HandlerTts2FaceContext(HandlerContext):
                 event: Tts2FaceEvent = self.lite_avatar_worker.event_out_queue.get(timeout=0.1)
                 logger.info("receive output event: {}", event)
                 if event == Tts2FaceEvent.SPEAKING_TO_LISTENING:
-                    self.shared_state.enable_vad = True
+                    # Close the CLIENT_PLAYBACK lifecycle stream
+                    # This auto-emits STREAM_END signal and auto-records to SessionHistory
+                    streamer = self.get_playback_streamer()
+                    if streamer is not None and self._current_tts_stream_key:
+                        streamer.finish_current()
+                        logger.info(f"LiteAvatar: CLIENT_PLAYBACK stream closed for stream_key={self._current_tts_stream_key}")
+                    self._current_tts_stream_key = None
             except Exception:
                 continue
         logger.info("event out loop exit")
     
+    def interrupt(self):
+        """打断当前语音播放，清空队列并通知子进程"""
+        logger.info("LiteAvatar interrupt: clearing output queues and notifying worker")
+        # CLIENT_PLAYBACK stream 由引擎的 forward_cancel_signal 级联自动取消，
+        # 此处只需清理追踪状态（防止 _event_out_loop 后续重复 finish）
+        self._current_tts_stream_key = None
+        # 清空音频和视频输出队列
+        while not self.lite_avatar_worker.audio_out_queue.empty():
+            try:
+                packet = self.lite_avatar_worker.audio_out_queue.get_nowait()
+                try:
+                    self.lite_avatar_worker.shm_pool.release_audio_buffer(packet.buffer_index)
+                except:
+                    pass
+            except:
+                break
+        while not self.lite_avatar_worker.video_out_queue.empty():
+            try:
+                packet = self.lite_avatar_worker.video_out_queue.get_nowait()
+                try:
+                    self.lite_avatar_worker.shm_pool.release_video_buffer(packet.buffer_index)
+                except:
+                    pass
+            except:
+                break
+        # 通知子进程清空音频处理队列
+        self.lite_avatar_worker.event_in_queue.put_nowait(Tts2FaceEvent.INTERRUPT)
+        logger.info("LiteAvatar interrupt: done")
+
     def clear(self):
         logger.info("clear tts2face context")
         self.loop_running = False

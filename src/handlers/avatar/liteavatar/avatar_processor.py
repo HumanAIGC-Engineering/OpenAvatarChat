@@ -104,10 +104,21 @@ class AvatarProcessor:
 
     def interrupt(self):
         """
-        clear input audio
+        打断当前语音：清空所有中间处理队列
+        管线: _audio_slice_queue → _signal_queue → _mouth_img_queue → output
+        所有队列都必须清空，否则残留数据会继续产出音频/视频
         """
         if self._audio_slice_queue is not None:
             self._audio_slice_queue.queue.clear()
+        if self._signal_queue is not None:
+            self._signal_queue.queue.clear()
+        if self._mouth_img_queue is not None:
+            self._mouth_img_queue.queue.clear()
+        # 重置语音状态，使后续 idle 帧为 LISTENING 状态而非 SPEAKING
+        self._last_speech_ended = True
+        # 重置音频对齐器，清除缓存的音频片段
+        if self._speech_audio_aligner is not None:
+            self._speech_audio_aligner.reset()
 
     def _audio2signal_loop(self):
         """

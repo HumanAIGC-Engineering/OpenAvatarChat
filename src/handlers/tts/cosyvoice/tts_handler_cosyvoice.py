@@ -40,7 +40,6 @@ class TTSConfig(HandlerBaseConfigModel, BaseModel):
 class HandlerTask:
     id: uuid.UUID = field(default_factory=uuid.uuid4)
     result_queue: queue.Queue = field(default_factory=queue.Queue)
-    speech_id: str = field(default=None)
     speech_end: bool = field(default=False)
 
 
@@ -184,9 +183,7 @@ class HandlerTTS(HandlerBase, ABC):
                     if audio is not None:
                         output = DataBundle(output_definition)
                         output.set_main_data(audio)
-                        output.add_meta("avatar_speech_end", False if not task.speech_end else True)
-                        output.add_meta("speech_id", task.speech_id)
-                        callback(output)
+                        callback(output, finish_stream=task.speech_end)
                         if context.dump_audio:
                             dump_audio = audio
                             context.audio_dump_file.write(dump_audio.tobytes())
@@ -212,15 +209,11 @@ class HandlerTTS(HandlerBase, ABC):
             text = inputs.data.get_main_data()
         else:
             return
-        speech_id = inputs.data.get_meta("speech_id")
-        if (speech_id is None):
-            speech_id = context.session_id
-
         if text is not None:
             text = re.sub(r"<\|.*?\|>", "", text)
             context.input_text += self.filter_text(text)
 
-        text_end = inputs.data.get_meta("avatar_text_end", False)
+        text_end = inputs.is_last_data
         if not text_end:
             sentences = re.split(r'(?<=[,.~!?，。！？])', context.input_text)
             if len(sentences) > 1:  # 至少有一个完整句子
@@ -232,7 +225,7 @@ class HandlerTTS(HandlerBase, ABC):
                     if len(sentence.strip()) < 1:
                         continue
                     logger.info('current sentence' + sentence)
-                    task = HandlerTask(speech_id=speech_id)
+                    task = HandlerTask()
                     tts_info = {
                         "text": sentence + '。',
                         "key": task.id,
@@ -244,7 +237,7 @@ class HandlerTTS(HandlerBase, ABC):
         else:
             logger.info('last sentence' + context.input_text)
             if context.input_text is not None and len(context.input_text.strip()) > 0:
-                task = HandlerTask(speech_id=speech_id)
+                task = HandlerTask()
                 tts_info = {
                     "text": context.input_text,
                     "key": task.id,
@@ -253,7 +246,7 @@ class HandlerTTS(HandlerBase, ABC):
                 self.tts_input_queue.put(tts_info)
                 context.task_queue.append(task)
             context.input_text = ''
-            end_task = HandlerTask(speech_id=speech_id, speech_end=True)
+            end_task = HandlerTask(speech_end=True)
             end_task.result_queue.put(np.zeros(shape=(1, 240), dtype=np.float32))
             end_task.result_queue.put(None)
             logger.info(f"speech end {end_task}")

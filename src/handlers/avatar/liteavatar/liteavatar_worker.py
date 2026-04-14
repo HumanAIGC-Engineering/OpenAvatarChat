@@ -40,6 +40,7 @@ class Tts2FaceConfigModel(HandlerBaseConfigModel, BaseModel):
 class Tts2FaceEvent(Enum):
     START = 1001
     STOP = 1002
+    INTERRUPT = 1003  # 打断当前语音，清空音频队列
 
     LISTENING_TO_SPEAKING = 2001
     SPEAKING_TO_LISTENING = 2002
@@ -296,6 +297,21 @@ class LiteAvatarWorker:
                     self._stop_ack_event.set()
                 else:
                     logger.warning("Received STOP event but no active session, ignoring")
+
+            elif event == Tts2FaceEvent.INTERRUPT:
+                # 打断当前语音，清空音频队列
+                if self.session_running and self.processor is not None:
+                    logger.info("Avatar interrupt: clearing audio queue")
+                    self.processor.interrupt()
+                    # 清空音频输入队列中等待处理的音频
+                    while not self.audio_in_queue.empty():
+                        try:
+                            self.audio_in_queue.get_nowait()
+                        except:
+                            break
+                    logger.info("Avatar interrupt completed")
+                else:
+                    logger.warning("Received INTERRUPT event but no active session, ignoring")
     
     def _audio_input_loop(self):
         while self.session_running:

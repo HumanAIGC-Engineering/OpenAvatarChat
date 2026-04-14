@@ -8,24 +8,29 @@ import numpy as np
 from fastapi import FastAPI
 from loguru import logger
 
-from chat_engine.common.engine_channel_type import EngineChannelType
+from chat_engine.data_models.engine_channel_type import EngineChannelType
 from chat_engine.common.handler_base import HandlerBase
-from chat_engine.contexts.handler_context import HandlerContext
-from chat_engine.contexts.session_context import SessionContext
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_signal import ChatSignal
 from chat_engine.data_models.session_info_data import SessionInfoData
+from chat_engine.contexts.session_context import SessionContext
+from chat_engine.contexts.handler_context import HandlerContext
 
 
 class ClientSessionDelegate(ABC):
+    # FIXME the definition of ClientSessionDelegate is not clear enough
+    # the caller of this class is supposed to be the client to access data from the session,
+    # should be refactored.
     @abstractmethod
     async def get_data(self, modality: EngineChannelType, timeout: Optional[float] = 0.1) -> Optional[ChatData]:
+        # from chat service to client
         pass
 
     @abstractmethod
     def put_data(self, modality: EngineChannelType, data: Union[np.ndarray, str],
                  timestamp: Optional[Tuple[int, int]] = None,
                  samplerate: Optional[int] = None, loopback: bool = False):
+        # from client to chat service
         pass
 
     @abstractmethod
@@ -72,7 +77,7 @@ class ClientHandlerDelegate:
         engine = self.engine_ref()
         assert engine is not None
         engine.stop_session(session_id)
-        self.session_delegates.pop(session_id)
+        self.session_delegates.pop(session_id, None)
 
     def find_session_delegate(self, session_id: str):
         return self.session_delegates.get(session_id)

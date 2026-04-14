@@ -2,12 +2,12 @@ from chat_engine.chat_engine import ChatEngine
 import gradio as gr
 import os
 import argparse
+import signal
 import sys
 
 import gradio
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from loguru import logger
 
 from engine_utils.directory_info import DirectoryInfo
@@ -49,6 +49,7 @@ class OpenAvatarChatWebServer(uvicorn.Server):
 
 
 def setup_demo():
+    """设置 FastAPI 应用和 Gradio 界面"""
     app = FastAPI(docs_url=None, redoc_url=None)
 
     css = """
@@ -66,12 +67,16 @@ def setup_demo():
         with gr.Column():
             with gr.Group() as rtc_container:
                 pass
+
     gradio.mount_gradio_app(app, gradio_block, "/gradio")
     return app, gradio_block, rtc_container
 
 
 def main():
     args = parse_args()
+    config_from_env = os.environ.get("OPEN_AVATAR_CHAT_CONFIG", None)
+    if  config_from_env:
+        args.config = config_from_env
     logger_config, service_config, engine_config = load_configs(args)
 
     # 设置modelscope的默认下载地址
@@ -80,9 +85,10 @@ def main():
                                                       engine_config.model_root.replace('models', ''))
 
     config_loggers(logger_config)
-    chat_engine = ChatEngine()
+    
     demo_app, ui, parent_block = setup_demo()
-
+    
+    chat_engine = ChatEngine()
     chat_engine.initialize(engine_config, app=demo_app, ui=ui, parent_block=parent_block)
 
     ssl_context = create_ssl_context(args, service_config)
@@ -91,8 +97,13 @@ def main():
     server = OpenAvatarChatWebServer(chat_engine, uvicorn_config)
     server.run()
 
-    # uvicorn.run(demo_app, host=service_config.host, port=service_config.port, **ssl_context)
-
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.info("Received KeyboardInterrupt, exiting.")
+    finally:
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        os._exit(0)

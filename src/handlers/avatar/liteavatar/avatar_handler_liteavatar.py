@@ -11,6 +11,9 @@ from handlers.avatar.liteavatar.model.audio_input import SpeechAudio
 from chat_engine.common.handler_base import HandlerBase, HandlerDetail, HandlerBaseInfo, HandlerDataInfo, \
     ChatDataConsumeMode
 from chat_engine.data_models.chat_data_type import ChatDataType
+from chat_engine.data_models.chat_stream_config import ChatStreamConfig
+from chat_engine.data_models.chat_signal import ChatSignal, SignalFilterRule
+from chat_engine.data_models.chat_signal_type import ChatSignalType
 from chat_engine.contexts.handler_context import HandlerContext
 from chat_engine.contexts.session_context import SessionContext, SharedStates
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
@@ -23,21 +26,21 @@ from handlers.avatar.liteavatar.liteavatar_worker_manager import LiteAvatarWorke
 class HandlerTts2Face(HandlerBase, ABC):
 
     TARGET_FPS = 25
-    
+
     def __init__(self):
         super().__init__()
         self.lite_avatar_worker_manager: Optional[LiteAvatarWorkerManager] = None
-        
+
         self.output_data_definitions: Dict[ChatDataType, DataBundleDefinition] = {}
 
         self.shared_state: SharedStates = None
-        
+
     def get_handler_info(self) -> HandlerBaseInfo:
         return HandlerBaseInfo(
             config_model=Tts2FaceConfigModel,
             load_priority=-999,
         )
-    
+
     def load(self,
              engine_config: ChatEngineConfigModel,
              handler_config: Optional[Tts2FaceConfigModel] = None):
@@ -62,13 +65,13 @@ class HandlerTts2Face(HandlerBase, ABC):
         self.output_data_definitions[ChatDataType.AVATAR_VIDEO] = video_output_definition
         self.lite_avatar_worker_manager = LiteAvatarWorkerManager(
             handler_config.concurrent_limit, self.handler_root, handler_config)
-    
+
     def create_context(self, session_context: SessionContext,
                        handler_config: Optional[Tts2FaceConfigModel] = None) -> HandlerContext:
         self.shared_state = session_context.shared_states
-        
+
         assert self.lite_avatar_worker_manager is not None
-        
+
         worker = self.lite_avatar_worker_manager.start_worker()
         if worker is None:
             raise Exception("No available lite avatar worker")
@@ -97,10 +100,15 @@ class HandlerTts2Face(HandlerBase, ABC):
             ChatDataType.AVATAR_VIDEO: HandlerDataInfo(
                 type=ChatDataType.AVATAR_VIDEO,
                 definition=context.output_data_definitions[ChatDataType.AVATAR_VIDEO],
+                output_stream_config=ChatStreamConfig(cancelable=False, auto_link_input=False),
             ),
         }
         return HandlerDetail(
             inputs=inputs, outputs=outputs,
+            signal_filters=[
+                # 监听 CLIENT_PLAYBACK 的 STREAM_CANCEL 信号（用于打断）
+                SignalFilterRule(ChatSignalType.STREAM_CANCEL, None, ChatDataType.CLIENT_PLAYBACK),
+            ]
         )
 
     def handle(self, context: HandlerContext, inputs: ChatData,
@@ -108,8 +116,27 @@ class HandlerTts2Face(HandlerBase, ABC):
         if inputs.type != ChatDataType.AVATAR_AUDIO:
             return
         context = cast(HandlerTts2FaceContext, context)
-        speech_id = inputs.data.get_meta("speech_id")
-        speech_end = inputs.data.get_meta("avatar_speech_end", False)
+
+        # Track TTS AVATAR_AUDIO stream via CLIENT_PLAYBACK lifecycle streams
+        stream_key_str = inputs.stream_id.stream_key_str if inputs.stream_id else None
+        if stream_key_str and stream_key_str != context._current_tts_stream_key:
+            # Close previous playback stream if it wasn't ended properly
+            streamer = context.get_playback_streamer()
+            if streamer is not None and context._current_tts_stream_key:
+                streamer.finish_current()
+                logger.info(
+                    f"LiteAvatar: CLIENT_PLAYBACK stream closed (implicit) for previous stream_key={context._current_tts_stream_key}")
+
+            context._current_tts_stream_key = stream_key_str
+
+            # Open a new CLIENT_PLAYBACK lifecycle stream derived from AVATAR_AUDIO
+            if streamer is not None:
+                sources = [inputs.stream_id] if inputs.stream_id else []
+                streamer.open_stream(sources=sources, name=f"playback:{stream_key_str}")
+                logger.info(f"LiteAvatar: CLIENT_PLAYBACK stream opened for stream_key={stream_key_str}")
+
+        speech_id = inputs.stream_id.stream_key_str if inputs.stream_id else None
+        speech_end = inputs.is_last_data
         audio_entry = inputs.data.get_main_definition_entry()
         audio_array = inputs.data.get_main_data()
         if audio_array is not None:
@@ -117,8 +144,8 @@ class HandlerTts2Face(HandlerBase, ABC):
                 audio_array = (audio_array * 32767).astype(np.int16)
         else:
             audio_array = np.zeros([512], dtype=np.int16)
-        #logger.info(f's2v: {audio_array.shape} type {type(audio_array)}')
-        #logger.info(f'sample_rate {audio_entry.sample_rate}' )
+        # logger.info(f's2v: {audio_array.shape} type {type(audio_array)}')
+        # logger.info(f'sample_rate {audio_entry.sample_rate}' )
         speech_audio = SpeechAudio(
             speech_id=speech_id,
             end_of_speech=speech_end,
@@ -131,7 +158,16 @@ class HandlerTts2Face(HandlerBase, ABC):
         if isinstance(context, HandlerTts2FaceContext):
             logger.info("destroy context with session id: {}", context.session_id)
             context.clear()
-    
+
+    def on_signal(self, context: HandlerContext, signal: ChatSignal):
+        """处理打断信号"""
+        if not isinstance(context, HandlerTts2FaceContext):
+            return
+        if signal.type == ChatSignalType.STREAM_CANCEL and signal.related_stream.data_type == ChatDataType.CLIENT_PLAYBACK:
+            # CLIENT_PLAYBACK 流被取消（上游 TTS/LLM 被打断）
+            logger.info(f"LiteAvatar: Received STREAM_CANCEL signal, interrupting avatar")
+            context.interrupt()
+
     def destroy(self):
         if self.lite_avatar_worker_manager is not None:
             self.lite_avatar_worker_manager.destroy()

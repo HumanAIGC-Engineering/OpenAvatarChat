@@ -5,8 +5,9 @@ description = "A modular interactive digital human conversation implementation t
 readme = "README.md"
 requires-python = ">=3.11.7, <3.12"
 dependencies = [
+    "av>=14.0,<16.0",
     "aiohttp~=3.11.12",
-    "aiortc~=1.12.0",
+    "aiortc>=1.12.0,<2.0",
     "dynaconf~=3.2.7",
     "fastapi[standard]~=0.115.12",
     "fastrtc",
@@ -16,39 +17,49 @@ dependencies = [
     "modelscope>=1.25.0",
     "numpy<=1.26.4",
     "openai>=1.72.0",
-    "opencv-python-headless~=4.11.0",
+    "opencv-python>=4.9.0,<5.0",
     "pip>=25.0.1",
     "pyaml>=25.1.0",
     "pydantic~=2.10.6",
     "pyyaml~=6.0.2",
     "scipy~=1.15.1",
-    "setuptools>=78.1.0",
+    "setuptools>=69.5.1,<70",  # pkg_resources 在 setuptools 70+ 中被移除
     "soundfile~=0.13.1",
     "starlette~=0.41.3",
     "tqdm~=4.67.1",
+    "typer>=0.15.1",  # gradio CLI 依赖
     "typing-extensions~=4.12.2",
     "uvicorn~=0.34.0",
     "torch==2.8.0",
-    "torchvision",
-    "torchaudio",
+    "torchvision==0.23.0",
+    "torchaudio==2.8.0",
     "python-dotenv>=1.1.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pillow>=11.1.0",
+    "pyjwt==2.10.1",
+    "opuslib>=3.0.1",  # Opus 音频编解码支持
+    "onnxruntime-gpu~=1.20.2",
+    "protobuf>=4.25.3,<5",  # TensorFlow 2.16.x 兼容范围，避免 MessageFactory.GetPrototype 报错
+    "huggingface-hub>=0.23.2,<1.0",
 ]
 
 [tool.uv.workspace]
 members = [
-    "src/handlers/tts/edgetts",
-    "src/handlers/tts/cosyvoice",
-    "src/handlers/llm/minicpm",
-    "src/handlers/avatar/liteavatar",
-    "src/handlers/avatar/lam",
-    "src/handlers/vad/silerovad",
-    "src/handlers/tts/bailian_tts",
-    "src/handlers/asr/sensevoice",
-    "src/handlers/avatar/musetalk",
+#    "src/handlers/tts/edgetts",
+#    "src/handlers/tts/cosyvoice",
+#    "src/handlers/avatar/liteavatar",
+#    "src/handlers/avatar/lam",
+#    "src/handlers/vad/silerovad",
+#    "src/handlers/vad/smart_turn_eou",
+#    "src/handlers/tts/bailian_tts",
+#    "src/handlers/asr/sensevoice",
+#    "src/handlers/avatar/musetalk",
 ]
 
 [tool.uv.sources]
-fastrtc = { path = "src/third_party/gradio_webrtc_videochat/dist/fastrtc-0.0.28.dev0-py3-none-any.whl" }
+#fastrtc = { path = "src/third_party/gradio_webrtc_videochat/dist/fastrtc-0.0.28.dev0-py3-none-any.whl" }
+
 torch = [
     { index = "pytorch-cu128" },
 ]
@@ -64,8 +75,8 @@ name = "pytorch-cu128"
 url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
-[tool.uv]
-no-build-isolation-package = ["chumpy"]
+#[tool.uv]
+#no-build-isolation-package = ["chumpy"]
 
-[tool.uv.extra-build-dependencies]
-chumpy = ["wheel"]
+#[tool.uv.extra-build-dependencies]
+#chumpy = ["wheel"]

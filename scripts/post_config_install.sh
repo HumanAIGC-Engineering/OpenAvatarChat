@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# =============================================================================
+# DEPRECATED: This script's functionality has been integrated into install.py.
+# Use `uv run install.py --config <config>.yaml` instead.
+# This file is kept for backward compatibility only.
+# =============================================================================
+
 # Initialize variables
 CONFIG_FILE=""
 
@@ -54,6 +60,11 @@ if grep -q "AvatarMusetalk:" "$CONFIG_FILE"; then
     echo "Installing mmcv==2.2.0..."
     uv pip uninstall mmcv
     uv run mim install mmcv==2.2.0 --force
+
+    # 3. mim install uses pip internally which may upgrade numpy/pillow/opencv
+    #    beyond compatible ranges. Pin them back to compatible versions.
+    echo "Restoring pinned dependency versions after mim install..."
+    uv pip install "numpy==1.26.4" "pillow>=11.1.0,<12.0" "opencv-python==4.9.0.80"
 else
     echo "No AvatarMusetalk configuration found in config file, skipping additional configuration."
 fi 

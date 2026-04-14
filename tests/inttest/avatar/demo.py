@@ -8,7 +8,7 @@ from handlers.avatar.liteavatar.avatar_processor_factory import AvatarAlgoType, 
 from handlers.avatar.liteavatar.model import AvatarInitOption
 from handlers.avatar.liteavatar.model import SpeechAudio
 from engine_utils.directory_info import DirectoryInfo
-from engine_utils.media_utils import AudioUtils
+from engine_utils.media_utils import AudioTestUtils
 from tests.inttest.avatar.sample_output_handler import SampleOutputHandler
 
 
@@ -21,7 +21,7 @@ class AvatarDemo:
         test_input_file_path = os.path.join(
             DirectoryInfo.get_project_dir(), "resource", "audio", "ymr_48k.wav"
         )
-        audio_bytes, sample_rate = AudioUtils.read_wav_to_bytes(test_input_file_path)
+        audio_bytes, sample_rate = AudioTestUtils.read_wav_to_bytes(test_input_file_path)
         
         processor = AvatarProcessorFactory.create_avatar_processor(
             "",

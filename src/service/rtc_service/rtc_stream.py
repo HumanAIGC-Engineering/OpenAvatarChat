@@ -7,16 +7,28 @@ from typing import Optional, Dict
 
 import numpy as np
 # noinspection PyPackageRequirements
-from fastrtc import AsyncAudioVideoStreamHandler, AudioEmitType, VideoEmitType
+from fastrtc import (
+    AsyncAudioVideoStreamHandler,
+    AudioEmitType,
+    VideoEmitType,
+    get_current_context,
+)
 from loguru import logger
 
 from chat_engine.common.client_handler_base import ClientHandlerDelegate, ClientSessionDelegate
-from chat_engine.common.engine_channel_type import EngineChannelType
+from chat_engine.data_models.engine_channel_type import EngineChannelType
 from chat_engine.data_models.chat_data.chat_data_model import ChatData
 from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.data_models.chat_signal import ChatSignal
 from chat_engine.data_models.chat_signal_type import ChatSignalType, ChatSignalSourceType
 from engine_utils.interval_counter import IntervalCounter
+from handlers.client.ws_client.ws_message_protocol import (
+    EchoHumanText,
+    EchoTextPayload,
+    MessageHeader,
+    MessageType,
+    serialize_message,
+)
 
 def _get_h264_encoder_info():
     """Get H.264 encoder info dynamically to avoid circular imports"""
@@ -53,6 +65,7 @@ class RtcStream(AsyncAudioVideoStreamHandler):
         self.stream_start_delay = stream_start_delay
 
         self.chat_channel = None
+        self.chat_channel_loop = None
         self.first_audio_emitted = False
 
         self.quit = asyncio.Event()
@@ -64,6 +77,7 @@ class RtcStream(AsyncAudioVideoStreamHandler):
         self.timestamp_base = self.input_sample_rate
 
         self.streams: Dict[str, RtcStream] = {}
+        self.owns_session = False
 
 
     # copy is used as create_instance in fastrtc
@@ -71,16 +85,9 @@ class RtcStream(AsyncAudioVideoStreamHandler):
         try:
             if self.client_handler_delegate is None:
                 raise Exception("ClientHandlerDelegate is not set.")
-            session_id = kwargs.get("webrtc_id", None)
-            if session_id is None:
-                session_id = uuid.uuid4().hex
-            
-            # Log codec information
-            selected_encoder, _ = _get_h264_encoder_info()
-            logger.debug(f"[{session_id}] H.264 encoder: {selected_encoder}")
-            
+
             new_stream = RtcStream(
-                session_id,
+                '',
                 expected_layout=self.expected_layout,
                 input_sample_rate=self.input_sample_rate,
                 output_sample_rate=self.output_sample_rate,
@@ -89,24 +96,76 @@ class RtcStream(AsyncAudioVideoStreamHandler):
                 stream_start_delay=self.stream_start_delay,
             )
             new_stream.weak_factory = weakref.ref(self)
-            new_session_delegate = self.client_handler_delegate.start_session(
-                session_id=session_id,
-                timestamp_base=self.input_sample_rate,
-            )
-            new_stream.client_session_delegate = new_session_delegate
-            if session_id in self.streams:
-                msg = f"Stream {session_id} already exists."
-                raise RuntimeError(msg)
-            self.streams[session_id] = new_stream
             return new_stream
         except Exception as e:
             logger.opt(exception=True).error(f"Failed to create stream: {e}")
             raise
 
+    async def start_up(self):
+        if self.client_session_delegate is not None:
+            return
+
+        factory = self
+        if self.weak_factory is not None and self.weak_factory() is not None:
+            factory = self.weak_factory()
+
+        if factory.client_handler_delegate is None:
+            raise RuntimeError("ClientHandlerDelegate is not set.")
+
+        session_id = self.session_id
+        if not session_id:
+            try:
+                session_id = get_current_context().webrtc_id
+            except Exception:
+                session_id = uuid.uuid4().hex
+
+        selected_encoder, _ = _get_h264_encoder_info()
+        logger.debug(f"[{session_id}] H.264 encoder: {selected_encoder}")
+
+        if session_id in factory.streams:
+            existing = factory.streams.get(session_id)
+            # Cleanup stale entries left by interrupted connections.
+            if existing is None or existing.client_session_delegate is None or existing.quit.is_set():
+                factory.streams.pop(session_id, None)
+            else:
+                base_session_id = session_id
+                session_id = f"{base_session_id}-{uuid.uuid4().hex[:8]}"
+                logger.warning(f"Session id conflict for {base_session_id}, fallback to {session_id}")
+
+        self.session_id = session_id
+        existing_delegate = factory.client_handler_delegate.find_session_delegate(session_id)
+        if existing_delegate is not None:
+            self.client_session_delegate = existing_delegate
+            self.owns_session = False
+            logger.info(f"Reuse existing session delegate for session {session_id}")
+        else:
+            try:
+                self.client_session_delegate = factory.client_handler_delegate.start_session(
+                    session_id=session_id,
+                    timestamp_base=self.input_sample_rate,
+                )
+                self.owns_session = True
+            except RuntimeError as e:
+                # Another client path (e.g. WS) may create the same session concurrently.
+                if "already exists" not in str(e):
+                    raise
+                existing_delegate = factory.client_handler_delegate.find_session_delegate(session_id)
+                if existing_delegate is None:
+                    raise
+                self.client_session_delegate = existing_delegate
+                self.owns_session = False
+                logger.info(f"Session {session_id} created concurrently, reusing existing delegate")
+
+        factory.streams[session_id] = self
+
     async def emit(self) -> AudioEmitType:
         try:
             # if not self.args_set.is_set():
             # await self.wait_for_args()
+            while self.client_session_delegate is None and not self.quit.is_set():
+                await asyncio.sleep(0.01)
+            if self.client_session_delegate is None:
+                return None
 
             if not self.first_audio_emitted:
                 self.client_session_delegate.clear_data()
@@ -130,11 +189,10 @@ class RtcStream(AsyncAudioVideoStreamHandler):
         try:
             if not self.first_audio_emitted:
                 await asyncio.sleep(0.1)
-            
-            # Log actual encoder being used (for verification)
-            selected_encoder, actual_encoder = _get_h264_encoder_info()
-            if actual_encoder:
-                logger.debug(f"[{self.session_id}] Using H.264 encoder: {actual_encoder}")
+            while self.client_session_delegate is None and not self.quit.is_set():
+                await asyncio.sleep(0.01)
+            if self.client_session_delegate is None:
+                return None
             
             self.emit_counter.add_property("video_emit")
             
@@ -142,10 +200,13 @@ class RtcStream(AsyncAudioVideoStreamHandler):
                 get_data_start = time.perf_counter()
                 video_frame_data: ChatData = await self.client_session_delegate.get_data(EngineChannelType.VIDEO)
                 get_data_wait_time = time.perf_counter() - get_data_start
-                
-                # Log slow data retrieval
-                if get_data_wait_time > 0.05:
-                    logger.debug(f"[{self.session_id}] Slow video data retrieval: {get_data_wait_time:.3f}s")
+
+                _slow_video_threshold_s = 0.12
+                if get_data_wait_time > _slow_video_threshold_s:
+                    logger.debug(
+                        f"[{self.session_id}] Slow video data retrieval: "
+                        f"{get_data_wait_time:.3f}s (threshold {_slow_video_threshold_s}s)"
+                    )
                 
                 if video_frame_data is None or video_frame_data.data is None:
                     continue
@@ -153,7 +214,7 @@ class RtcStream(AsyncAudioVideoStreamHandler):
                 frame_data = video_frame_data.data.get_main_data().squeeze()
                 if frame_data is None:
                     continue
-                
+
                 return frame_data
         except Exception as e:
             logger.opt(exception=e).error("Error in video_emit")
@@ -189,21 +250,10 @@ class RtcStream(AsyncAudioVideoStreamHandler):
     def set_channel(self, channel):
             super().set_channel(channel)
             self.chat_channel = channel
-            
-            async def process_chat_history():
-                role = None
-                chat_id = None
-                while not self.quit.is_set():
-                    chat_data = await self.client_session_delegate.get_data(EngineChannelType.TEXT)
-                    if chat_data is None or chat_data.data is None:
-                        continue
-                    logger.debug(f"Got chat data {str(chat_data)}")
-                    current_role = 'human' if chat_data.type == ChatDataType.HUMAN_TEXT else 'avatar'
-                    chat_id = uuid.uuid4().hex if current_role != role else chat_id
-                    role = current_role
-                    self.chat_channel.send(json.dumps({'type': 'chat', 'message': chat_data.data.get_main_data(), 
-                                                        'id': chat_id, 'role': current_role}))  
-            asyncio.create_task(process_chat_history())
+            try:
+                self.chat_channel_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                self.chat_channel_loop = None
                 
             @channel.on("message")
             def _(message):
@@ -221,7 +271,7 @@ class RtcStream(AsyncAudioVideoStreamHandler):
                     return
                 logger.info(f'on_chat_datachannel: {message}')
     
-                if message['type'] == 'stop_chat':
+                if message['header']['name'] == 'Interrupt':
                     self.client_session_delegate.emit_signal(
                         ChatSignal(
                             type=ChatSignalType.INTERRUPT,
@@ -229,15 +279,18 @@ class RtcStream(AsyncAudioVideoStreamHandler):
                             source_name="rtc",
                         )
                     )
-                elif message['type'] == 'chat':
-                    channel.send(json.dumps({'type': 'avatar_end'}))
-                    if self.client_session_delegate.shared_states.enable_vad is False:
-                        return
-                    self.client_session_delegate.shared_states.enable_vad = False
+                elif message['header']['name'] == 'SendHumanText':
+                    # self.client_session_delegate.emit_signal(
+                    #     ChatSignal(
+                    #         type=ChatSignalType.INTERRUPT,
+                    #         source_type=ChatSignalSourceType.CLIENT,
+                    #         source_name="rtc",
+                    #     )
+                    # )
                     self.client_session_delegate.emit_signal(
                         ChatSignal(
                             # begin a new round of responding
-                            type=ChatSignalType.BEGIN,
+                            type=ChatSignalType.STREAM_BEGIN,
                             stream_type=ChatDataType.AVATAR_AUDIO,
                             source_type=ChatSignalSourceType.CLIENT,
                             source_name="rtc",
@@ -245,9 +298,30 @@ class RtcStream(AsyncAudioVideoStreamHandler):
                     )
                     self.client_session_delegate.put_data(
                         EngineChannelType.TEXT,
-                        message['data'],
+                        message['payload']['text'],
                         loopback=True
                     )
+                    # Keep immediate user-text echo for pure RTC mode.
+                    # WsLam delegate has its own text echo path, so skip here to avoid duplicates.
+                    if not hasattr(self.client_session_delegate, "ws_text_queue"):
+                        try:
+                            payload = message.get("payload", {})
+                            response = EchoHumanText(
+                                header=MessageHeader(
+                                    name=MessageType.ECHO_HUMAN_TEXT,
+                                    request_id=str(uuid.uuid4()),
+                                ),
+                                payload=EchoTextPayload(
+                                    stream_key=payload.get("stream_key"),
+                                    mode="full_text",
+                                    text=payload.get("text", ""),
+                                    end_of_speech=payload.get("end_of_speech", True),
+                                    metadata=None,
+                                ),
+                            )
+                            self.chat_channel.send(json.dumps(serialize_message(response)))
+                        except Exception as e:
+                            logger.opt(exception=e).warning("Failed to send local human text echo")
                 # else:
 
                 # channel.send(json.dumps({"type": "chat", "unique_id": unique_id, "message": message}))
@@ -264,5 +338,7 @@ class RtcStream(AsyncAudioVideoStreamHandler):
         if factory is None:
             factory = self
         self.client_session_delegate = None
-        if factory.client_handler_delegate is not None:
+        if self.session_id in factory.streams:
+            factory.streams.pop(self.session_id, None)
+        if self.owns_session and factory.client_handler_delegate is not None:
             factory.client_handler_delegate.stop_session(self.session_id)
