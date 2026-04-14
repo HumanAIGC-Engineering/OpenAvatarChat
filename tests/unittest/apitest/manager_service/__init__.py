@@ -1,1 +1,0 @@
-# Manager service API tests
