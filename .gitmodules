@@ -19,3 +19,6 @@
 [submodule "src/handlers/avatar/flashhead/SoulX-FlashHead"]
 	path = src/handlers/avatar/flashhead/SoulX-FlashHead
 	url = https://github.com/Soul-AILab/SoulX-FlashHead.git
+[submodule "src/service/frontend_service/frontend"]
+	path = src/service/frontend_service/frontend
+	url = https://github.com/HumanAIGC-Engineering/OpenAvatarChat-WebUI.git
