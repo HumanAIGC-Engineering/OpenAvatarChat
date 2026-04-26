@@ -43,8 +43,8 @@ def _configure_h264_hardware_encoding():
 
     hardware_encoders = ['h264_nvenc', 'h264_qsv', 'h264_videotoolbox']
     encoder_options = {
-        'h264_nvenc': {"preset": "llhq", "zerolatency": "1", "profile": "baseline"},
-        'h264_qsv': {"preset": "veryfast", "profile": "baseline"},
+        'h264_nvenc': {"preset": "p4", "tune": "ll", "profile": "main", "rc": "cbr", "zerolatency": "1"},
+        'h264_qsv': {"preset": "veryfast", "profile": "main"},
         'h264_videotoolbox': {"realtime": "1", "profile": "baseline"},
     }
     for encoder in hardware_encoders:
@@ -101,11 +101,11 @@ def _configure_h264_hardware_encoding():
                     self.codec.time_base = fractions.Fraction(1, h264.MAX_FRAME_RATE)
 
                     if encoder_to_use == 'libx264':
-                        self.codec.options = {"level": "31", "tune": "zerolatency", "profile": "baseline"}
+                        self.codec.options = {"level": "31", "tune": "zerolatency", "profile": "baseline", "preset": "ultrafast"}
                     elif encoder_to_use == 'h264_nvenc':
-                        self.codec.options = {"preset": "llhq", "zerolatency": "1", "profile": "baseline"}
+                        self.codec.options = {"preset": "p4", "tune": "ll", "profile": "main", "rc": "cbr", "zerolatency": "1"}
                     elif encoder_to_use == 'h264_qsv':
-                        self.codec.options = {"preset": "veryfast", "profile": "baseline"}
+                        self.codec.options = {"preset": "veryfast", "profile": "main"}
                     elif encoder_to_use == 'h264_videotoolbox':
                         self.codec.options = {"realtime": "1", "profile": "baseline"}
 

@@ -9,12 +9,17 @@ import numpy as np
 from loguru import logger
 
 # 尝试导入 opuslib
+# 注意：opuslib 在 Windows 上若找不到 opus.dll 会抛普通 Exception（非 ImportError），
+# 因此这里需要捕获 Exception，避免污染只用 RTC 路径的启动流程。
 try:
     import opuslib
     OPUS_AVAILABLE = True
-except ImportError:
+except Exception as _opus_import_error:
+    opuslib = None  # type: ignore[assignment]
     OPUS_AVAILABLE = False
-    logger.warning("opuslib not available, Opus codec will be disabled")
+    logger.warning(
+        f"opuslib not available, Opus codec will be disabled: {_opus_import_error}"
+    )
 
 
 # ============================================================================
