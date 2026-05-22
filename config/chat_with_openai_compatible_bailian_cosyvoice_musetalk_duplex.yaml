@@ -23,7 +23,7 @@ default:
       RtcClient:
         module: client/rtc_client/client_handler_rtc
         connection_ttl: 900
-        output_video_fps: 30 
+        output_video_fps: 24  # Must equal AvatarMusetalk.fps for correct A/V sync
 
       # === 打断处理器 - 接收 INTERRUPT 信号并执行流取消 ===
       InterruptHandler:
@@ -110,9 +110,11 @@ default:
       # === MuseTalk 数字人 Avatar ===
       AvatarMusetalk:
         module: avatar/musetalk/avatar_handler_musetalk
-        fps: 25
+        # Allowed fps: 15, 16, 20, 24, 25, 30, 32, 40, 48 (must divide 24000 and be <=49); other values get auto-corrected to a nearby divisor and break server load.
+        fps: 24
         batch_size: 2
-        avatar_video_path: "src/handlers/avatar/musetalk/MuseTalk/data/video/yongen.mp4" 
+        # avatar_video_path: "src/handlers/avatar/musetalk/MuseTalk/data/video/yongen.mp4" 
+        avatar_video_path: "resource/avatar/liteavatar/20250408/sample_data/bg_video_silence.mp4"
         avatar_model_dir: "models/musetalk/avatar_model"
         force_create_avatar: false
         debug: false

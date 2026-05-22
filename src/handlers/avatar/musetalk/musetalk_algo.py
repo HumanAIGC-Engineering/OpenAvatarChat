@@ -341,7 +341,11 @@ class MuseTalkAlgoV15:
 
     def _prepare_material_impl(self):
         logger.info("preparing data materials ... ...")
-        
+
+        if not self.video_path or not os.path.exists(self.video_path):
+            logger.error(f"avatar_video_path does not exist: {self.video_path!r}")
+            raise FileNotFoundError(f"avatar_video_path does not exist: {self.video_path!r}")
+
         # Step 1: Save basic avatar config info
         with open(self.avatar_info_path, "w") as f:
             json.dump(self.avatar_info, f)

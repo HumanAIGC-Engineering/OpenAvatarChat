@@ -1,4 +1,5 @@
 import os
+import sys
 
 # xformers has a strict flash-attn version window check that may reject
 # newer ABI-compatible releases.  Bypass it so the two libraries coexist.
@@ -196,6 +197,22 @@ class HandlerAvatarMuseTalk(HandlerBase):
         if not isinstance(handler_config, AvatarMuseTalkConfig):
             handler_config = AvatarMuseTalkConfig()
         self._handler_config = handler_config
+
+        # musetalk_processor strictly emits 1 audio chunk per video frame at AvatarMusetalk.fps
+        # (silent_chunk size = output_audio_sample_rate // fps). On the WebRTC egress, audio is
+        # paced by real sample duration (fastrtc resamples to ~50Hz frames) while video is paced
+        # by RtcClient.output_video_fps. Any mismatch leaks (rtc_fps - musetalk_fps) frame intervals
+        # of A/V drift per wall second — invisible in browser playback (RTCP SR re-syncs) but
+        # very visible in MP4 captures and aiortc-based clients.
+        rtc_cfg = (engine_config.handler_configs or {}).get("RtcClient") or {}
+        rtc_output_video_fps = rtc_cfg.get("output_video_fps", 30)
+        if handler_config.fps != rtc_output_video_fps:
+            logger.error(
+                f"[INVALID CONFIG] AvatarMusetalk.fps={handler_config.fps} != "
+                f"RtcClient.output_video_fps={rtc_output_video_fps}; "
+                f"must be equal — see comment above. Set both to the same value."
+            )
+            sys.exit(1)
 
         audio_output_definition = DataBundleDefinition()
         audio_output_definition.add_entry(DataBundleEntry.create_audio_entry(

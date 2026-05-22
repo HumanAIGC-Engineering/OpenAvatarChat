@@ -44,4 +44,15 @@ docs/.vitepress/cache/
 docs/.vitepress/dist/
 
 .qoder/
+CLAUDE.md
 .cursor/
+
+# Python bytecode cache directories (any depth)
+__pycache__/
+
+# pytest runtime artifacts (MP4/CSV/PNG/log dumps under tests/**/outputs/)
+tests/**/outputs/
+.pytest_cache/
+
+# tmux session logs
+tmux-client-*.log

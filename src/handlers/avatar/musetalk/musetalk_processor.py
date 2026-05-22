@@ -1,7 +1,7 @@
 import queue
 import threading
 import time
-from queue import Empty, Queue
+from queue import Queue
 from threading import Thread
 from typing import Optional
 
@@ -32,7 +32,6 @@ class AvatarMuseTalkProcessor:
         self._audio_queue: Queue = Queue()                                 # AudioQueueItem
         self._whisper_queue: Queue = Queue()                               # WhisperQueueItem
         self._unet_queue: Queue = Queue()                                  # UNetQueueItem (multi_thread_inference mode only)
-        self._frame_id_queue: Queue = Queue()                              # int (backpressure queue: Frame Collector → Frame Generator)
         self._compose_queue: Queue = Queue()                               # ComposeQueueItem
         self._output_queue: Queue = Queue()                                # ComposeQueueItem (with frame field set)
 
@@ -50,11 +49,30 @@ class AvatarMuseTalkProcessor:
         self._interrupted: threading.Event = threading.Event()             # Interrupt flag
         self._generation_id: int = 0                                       # Monotonically increasing counter (distinguishes stale vs fresh data)
         self._generation_lock: threading.Lock = threading.Lock()           # Protects _generation_id
-        self._frame_id_lock: threading.Lock = threading.Lock()             # Protects queue clear operations
+        self._queues_lock: threading.Lock = threading.Lock()               # Serializes interrupt() / _clear_queues() draining
 
         # --- Debug statistics ---
         self._first_add_audio_time: Optional[float] = None                 # Timestamp of the first add_audio call
         self._audio_duration_sum: float = 0.0                              # Cumulative audio duration
+
+        # Pre-built one-frame silent audio in [1, N] float32 layout. Dispatched
+        # alongside every idle frame so AVATAR_AUDIO advances in lock-step with
+        # AVATAR_VIDEO; also used as a fallback in _compose_worker so every
+        # frame_collector tick emits a uniform [1, N] audio shape.
+        samples_per_frame = self._output_audio_sample_rate // self._config.fps
+        self._silence_chunk: np.ndarray = np.zeros((1, samples_per_frame), dtype=np.float32)
+
+        # Reused on SPEAKING starve so the mouth holds its current shape
+        # instead of snapping to the avatar's neutral pose.
+        self._last_emitted_frame: Optional[np.ndarray] = None
+
+        # Producer runs on its own monotonic idx, anchored to the collector's
+        # wall-clock at each speech-segment boundary so the avatar's ping-pong
+        # cycle stays continuous across LISTENING↔SPEAKING. Each var has a
+        # single writer (collector / producer) — no Lock needed.
+        self._collector_wall_clock: int = 0
+        self._next_producer_idx: int = 0
+        self._last_seen_speech_id: Optional[str] = None
 
     def set_callbacks(self, callbacks: MuseTalkProcessorCallbacks):
         self._callbacks = callbacks
@@ -64,6 +82,10 @@ class AvatarMuseTalkProcessor:
         self._interrupted.clear()
         self._first_add_audio_time = None
         self._audio_duration_sum = 0.0
+        self._last_emitted_frame = None
+        self._collector_wall_clock = 0
+        self._next_producer_idx = 0
+        self._last_seen_speech_id = None
         self._clear_queues()
 
     def start(self):
@@ -324,10 +346,16 @@ class AvatarMuseTalkProcessor:
                 continue
 
             # --- Backpressure: pause when _output_queue is too deep ---
+            # Log on entry/exit edges only — sustained backpressure is steady
+            # state now that the producer isn't rate-limited by collector tick.
+            was_in_backpressure = False
             while self._output_queue.qsize() > max_speaking_buffer and not self._stop_event.is_set():
-                if self._config.debug:
-                    logger.info(f"[FRAME_GEN] output buffer full, waiting... output_queue_size={self._output_queue.qsize()}, max_speaking_buffer={max_speaking_buffer}")
+                if not was_in_backpressure and self._config.debug:
+                    logger.info(f"[FRAME_GEN] backpressure ON: output_queue_size={self._output_queue.qsize()}, max_speaking_buffer={max_speaking_buffer}")
+                was_in_backpressure = True
                 time.sleep(0.01)
+            if was_in_backpressure and self._config.debug:
+                logger.info(f"[FRAME_GEN] backpressure OFF: output_queue_size={self._output_queue.qsize()}")
 
             try:
                 item: WhisperQueueItem = self._whisper_queue.get(timeout=1)
@@ -368,19 +396,22 @@ class AvatarMuseTalkProcessor:
                     else:
                         whisper_batch = np.concatenate(batch_chunks, axis=0)
 
-                    # --- Acquire frame_ids from Frame Collector (backpressure: blocks until Collector allocates) ---
-                    frame_ids = []
-                    for _ in range(batch_size):
-                        while not self._stop_event.is_set():
-                            if self._interrupted.is_set():
-                                return None
-                            try:
-                                frame_ids.append(self._frame_id_queue.get(timeout=0.5))
-                                break
-                            except Empty:
-                                continue
-                    if self._stop_event.is_set():
+                    # --- Allocate frame_ids from the internal monotonic counter ---
+                    # New speech segment → re-anchor idx to wall-clock so the
+                    # avatar cycle stays continuous with preceding idle frames.
+                    # State is only committed after the final interrupt check
+                    # so a concurrent interrupt() that resets _last_seen can't
+                    # be silently overwritten here.
+                    if self._interrupted.is_set() or self._stop_event.is_set():
                         return None
+                    batch_first_speech_id = batch_speech_id[0]
+                    new_segment = batch_first_speech_id != self._last_seen_speech_id
+                    next_idx = self._collector_wall_clock + 1 if new_segment else self._next_producer_idx
+                    frame_ids = [next_idx + i for i in range(batch_size)]
+                    if self._interrupted.is_set() or self._stop_event.is_set():
+                        return None
+                    self._next_producer_idx = next_idx + batch_size
+                    self._last_seen_speech_id = batch_first_speech_id
                     return (whisper_batch, batch_audio, batch_speech_id, batch_end_of_speech, valid_num, frame_ids)
             except queue.Empty:
                 time.sleep(0.01)
@@ -542,13 +573,24 @@ class AvatarMuseTalkProcessor:
                     continue
                 frame = self._avatar.res2combined(item.recon, item.idx)
                 item.frame = frame
+                # Normalize audio_segment to [1, N] float32 here so frame_collector
+                # can emit it uniformly with self._silence_chunk (also [1, N]).
+                audio = item.audio_segment
+                if audio is None or len(audio) == 0:
+                    item.audio_segment = self._silence_chunk
+                else:
+                    audio = np.asarray(audio, dtype=np.float32)
+                    if audio.ndim == 1:
+                        audio = audio[np.newaxis, :]
+                    item.audio_segment = audio
                 self._output_queue.put(item)
             except queue.Empty:
                 continue
 
     def _frame_collector_worker(self):
         """Frame-rate metronome: strictly outputs one frame per 1/fps second.
-        Also allocates frame_ids to control inference backpressure.
+        Publishes the wall-clock as _collector_wall_clock so the producer can
+        anchor its idx at speech-segment boundaries (avatar cycle continuity).
         """
         fps = self._config.fps
         frame_interval = 1.0 / fps                                 # Seconds per frame
@@ -558,7 +600,6 @@ class AvatarMuseTalkProcessor:
         last_speaking = False
         last_end_of_speech = False
         current_speech_id = None
-        max_frame_id_buffer = self._config.batch_size * 3          # Max frame_ids to pre-allocate
 
         while not self._stop_event.is_set():
             # --- Precise timing: absolute time avoids cumulative drift ---
@@ -570,10 +611,6 @@ class AvatarMuseTalkProcessor:
             while time.perf_counter() < target_time:               # Spin wait for sub-ms accuracy
                 pass
             t_frame_start = time.perf_counter()
-
-            # --- Allocate frame_id (backpressure: inference thread blocks until Collector allocates) ---
-            if not self._interrupted.is_set() and self._frame_id_queue.qsize() < max_frame_id_buffer:
-                self._frame_id_queue.put(local_frame_id)
 
             # --- Try to get a speaking frame (non-blocking) ---
             output_item: Optional[ComposeQueueItem] = None
@@ -593,12 +630,18 @@ class AvatarMuseTalkProcessor:
                 frame_timestamp = output_item.timestamp
                 audio_segment = output_item.audio_segment
             else:
-                frame = self._avatar.generate_idle_frame(local_frame_id)
+                # SPEAKING starve: hold the last emitted frame to avoid a mouth
+                # twitch. Audio stays silence — repeating audio would delay
+                # the whole stream. LISTENING still uses the regular idle frame.
+                if last_speaking and not last_end_of_speech and self._last_emitted_frame is not None:
+                    frame = self._last_emitted_frame
+                else:
+                    frame = self._avatar.generate_idle_frame(local_frame_id)
                 speech_id = last_active_speech_id
                 avatar_status = MuseTalkAvatarStatus.LISTENING
                 end_of_speech = False
                 frame_timestamp = time.time()
-                audio_segment = None
+                audio_segment = self._silence_chunk
 
             is_idle = (output_item is None)
             is_speaking = (avatar_status == MuseTalkAvatarStatus.SPEAKING)
@@ -633,14 +676,12 @@ class AvatarMuseTalkProcessor:
                     else:
                         logger.warning(f"[IDLE_FRAME] Inserted idle during speaking: frame_id={local_frame_id}")
 
-            # --- Output callbacks: video (every frame), audio (speaking only), speech_end ---
+            # --- Output callbacks: video (every frame), audio (every frame: real or silence), speech_end ---
+            # audio_segment is always [1, N] float32 here: speaking frames are
+            # normalized in _compose_worker; idle frames carry self._silence_chunk.
             self._notify_video(frame)
-            audio_len = len(audio_segment) if audio_segment is not None else 0
-            if audio_segment is not None and audio_len > 0:
-                audio_np = np.asarray(audio_segment, dtype=np.float32)
-                if audio_np.ndim == 1:
-                    audio_np = audio_np[np.newaxis, :]             # Ensure shape [1, N] for mono audio
-                self._notify_audio(audio_np)
+            self._last_emitted_frame = frame
+            self._notify_audio(audio_segment)
             if end_of_speech:
                 logger.info(f"Status change: SPEAKING -> LISTENING, speech_id={speech_id}")
                 self._notify_speech_end(speech_id)
@@ -656,6 +697,7 @@ class AvatarMuseTalkProcessor:
             local_frame_id += 1
             last_speaking = is_speaking
             last_end_of_speech = is_end_of_speech
+            self._collector_wall_clock = local_frame_id
 
     # --- Callback dispatchers (called from worker threads) ---
 
@@ -684,7 +726,7 @@ class AvatarMuseTalkProcessor:
 
     def interrupt(self):
         """Interrupt current speech: set interrupt flag and clear all intermediate queues.
-        Pipeline: _audio_queue -> _whisper_queue -> [_unet_queue] -> _frame_id_queue -> _compose_queue -> _output_queue
+        Pipeline: _audio_queue -> _whisper_queue -> [_unet_queue] -> _compose_queue -> _output_queue
         """
         logger.info("MuseTalk processor interrupt: setting interrupted flag and clearing all queues")
         # 1. Increment generation_id to invalidate all enqueued data
@@ -693,22 +735,24 @@ class AvatarMuseTalkProcessor:
         # 2. Set interrupt flag for fast worker skip/sleep
         self._interrupted.set()
         # 3. Drain all pipeline queues
-        with self._frame_id_lock:
-            for q in [self._audio_queue, self._whisper_queue, self._unet_queue, self._frame_id_queue, self._compose_queue, self._output_queue]:
+        with self._queues_lock:
+            for q in [self._audio_queue, self._whisper_queue, self._unet_queue, self._compose_queue, self._output_queue]:
                 while not q.empty():
                     try:
                         q.get_nowait()
                     except Exception:
                         break
-        # 4. Reset debug statistics
+        # 4. Reset per-utterance state so the next segment starts clean
         self._audio_duration_sum = 0.0
         self._first_add_audio_time = None
+        self._last_emitted_frame = None
+        self._last_seen_speech_id = None  # force producer idx re-anchor
         logger.info("MuseTalk processor interrupt: done")
 
     def _clear_queues(self):
         """Drain all pipeline queues. Used by _reset_runtime_state() and stop()."""
-        with self._frame_id_lock:
-            for q in [self._audio_queue, self._whisper_queue, self._unet_queue, self._frame_id_queue, self._compose_queue, self._output_queue]:
+        with self._queues_lock:
+            for q in [self._audio_queue, self._whisper_queue, self._unet_queue, self._compose_queue, self._output_queue]:
                 while not q.empty():
                     try:
                         q.get_nowait()
