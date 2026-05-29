@@ -132,6 +132,7 @@ Chat Agent mode replaces the traditional LLM Handler with a multi-turn tool-call
 
 ## Community Thanks
 
+- Live2D frontend by bingochaos: [OpenAvatarChat-WebUI-Live2D](https://github.com/bingochaos/OpenAvatarChat-WebUI-Live2D) — swap digital human rendering to Live2D characters without any backend changes.
 - One-click installation package by "Shi Zi Yu" on [Bilibili](https://www.bilibili.com/video/BV1V1oLYmEu3/)
 - Quark one-click packages by "W&H": [Windows (code: a79V)](https://pan.quark.cn/s/237177126010) / [Linux (code: E8Kq)](https://pan.quark.cn/s/b7fcdc157586)
 - Source code zip by "W&H": [Quark (code: 9iNy)](https://pan.quark.cn/s/9e6156cafacd) / [Baidu (code: xrxr)](https://pan.baidu.com/s/16-0OBtSD5cBz2gJDJORW7w)

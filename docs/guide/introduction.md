@@ -28,3 +28,6 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 | | facebook/wav2vec2-base-960h ||[HuggingFace](https://huggingface.co/facebook/wav2vec2-base-960h) / [ModelScope](https://modelscope.cn/models/AI-ModelScope/wav2vec2-base-960h)|
 | Avatar | TMElyralab/MuseTalk |[GitHub](https://github.com/TMElyralab/MuseTalk)||
 | Avatar | Soul-AILab/SoulX-FlashHead |[GitHub](https://github.com/Soul-AILab/SoulX-FlashHead)|[HuggingFace](https://huggingface.co/Soul-AILab/SoulX-FlashHead-1_3B)|
+
+> [!TIP]
+> 如果你希望用 Live2D 2D 角色替代 3D 数字人渲染，可以参考社区提供的 [OpenAvatarChat-WebUI-Live2D](https://github.com/bingochaos/OpenAvatarChat-WebUI-Live2D) 前端，无需修改后端即可切换。
