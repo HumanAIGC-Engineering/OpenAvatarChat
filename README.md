@@ -133,7 +133,6 @@ Chat Agent 模式使用多轮工具调用 Agent 替代传统 LLM Handler，为�
 ## 社区贡献-感谢
 
 - 感谢社区同学 bingochaos 提供的 Live2D 前端 [OpenAvatarChat-WebUI-Live2D](https://github.com/bingochaos/OpenAvatarChat-WebUI-Live2D)，无需修改后端即可将数字人切换为 Live2D 角色渲染，详见该仓库说明。
-
 <p align="center">
 <video src="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/assets/images/live2d_demo.mp4" width="480" controls></video>
 <br/>

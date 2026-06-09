@@ -133,7 +133,6 @@ Chat Agent mode replaces the traditional LLM Handler with a multi-turn tool-call
 ## Community Thanks
 
 - Live2D frontend by bingochaos: [OpenAvatarChat-WebUI-Live2D](https://github.com/bingochaos/OpenAvatarChat-WebUI-Live2D) — swap digital human rendering to Live2D characters without any backend changes.
-
 <p align="center">
 <video src="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/assets/images/live2d_demo.mp4" width="480" controls></video>
 <br/>
