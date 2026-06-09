@@ -31,3 +31,4 @@ Open Avatar Chat is a modular interactive digital human dialogue implementation 
 
 > [!TIP]
 > To render a Live2D 2D character instead of a 3D digital human, check out the community-maintained [OpenAvatarChat-WebUI-Live2D](https://github.com/bingochaos/OpenAvatarChat-WebUI-Live2D) frontend — no backend changes required.
+> <video src="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/assets/images/live2d_demo.mp4" width="480" controls></video>

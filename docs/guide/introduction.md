@@ -31,3 +31,4 @@ Open Avatar Chat 是一个模块化的交互数字人对话实现，能够在单
 
 > [!TIP]
 > 如果你希望用 Live2D 2D 角色替代 3D 数字人渲染，可以参考社区提供的 [OpenAvatarChat-WebUI-Live2D](https://github.com/bingochaos/OpenAvatarChat-WebUI-Live2D) 前端，无需修改后端即可切换。
+> <video src="https://github.com/HumanAIGC-Engineering/OpenAvatarChat/assets/images/live2d_demo.mp4" width="480" controls></video>
