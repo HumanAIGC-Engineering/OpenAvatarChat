@@ -9,7 +9,8 @@ LLMOpenAICompatible:
   model_name: "qwen-plus"
   system_prompt: "你是个AI对话数字人，你要用简短的对话来回答我的问题，并在合理的地方插入标点符号"
   api_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
-  api_key: 'yourapikey' # default=os.getenv("DASHSCOPE_API_KEY")
+  api_key: 'yourapikey' # 可选；未设置时读取 api_key_env 指定的环境变量
+  api_key_env: "DASHSCOPE_API_KEY"
 ```
 
 | 参数 | 默认值 | 说明 |
@@ -18,6 +19,7 @@ LLMOpenAICompatible:
 | LLMOpenAICompatible.system_prompt | | 默认系统 prompt |
 | LLMOpenAICompatible.api_url | | 模型 API URL |
 | LLMOpenAICompatible.api_key | | 模型 API Key |
+| LLMOpenAICompatible.api_key_env | DASHSCOPE_API_KEY | 未直接配置 `api_key` 时读取的环境变量名 |
 
 > [!TIP]
 > 系统默认会获取项目当前目录下的 `.env` 文件用来获取环境变量。

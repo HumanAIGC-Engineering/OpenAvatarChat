@@ -24,7 +24,8 @@ from chat_engine.data_models.chat_stream_config import ChatStreamConfig
 class LLMConfig(HandlerBaseConfigModel, BaseModel):
     model_name: str = Field(default="qwen-plus")
     system_prompt: str = Field(default="请你扮演一个 AI 助手，用简短的对话来回答用户的问题，并在对话内容中加入合适的标点符号，不需要加入标点符号相关的内容")
-    api_key: str = Field(default=os.getenv("DASHSCOPE_API_KEY"))
+    api_key: str = Field(default=None)
+    api_key_env: str = Field(default="DASHSCOPE_API_KEY")
     api_url: str = Field(default=None)
     enable_video_input: bool = Field(default=False)
     history_length: int = Field(default=20)
@@ -51,6 +52,12 @@ class LLMContext(HandlerContext):
 class HandlerLLM(HandlerBase, ABC):
     def __init__(self):
         super().__init__()
+
+    @staticmethod
+    def resolve_api_key(config: LLMConfig) -> Optional[str]:
+        if config.api_key:
+            return config.api_key
+        return os.getenv(config.api_key_env)
 
     def get_handler_info(self) -> HandlerBaseInfo:
         return HandlerBaseInfo(
@@ -85,8 +92,12 @@ class HandlerLLM(HandlerBase, ABC):
 
     def load(self, engine_config: ChatEngineConfigModel, handler_config: Optional[BaseModel] = None):
         if isinstance(handler_config, LLMConfig):
-            if handler_config.api_key is None or len(handler_config.api_key) == 0:
-                error_message = 'api_key is required in config/xxx.yaml, when use handler_llm'
+            api_key = self.resolve_api_key(handler_config)
+            if api_key is None or len(api_key) == 0:
+                error_message = (
+                    f'api_key or {handler_config.api_key_env} is required '
+                    'in config/xxx.yaml, when use handler_llm'
+                )
                 logger.error(error_message)
                 raise ValueError(error_message)
 
@@ -96,7 +107,7 @@ class HandlerLLM(HandlerBase, ABC):
         context = LLMContext(session_context.session_info.session_id)
         context.model_name = handler_config.model_name
         context.system_prompt = {'role': 'system', 'content': handler_config.system_prompt}
-        context.api_key = handler_config.api_key
+        context.api_key = self.resolve_api_key(handler_config)
         context.api_url = handler_config.api_url
         context.enable_video_input = handler_config.enable_video_input
         context.history = ChatHistory(history_length=handler_config.history_length)
@@ -222,4 +233,3 @@ class HandlerLLM(HandlerBase, ABC):
             except Exception:
                 pass
             context.client = None
-
