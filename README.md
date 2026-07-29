@@ -34,13 +34,6 @@
 
 ## Demo
 
-### 在线体验
-
-我们部署在
-<a href="https://www.modelscope.cn/studios/HumanAIGC-Engineering/open-avatar-chat" target="_blank">ModelScope</a>
-和
-<a href="https://huggingface.co/spaces/HumanAIGC-Engineering-Team/open-avatar-chat" target="_blank">HuggingFace</a>
-上均部署了体验服务，欢迎体验。
 
 ### 视频
 <table>
@@ -130,12 +123,6 @@ Chat Agent 模式使用多轮工具调用 Agent 替代传统 LLM Handler，为�
 * 官方视频教程：[Bilibili](https://www.bilibili.com/video/BV1sv8QzLEC2)
 * 🚨 [常见问题](https://humanaigc-engineering.github.io/OpenAvatarChat/community/faq)
 
-## 社区贡献-感谢
-
-- 感谢社区同学 bingochaos 提供的 Live2D 前端 [OpenAvatarChat-WebUI-Live2D](https://github.com/bingochaos/OpenAvatarChat-WebUI-Live2D)，无需修改后端即可将数字人切换为 Live2D 角色渲染，详见该仓库说明。
-- 感谢社区热心同学"十字鱼"在B站上发布的一键安装包视频 [一键包](https://www.bilibili.com/video/BV1V1oLYmEu3/?vd_source=29463f5b63a3510553325ba70f325293)
-- 感谢社区热心同学"W&H"提供的夸克一键包[windows版本:提取码a79V](https://pan.quark.cn/s/237177126010) 和 [linux 版本:提取码：E8Kq](https://pan.quark.cn/s/b7fcdc157586)
-- 感谢社区热心同学"W&H"提供的源码zip[夸克网盘:提取码 9iNy](https://pan.quark.cn/s/9e6156cafacd) 和 [百度云盘:提取码：xrxr](https://pan.baidu.com/s/16-0OBtSD5cBz2gJDJORW7w)
 
 ## Star历史
 
