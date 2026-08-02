@@ -8,6 +8,7 @@ OpenAvatarChat 按照配置文件启动并组织各个模块。项目在 `config
 | chat_with_qwen_omni.yaml | Qwen-Omni | Qwen-Omni | Qwen-Omni | lite-avatar |
 | chat_with_openai_compatible.yaml | SenseVoice | API | CosyVoice | lite-avatar |
 | chat_with_openai_compatible_edge_tts.yaml | SenseVoice | API | edgetts | lite-avatar |
+| chat_with_atlascloud_edge_tts.yaml | SenseVoice | Atlas Cloud API | edgetts | lite-avatar |
 | chat_with_openai_compatible_bailian_cosyvoice.yaml | SenseVoice | API | API | lite-avatar |
 | chat_with_openai_compatible_bailian_cosyvoice_musetalk.yaml | SenseVoice | API | API | MuseTalk |
 | chat_with_openai_compatible_bailian_cosyvoice_flashhead.yaml | SenseVoice | API | API | FlashHead |
