@@ -98,12 +98,21 @@ def main():
     server.run()
 
 
-if __name__ == "__main__":
+def _run_main():
     try:
         main()
     except KeyboardInterrupt:
         logger.info("Received KeyboardInterrupt, exiting.")
+    except Exception:
+        logger.exception("OpenAvatarChat failed to start")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        exit_code = _run_main()
     finally:
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         signal.signal(signal.SIGTERM, signal.SIG_DFL)
-        os._exit(0)
+    os._exit(exit_code)
