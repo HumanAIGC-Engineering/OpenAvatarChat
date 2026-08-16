@@ -126,7 +126,7 @@ Chat Agent 模式使用多轮工具调用 Agent 替代传统 LLM Handler，为�
 
 ## Star历史
 
-![](https://api.star-history.com/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)
+![](https://star-history.dera.page/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)
 
 ## 引用
 
