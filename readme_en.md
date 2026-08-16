@@ -128,7 +128,7 @@ Chat Agent mode replaces the traditional LLM Handler with a multi-turn tool-call
 
 ## Star History
 
-![](https://api.star-history.com/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)
+![](https://star-history.dera.page/svg?repos=HumanAIGC-Engineering/OpenAvatarChat&type=Date)
 
 ## Citation
 
