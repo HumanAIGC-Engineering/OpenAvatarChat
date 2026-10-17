@@ -240,12 +240,11 @@ class HandlerAvatarFlashHead(HandlerBase):
             # --- Initialize FlashHead pipeline ---
             from flash_head.inference import get_pipeline, get_base_data, get_infer_params
 
-            # Disable torch.compile for VAE/model: the inductor backend may
-            # generate incorrect strides on newer GPU architectures (Blackwell).
+            # Keep eager execution by default; validate each GPU before opting in.
             import flash_head.src.pipeline.flash_head_pipeline as _fh_pipeline
-            _fh_pipeline.COMPILE_MODEL = False
-            _fh_pipeline.COMPILE_VAE = False
-            logger.info("FlashHead: Disabled torch.compile for model & VAE")
+            _fh_pipeline.COMPILE_MODEL = handler_config.enable_compile
+            _fh_pipeline.COMPILE_VAE = handler_config.enable_compile
+            logger.info(f"FlashHead: torch.compile enabled={handler_config.enable_compile}")
 
             logger.info(f"Loading FlashHead pipeline: ckpt_dir={ckpt_dir}, "
                          f"model_type={handler_config.model_type}, wav2vec_dir={wav2vec_dir}, "

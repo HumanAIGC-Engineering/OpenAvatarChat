@@ -53,5 +53,6 @@ class FlashHeadConfig(HandlerBaseConfigModel, BaseModel):
                     "~0.003 corresponds to ambient room tone (approx -50 dBFS). "
                     "Set to 0.0 to use pure silence.",
     )
+    enable_compile: bool = Field(default=False, description="Opt in to validated torch.compile execution.")
     debug: bool = Field(default=False, description="Enable debug logging.")
     # concurrent_limit is inherited from HandlerBaseConfigModel and auto-injected by ChatEngine
