@@ -160,6 +160,8 @@ class HandlerAvatarFlashHead(HandlerBase):
     def __init__(self) -> None:
         super().__init__()
         self.pipeline = None
+        self._worker = None
+        self._pipeline_lock = threading.Lock()
         self.infer_params: Optional[dict] = None
         self.output_data_definitions: Dict[ChatDataType, DataBundleDefinition] = {}
         self._handler_config: Optional[FlashHeadConfig] = None
@@ -192,6 +194,23 @@ class HandlerAvatarFlashHead(HandlerBase):
         ))
         video_output_definition.lockdown()
         self.output_data_definitions[ChatDataType.AVATAR_VIDEO] = video_output_definition
+
+        if handler_config.execution_mode == "process":
+            if handler_config.concurrent_limit != 1:
+                raise ValueError("FlashHead process mode currently requires concurrent_limit=1")
+            from handlers.avatar.flashhead.flashhead_worker import FlashHeadWorker
+            self._worker = FlashHeadWorker(
+                handler_config.model_dump(), engine_config.model_dump(),
+                self.handler_root,
+            )
+            self.infer_params = self._worker.infer_params
+            try:
+                self._validate_timing(handler_config)
+            except Exception:
+                self._worker.close()
+                self._worker = None
+                raise
+            return
 
         # --- Workaround: cuDNN bundled with torch may not support Blackwell GPUs.
         #     Disable it to fall back to native CUDA kernels. ---
@@ -285,16 +304,28 @@ class HandlerAvatarFlashHead(HandlerBase):
         finally:
             os.chdir(original_cwd)
 
+    def _validate_timing(self, config):
+        if self.infer_params["tgt_fps"] != config.fps:
+            raise ValueError("FlashHead pipeline FPS does not match the configured FPS")
+        if self.infer_params["sample_rate"] != config.algo_audio_sample_rate:
+            raise ValueError("FlashHead pipeline audio rate does not match configuration")
+
     def create_context(self, session_context: SessionContext,
                        handler_config: Optional[FlashHeadConfig] = None) -> HandlerContext:
         if not isinstance(handler_config, FlashHeadConfig):
             handler_config = FlashHeadConfig()
 
+        self._validate_timing(handler_config)
+        session_id = session_context.session_info.session_id
+        backend = self._worker.session(session_id) if self._worker is not None else None
         processor = FlashHeadProcessor(
             pipeline=self.pipeline,
             infer_params=copy.deepcopy(self.infer_params),
             output_audio_sample_rate=handler_config.output_audio_sample_rate,
             idle_noise_amplitude=handler_config.idle_noise_amplitude,
+            backend=backend,
+            max_buffer_seconds=handler_config.max_buffer_seconds,
+            inference_lock=self._pipeline_lock,
         )
 
         context = FlashHeadContext(
@@ -389,7 +420,7 @@ class HandlerAvatarFlashHead(HandlerBase):
         if audio_array.dtype != np.float32:
             audio_array = audio_array.astype(np.float32)
 
-        audio_array = audio_array.squeeze()
+        audio_array = audio_array.reshape(-1)
 
         # --- Resample from TTS output rate to FlashHead algo rate (e.g. 24kHz -> 16kHz) ---
         input_sample_rate = audio_entry.sample_rate
@@ -406,7 +437,13 @@ class HandlerAvatarFlashHead(HandlerBase):
         # --- Prepare original audio for synchronized output via frame collector ---
         original_audio = inputs.data.get_main_data()
         if original_audio is not None:
-            original_audio = original_audio.astype(np.float32).squeeze()
+            original_audio = original_audio.astype(np.float32).reshape(-1)
+            if input_sample_rate != context.config.output_audio_sample_rate:
+                import librosa
+                original_audio = librosa.resample(
+                    original_audio, orig_sr=input_sample_rate,
+                    target_sr=context.config.output_audio_sample_rate,
+                )
         else:
             # Fallback: synthesize silence at the ratio matching 16kHz input
             ratio = context.config.output_audio_sample_rate / context.config.algo_audio_sample_rate
@@ -431,6 +468,7 @@ class HandlerAvatarFlashHead(HandlerBase):
         if not isinstance(context, FlashHeadContext):
             return
         if (signal.type == ChatSignalType.STREAM_CANCEL
+                and signal.related_stream is not None
                 and signal.related_stream.data_type == ChatDataType.CLIENT_PLAYBACK):
             logger.info("FlashHead: Received STREAM_CANCEL signal, interrupting avatar")
             context.interrupt()
@@ -446,11 +484,16 @@ class HandlerAvatarFlashHead(HandlerBase):
             if context.processor is not None:
                 context.processor.stop()
                 context.processor.set_callbacks(None)
+                if context.processor.backend is not None:
+                    context.processor.backend.close()
             context.clear()
             logger.info(f"FlashHead: Context destroyed for session {context.session_id}")
 
     def destroy(self):
         """Global cleanup."""
+        if self._worker is not None:
+            self._worker.close()
+            self._worker = None
         self.pipeline = None
         self.infer_params = None
         logger.info("FlashHead: Handler destroyed")

@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from typing import Literal
+from pydantic import BaseModel, Field, model_validator
 from loguru import logger
 
 from chat_engine.data_models.chat_engine_config_data import HandlerBaseConfigModel
@@ -23,13 +24,13 @@ class FlashHeadConfig(HandlerBaseConfigModel, BaseModel):
         default="",
         description="Path to the condition image for the talking head. Required.",
     )
-    fps: int = Field(default=25, description="Target video frame rate.")
-    algo_audio_sample_rate: int = Field(
+    fps: Literal[25] = Field(default=25, description="FlashHead currently generates 25 FPS.")
+    algo_audio_sample_rate: Literal[16000] = Field(
         default=16000,
         description="Audio sample rate expected by FlashHead (wav2vec2 input).",
     )
     output_audio_sample_rate: int = Field(
-        default=24000,
+        default=24000, gt=0,
         description="Audio sample rate from TTS, passed through to client.",
     )
     base_seed: int = Field(default=42, description="Random seed for reproducibility.")
@@ -55,3 +56,16 @@ class FlashHeadConfig(HandlerBaseConfigModel, BaseModel):
     )
     debug: bool = Field(default=False, description="Enable debug logging.")
     # concurrent_limit is inherited from HandlerBaseConfigModel and auto-injected by ChatEngine
+
+    execution_mode: Literal["in_process", "process"] = Field(default="in_process")
+    max_buffer_seconds: float = Field(default=2.0, gt=0, le=10)
+    worker_threads: int = Field(default=4, ge=1, le=64)
+    worker_warmup_batches: int = Field(default=3, ge=1, le=20)
+    worker_start_timeout: float = Field(default=600.0, gt=0)
+    worker_request_timeout: float = Field(default=60.0, gt=0)
+
+    @model_validator(mode="after")
+    def validate_audio_clock(self):
+        if self.output_audio_sample_rate % self.fps:
+            raise ValueError("Output sample rate must be divisible by FPS")
+        return self

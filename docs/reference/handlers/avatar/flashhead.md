@@ -45,3 +45,6 @@ FlashHead:
 
 > [!Note]
 > FlashHead 依赖 `flash-attn`，`install.py` 会自动编译安装。
+
+
+[Experimental isolated inference and validation](./flashhead-worker.md).
