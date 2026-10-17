@@ -332,13 +332,20 @@ class RtcStream(AsyncAudioVideoStreamHandler):
         pass
     def shutdown(self):
         self.quit.set()
-        factory = None
-        if self.weak_factory is not None:
-            factory = self.weak_factory()
+        delegate = self.client_session_delegate
+        owns_session = self.owns_session
+        self.owns_session = False
+        self.client_session_delegate = None
+        self.chat_channel = None
+        self.chat_channel_loop = None
+        factory = self.weak_factory() if self.weak_factory is not None else None
         if factory is None:
             factory = self
-        self.client_session_delegate = None
-        if self.session_id in factory.streams:
+        if factory.streams.get(self.session_id) is self:
             factory.streams.pop(self.session_id, None)
-        if self.owns_session and factory.client_handler_delegate is not None:
-            factory.client_handler_delegate.stop_session(self.session_id)
+        if owns_session:
+            close_queues = getattr(delegate, "close_output_queues", None)
+            if close_queues is not None:
+                close_queues()
+            if factory.client_handler_delegate is not None:
+                factory.client_handler_delegate.stop_session(self.session_id)

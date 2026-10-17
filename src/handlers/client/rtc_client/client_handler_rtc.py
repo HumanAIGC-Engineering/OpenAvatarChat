@@ -1,4 +1,5 @@
 import asyncio
+from handlers.client.rtc_client.thread_safe_queue import ThreadSafeAsyncQueue
 import json
 from typing import Dict, Optional, cast, Union, Tuple
 from uuid import uuid4
@@ -15,6 +16,7 @@ from fastapi import FastAPI
 # ============================================================================
 from aiortc.codecs import CODECS, h264
 from aiortc import codecs as aiortc_codecs
+from aiortc.exceptions import InvalidStateError
 import av
 import fractions
 
@@ -256,9 +258,9 @@ class RtcClientSessionDelegate(ClientSessionDelegate):
         self.signal_emitter = None
         self.shared_states = None
         self.output_queues = {
-            EngineChannelType.AUDIO: asyncio.Queue(),
-            EngineChannelType.VIDEO: asyncio.Queue(),
-            EngineChannelType.TEXT: asyncio.Queue(),
+            EngineChannelType.AUDIO: ThreadSafeAsyncQueue(),
+            EngineChannelType.VIDEO: ThreadSafeAsyncQueue(),
+            EngineChannelType.TEXT: ThreadSafeAsyncQueue(),
         }
         self.input_data_definitions: Dict[EngineChannelType, DataBundleDefinition] = {}
         self.modality_mapping = {
@@ -279,6 +281,9 @@ class RtcClientSessionDelegate(ClientSessionDelegate):
         else:
             data = await data_queue.get()
         return data
+
+
+
 
     def put_data(self, modality: EngineChannelType, data: Union[np.ndarray, str],
                  timestamp: Optional[Tuple[int, int]] = None, samplerate: Optional[int] = None, loopback: bool = False):
@@ -320,10 +325,14 @@ class RtcClientSessionDelegate(ClientSessionDelegate):
         else:
             logger.warning("signal_emitter is None, cannot emit signal")
 
+    def close_output_queues(self):
+        """Release media and pending reads when this RTC-owned session ends."""
+        for data_queue in self.output_queues.values():
+            data_queue.close()
+
     def clear_data(self):
         for data_queue in self.output_queues.values():
-            while not data_queue.empty():
-                data_queue.get_nowait()
+            data_queue.clear()
 
 
 class ClientRtcConfigModel(HandlerBaseConfigModel, BaseModel):
@@ -518,16 +527,26 @@ class ClientHandlerRtc(ClientHandlerBase):
         if stream is None or stream.chat_channel is None:
             return False
         payload = json.dumps(serialize_message(message))
+        channel = stream.chat_channel
+
+        def send_if_open():
+            if stream.chat_channel is not channel or channel.readyState != "open":
+                return False
+            try:
+                channel.send(payload)
+                return True
+            except (RuntimeError, OSError, InvalidStateError) as exc:
+                logger.debug(f"Chat channel closed during send for {session_id}: {exc}")
+                return False
+
         loop = getattr(stream, "chat_channel_loop", None)
         if loop is not None and loop.is_running():
-            loop.call_soon_threadsafe(stream.chat_channel.send, payload)
-            return True
-        try:
-            stream.chat_channel.send(payload)
-            return True
-        except RuntimeError as e:
-            logger.warning(f"Failed to send chat channel message for session {session_id}: {e}")
-            return False
+            try:
+                loop.call_soon_threadsafe(send_if_open)
+                return True  # Scheduled, not a delivery acknowledgement.
+            except RuntimeError:
+                return False
+        return send_if_open()
 
     def _send_text_to_chat_channel(self, context: ClientRtcContext, inputs: ChatData) -> bool:
         stream_key_str = inputs.stream_id.stream_key_str if inputs.stream_id else None
@@ -593,9 +612,12 @@ class ClientHandlerRtc(ClientHandlerBase):
                 signal_payload.stream_key = signal.related_stream.stream_key_str
 
             if signal.type == ChatSignalType.STREAM_CANCEL:
+                if context.client_session_delegate is not None:
+                    context.client_session_delegate.clear_data()
                 current_stream = context.stream_manager.find_stream(signal.related_stream)
                 signal_payload.parent_stream_keys = [
-                    stream.stream_key_str for stream in current_stream.ancestor_streams]
+                    stream.stream_key_str for stream in current_stream.ancestor_streams
+                ] if current_stream is not None else []
 
             message = ChatSignalMessage(
                 header=MessageHeader(name=MessageType.CHAT_SIGNAL, request_id=str(uuid4())),
