@@ -73,7 +73,7 @@ class TTSCosyVoiceProcessor(spawn_context.Process):
             response = None
             if self.ref_audio_buffer is not None:
                 response = self.model.inference_zero_shot(
-                    init_text, self.ref_audio_text, self.ref_audio_buffer, True)
+                    init_text, self.ref_audio_text, self.ref_audio_buffer, stream=True)
             elif self.spk_id:
                 response = self.model.inference_sft(init_text, self.spk_id)
             else:
