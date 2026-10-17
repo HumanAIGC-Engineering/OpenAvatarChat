@@ -508,7 +508,10 @@ class FlashHeadProcessor:
         audio_embedding = audio_embedding.to(self.pipeline.device)
         sample = self.pipeline.generate(audio_embedding)
         # Convert from [-1, 1] to [0, 255] uint8: (T, H, W, C)
-        sample_frames = (((sample + 1) / 2).permute(1, 2, 3, 0).clip(0, 1) * 255).contiguous()
+        sample_frames = (
+            (((sample + 1) / 2).permute(1, 2, 3, 0).clip(0, 1) * 255)
+            .to(torch.uint8).contiguous()
+        )
         return sample_frames
 
     def interrupt(self):
