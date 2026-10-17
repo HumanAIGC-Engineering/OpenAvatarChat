@@ -24,3 +24,6 @@ FlashHead:
 
 > [!Note]
 > FlashHead depends on `flash-attn`. `install.py` compiles it automatically.
+
+
+[Experimental isolated inference and validation](./flashhead-worker.md).
