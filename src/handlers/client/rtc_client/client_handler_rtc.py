@@ -33,6 +33,23 @@ def _prioritize_h264():
     logger.info(f"Video codec priority: {[c.mimeType for c in CODECS['video'][:3]]}")
 
 
+def _probe_h264_encoder(name, options):
+    """Open a short-lived probe without relying on an optional PyAV close API."""
+    codec = None
+    try:
+        codec = av.CodecContext.create(name, "w")
+        codec.width = 640
+        codec.height = 480
+        codec.pix_fmt = "yuv420p"
+        codec.framerate = fractions.Fraction(30, 1)
+        codec.time_base = fractions.Fraction(1, 30)
+        codec.options = options
+        codec.open()
+    finally:
+        # PyAV releases the native codec when its last reference is dropped.
+        codec = None
+
+
 def _configure_h264_hardware_encoding():
     """Configure H.264 to use hardware encoder (must execute before importing fastrtc)"""
     global _selected_h264_encoder, _actual_h264_encoder
@@ -49,16 +66,7 @@ def _configure_h264_hardware_encoding():
     }
     for encoder in hardware_encoders:
         try:
-            test_codec = av.CodecContext.create(encoder, "w")
-            test_codec.width = 640
-            test_codec.height = 480
-            test_codec.pix_fmt = "yuv420p"
-            test_codec.framerate = fractions.Fraction(30, 1)
-            test_codec.time_base = fractions.Fraction(1, 30)
-            if encoder in encoder_options:
-                test_codec.options = encoder_options[encoder]
-            test_codec.open()
-            test_codec.close()
+            _probe_h264_encoder(encoder, encoder_options.get(encoder, {}))
             _selected_h264_encoder = encoder
             logger.info(f"Detected H.264 hardware encoder: {encoder}")
             break
